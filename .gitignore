@@ -8,3 +8,10 @@ extracted/
 node_modules/
 target/
 dist/
+# Flutter / Dart
+.dart_tool/
+.fvm/
+build/
+# Varios
+.env
+*.log
