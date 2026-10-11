@@ -1,0 +1,10 @@
+# Binarios y material extraído del original: nunca al repo
+reference/
+extracted/
+*.AppImage
+# Datos locales con tokens
+**/session.json
+**/launcher_account.json
+node_modules/
+target/
+dist/
