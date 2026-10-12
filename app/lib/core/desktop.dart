@@ -173,8 +173,13 @@ class NoopAutostart implements Autostart {
 
 class DesktopAutostart implements Autostart {
   DesktopAutostart() {
-    // En una AppImage, el ejecutable real cambia en cada montaje.
-    final path = Platform.environment['APPIMAGE'] ?? Platform.resolvedExecutable;
+    // En una AppImage, el ejecutable real cambia en cada montaje; en Flatpak,
+    // la ruta interna no existe fuera del sandbox.
+    final env = Platform.environment;
+    final flatpak = env['FLATPAK_ID'];
+    final path = flatpak != null
+        ? 'flatpak run $flatpak'
+        : env['APPIMAGE'] ?? Platform.resolvedExecutable;
     launchAtStartup.setup(
       appName: kAppName,
       appPath: path,
