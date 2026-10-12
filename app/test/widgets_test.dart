@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shard/ui/accounts/account_dialogs.dart';
+import 'package:shard/ui/home/home_page.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/settings/settings_page.dart';
 import 'package:shard/ui/widgets/common.dart';
@@ -64,6 +65,44 @@ void main() {
     await tester.tap(findRail('Ajustes'));
     await settle(tester);
     expect(find.byType(SettingsPage), findsOneWidget);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('al cambiar de sección las páginas no se superponen', (tester) async {
+    await pumpApp(tester, location: '/');
+    await tester.tap(findRail('Instancias'));
+    // Opacidad efectiva de una página (producto de sus FadeTransition).
+    double opacity(Type page) {
+      final finder = find.byType(page);
+      if (finder.evaluate().isEmpty) return 0;
+      return tester
+          .widgetList<FadeTransition>(
+            find.ancestor(of: finder, matching: find.byType(FadeTransition)),
+          )
+          .fold(1.0, (v, f) => v * f.opacity.value);
+    }
+
+    for (var ms = 0; ms <= 300; ms += 20) {
+      await tester.pump(const Duration(milliseconds: 20));
+      final home = opacity(HomePage), list = opacity(InstancesPage);
+      expect(home > 0.01 && list > 0.01, isFalse, reason: 'a los $ms ms: $home / $list');
+    }
+    await settle(tester);
+    expect(opacity(InstancesPage), 1);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('en modo rendimiento el cambio de sección es instantáneo', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/',
+      bridge: FakeBridge()..uiPrefs = '{"first_run_done":true,"performance":true}',
+    );
+    await tester.tap(findRail('Instancias'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byType(HomePage), findsNothing);
+    expect(find.byType(InstancesPage), findsOneWidget);
     debugDisableShadows = true;
   });
 

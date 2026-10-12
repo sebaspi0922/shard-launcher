@@ -1722,7 +1722,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get appearancePerformanceDesc =>
-      'Sin desenfoque ni animaciones de fondo. Útil en equipos modestos.';
+      'Sin desenfoque ni animaciones de fondo, y cambio de página instantáneo. Útil en equipos modestos.';
 
   @override
   String get settingsAutostart => 'Abrir al iniciar sesión';
