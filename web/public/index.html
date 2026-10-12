@@ -48,8 +48,9 @@
         <a class="btn" href="#funciones">Ver qué hace</a>
       </div>
       <p class="platforms">Linux (AppImage, Flatpak, Arch) · Windows y macOS, próximamente</p>
-      <div class="shot">
-        <img src="img/home_style_graphite.webp" width="1280" height="800" alt="Pantalla de inicio de Shard con la última instancia, servidores rápidos e instancias recientes">
+      <div class="shot live">
+        <canvas class="live-bg" aria-hidden="true"></canvas>
+        <img src="img/home_graphite_live.webp" width="1280" height="800" alt="Pantalla de inicio de Shard con la última instancia, servidores rápidos e instancias recientes">
       </div>
     </div>
 
@@ -108,13 +109,14 @@
         <p class="sub">Cambia los colores, la forma y el fondo de toda la app. También puedes usar tu propia imagen.</p>
         <div class="gallery">
           <div class="tabs" role="tablist">
-            <button role="tab" aria-selected="true" data-img="img/home_style_graphite.webp" data-alt="Estilo Grafito">Grafito</button>
+            <button role="tab" aria-selected="true" data-img="img/home_graphite_live.webp" data-live data-alt="Estilo Grafito">Grafito</button>
             <button role="tab" aria-selected="false" data-img="img/home_style_sebaspi.webp" data-alt="Estilo sebaspi">sebaspi</button>
             <button role="tab" aria-selected="false" data-img="img/home_style_landscape.webp" data-alt="Estilo Paisaje">Paisaje</button>
             <button role="tab" aria-selected="false" data-img="img/home_style_aurora.webp" data-alt="Estilo Aurora">Aurora</button>
           </div>
-          <div class="shot">
-            <img id="style-shot" src="img/home_style_graphite.webp" width="1280" height="800" alt="Estilo Grafito">
+          <div class="shot live" id="style-frame">
+            <canvas class="live-bg" aria-hidden="true"></canvas>
+            <img id="style-shot" src="img/home_graphite_live.webp" width="1280" height="800" alt="Estilo Grafito">
           </div>
         </div>
       </div>

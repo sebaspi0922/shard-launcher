@@ -19,28 +19,44 @@ const SHAPES = [
 ];
 
 const PERIOD = 18000;
-const canvas = document.getElementById("atmosphere");
-const ctx = canvas.getContext("2d");
 const still = matchMedia("(prefers-reduced-motion: reduce)");
-let width = 0;
-let height = 0;
 
-function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  width = innerWidth;
-  height = innerHeight;
-  canvas.width = Math.round(width * dpr);
-  canvas.height = Math.round(height * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+// Lienzos animados: el fondo de la página y el de las capturas «vivas» de la
+// app (las formas a la escala de la captura, diseñada a 1280 px de ancho).
+const layers = [];
+
+function addLayer(canvas, { design = 0, background = null } = {}) {
+  layers.push({ canvas, ctx: canvas.getContext("2d"), design, background, width: 0, height: 0 });
 }
 
-function draw(now) {
+function resize(layer) {
+  const dpr = window.devicePixelRatio || 1;
+  const box = layer.canvas.getBoundingClientRect();
+  layer.width = box.width;
+  layer.height = box.height;
+  layer.canvas.width = Math.round(box.width * dpr);
+  layer.canvas.height = Math.round(box.height * dpr);
+  // Las capturas se dibujan en coordenadas de la app y se escalan.
+  const k = layer.design ? box.width / layer.design : 1;
+  layer.scale = k;
+  layer.ctx.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
+}
+
+function draw(layer, now) {
+  const { ctx, scale } = layer;
+  const width = layer.width / scale;
+  const height = layer.height / scale;
   const phase = ((now % PERIOD) / PERIOD) * 2;
   const swing = phase < 1 ? phase : 2 - phase;
   const sway = -28 + 62 * swing;
   const lift = 30 - 72 * swing;
-  ctx.clearRect(0, 0, width, height);
-  ctx.lineWidth = 1;
+  if (layer.background) {
+    ctx.fillStyle = layer.background;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    ctx.clearRect(0, 0, width, height);
+  }
+  ctx.lineWidth = 1 / Math.max(scale, 0.5);
   for (const [x, fx, y, fy, sx, lx, sy, ly, size, color, radius, outline] of SHAPES) {
     const left = x + fx * width + sx * sway + lx * lift;
     const top = y + fy * height + sy * sway + ly * lift;
@@ -61,15 +77,30 @@ function draw(now) {
   }
 }
 
+function drawAll(now) {
+  for (const layer of layers) {
+    if (layer.canvas.offsetParent !== null || layer.canvas.id === "atmosphere") draw(layer, now);
+  }
+}
+
 function frame(now) {
-  draw(now);
+  drawAll(now);
   if (!still.matches) requestAnimationFrame(frame);
 }
 
-resize();
-addEventListener("resize", () => {
-  resize();
-  if (still.matches) draw(0);
-});
-still.addEventListener("change", () => (still.matches ? draw(0) : requestAnimationFrame(frame)));
+function resizeAll() {
+  for (const layer of layers) resize(layer);
+  if (still.matches) drawAll(0);
+}
+
+addLayer(document.getElementById("atmosphere"));
+for (const canvas of document.querySelectorAll("canvas.live-bg")) {
+  addLayer(canvas, { design: 1280, background: "#212121" });
+}
+resizeAll();
+addEventListener("resize", resizeAll);
+// También cuando un lienzo cambia de tamaño o vuelve a mostrarse.
+const observer = new ResizeObserver(resizeAll);
+for (const layer of layers) observer.observe(layer.canvas);
+still.addEventListener("change", () => (still.matches ? drawAll(0) : requestAnimationFrame(frame)));
 requestAnimationFrame(frame);

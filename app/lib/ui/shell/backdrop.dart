@@ -17,11 +17,16 @@ import '../widgets/atmosphere.dart';
 /// Semilla del paisaje de fondo (elegida por cómo queda).
 const kBackdropLandscapeSeed = 'shard-ocaso';
 
+/// Solo para capturas: sin fondo (transparente), para animarlo fuera (web).
+@visibleForTesting
+bool debugHideBackdrop = false;
+
 class AppBackdrop extends ConsumerWidget {
   const AppBackdrop({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (debugHideBackdrop) return const SizedBox.expand();
     final p = ref.watch(uiPrefsProvider);
     final c = context.colors;
     final animate = !p.performance;
