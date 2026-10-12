@@ -1,0 +1,11 @@
+#!/bin/sh
+# Sustituto mínimo de rustup para Cargokit cuando Rust viene del sistema
+# (pacman) y no hay rustup. Solo sirve para compilar para el propio equipo.
+# Se usa poniéndolo delante en el PATH: tools/flutter.sh lo hace.
+host=$(rustc -vV | sed -n 's/^host: //p')
+case "$1 $2" in
+  "toolchain list") echo "stable-$host (default)" ;;
+  "target list") echo "$host" ;;
+  "run "*) shift 2; exec "$@" ;;
+  *) echo "rustup-shim: no soportado: $*" >&2; exit 1 ;;
+esac
