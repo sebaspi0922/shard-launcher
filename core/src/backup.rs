@@ -2,10 +2,13 @@
 //!
 //! Disco: `backups/<instancia>/backup-<epoch>.zip` + `backups.json`.
 //! Contenido de un backup nuevo: `instance.json`, `content.json` (si existe) y
-//! `game/**`, sin `game/logs/`, `game/crash-reports/`, `*.tmp` ni enlaces
-//! simbólicos que apunten fuera del directorio del juego. Los zip heredados de
-//! Roxy llevan el directorio entero de la instancia en la raíz (sin `game/`).
+//! `game/**`, sin `game/logs/`, `game/crash-reports/` ni `*.tmp`. De los enlaces
+//! simbólicos se siguen los que van a carpetas fuera del juego (p. ej. `saves`
+//! enlazado a otro disco), que entran como carpetas normales, y los de archivos
+//! dentro del juego; los de archivos fuera se omiten. Los zip heredados de Roxy
+//! llevan el directorio entero de la instancia en la raíz (sin `game/`).
 
+use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
@@ -689,10 +692,19 @@ fn collect_game_items(game_dir: &Path, items: &mut Vec<Item>) -> Result<()> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(Error::io(game_dir, e)),
     };
-    walk(game_dir, "", &root, items)
+    let mut visited = HashSet::from([root.clone()]);
+    walk(game_dir, "", &root, &mut visited, items)
 }
 
-fn walk(dir: &Path, prefix: &str, root: &Path, items: &mut Vec<Item>) -> Result<()> {
+/// `visited`: carpetas canónicas ya recorridas, para no entrar en bucles por
+/// enlaces que apuntan a un antecesor.
+fn walk(
+    dir: &Path,
+    prefix: &str,
+    root: &Path,
+    visited: &mut HashSet<PathBuf>,
+    items: &mut Vec<Item>,
+) -> Result<()> {
     let mut children = fs::read_dir(dir)
         .map_err(|e| Error::io(dir, e))?
         .collect::<io::Result<Vec<_>>>()
@@ -720,17 +732,32 @@ fn walk(dir: &Path, prefix: &str, root: &Path, items: &mut Vec<Item>) -> Result<
         };
         let zip_name = format!("game/{rel}");
         if meta.file_type().is_symlink() {
-            // Solo se siguen enlaces a archivos que resuelven dentro de `game/`.
             let Ok(target) = fs::canonicalize(&path) else {
                 continue;
             };
-            if !target.starts_with(root) {
-                tracing::warn!(path = %path.display(), "enlace fuera de game/: se omite del backup");
+            let Ok(tmeta) = fs::metadata(&path) else {
                 continue;
-            }
-            if let Ok(tmeta) = fs::metadata(&path)
-                && tmeta.is_file()
-            {
+            };
+            if tmeta.is_dir() {
+                // Dentro del juego su contenido ya entra por su ruta real.
+                if target.starts_with(root) {
+                    continue;
+                }
+                if root.starts_with(&target) || !visited.insert(target.clone()) {
+                    tracing::warn!(path = %path.display(), "enlace repetido o en bucle: se omite del backup");
+                    continue;
+                }
+                items.push(Item {
+                    abs: path.clone(),
+                    name: format!("{zip_name}/"),
+                    kind: ItemKind::Dir,
+                });
+                walk(&path, &rel, root, visited, items)?;
+            } else if tmeta.is_file() {
+                if !target.starts_with(root) {
+                    tracing::warn!(path = %path.display(), "enlace a un archivo fuera de game/: se omite del backup");
+                    continue;
+                }
                 items.push(Item {
                     abs: path,
                     name: zip_name,
@@ -746,7 +773,7 @@ fn walk(dir: &Path, prefix: &str, root: &Path, items: &mut Vec<Item>) -> Result<
                 name: format!("{zip_name}/"),
                 kind: ItemKind::Dir,
             });
-            walk(&path, &rel, root, items)?;
+            walk(&path, &rel, root, visited, items)?;
         } else if meta.is_file() {
             items.push(Item {
                 abs: path,
@@ -1218,6 +1245,12 @@ mod tests {
             std::os::unix::fs::symlink(&outside, game.join("enlace-fuera")).unwrap();
             std::os::unix::fs::symlink(game.join("options.txt"), game.join("enlace-dentro"))
                 .unwrap();
+            // Carpeta de mundos en otro sitio, con un enlace de vuelta a sí misma.
+            let mundos = tmp.path().join("mundos-fuera");
+            put(&mundos.join("Otro/level.dat"), "nbt");
+            std::os::unix::fs::symlink(&mundos, mundos.join("bucle")).unwrap();
+            std::os::unix::fs::symlink(&mundos, game.join("saves-externo")).unwrap();
+            std::os::unix::fs::symlink(&game, game.join("raiz")).unwrap();
         }
 
         let mut rx = core.subscribe();
@@ -1256,7 +1289,15 @@ mod tests {
         assert!(!names.iter().any(|n| n.ends_with(".tmp")));
         assert!(!names.iter().any(|n| n.contains("enlace-fuera")));
         #[cfg(unix)]
-        assert!(names.contains(&"game/enlace-dentro".to_owned()));
+        {
+            assert!(names.contains(&"game/enlace-dentro".to_owned()));
+            assert!(names.contains(&"game/saves-externo/Otro/level.dat".to_owned()));
+            assert!(
+                !names
+                    .iter()
+                    .any(|n| n.contains("/bucle") || n.contains("game/raiz"))
+            );
+        }
         // Sin restos .part.
         let leftovers: Vec<_> = fs::read_dir(zip_path.parent().unwrap())
             .unwrap()
