@@ -21,7 +21,7 @@ Cloudflare Registrar vende a coste y no admite `.gg` (en Porkbun, 51,80 al año)
 
 | Servicio | Producto | Coste |
 |---|---|---|
-| Web y `latest.json` del actualizador | Worker con assets estáticos (`web/`) | 0 |
+| Web y `latest.json` del actualizador | Worker con assets estáticos (repo `shard-web`) | 0 |
 | Descargas (`dl.`) | R2 con dominio propio; egreso gratis, 10 GB | 0 |
 | API (`api.`): amigos, presencia, instancias compartidas, informes de cierre | Worker + D1 + R2 + un Durable Object por sala | 0 (plan gratuito) o 5 USD/mes |
 | LAN por internet | Prototipo: túnel TCP sobre WebSocket en un Durable Object. Alternativa: relay estilo e4mc en un VPS (~6 EUR/mes) | 0 a 6 EUR/mes |
@@ -36,7 +36,7 @@ Cloudflare Registrar vende a coste y no admite `.gg` (en Porkbun, 51,80 al año)
 ## Pasos
 
 1. Elegir el dominio y comprarlo en Cloudflare (necesita la cuenta y el pago del usuario).
-2. Publicar la web (`web/`) con `wrangler` y un `latest.json` de prueba.
+2. Publicar la web (repo `shard-web`, Astro) con `wrangler` y un `latest.json` de prueba.
 3. Bucket R2 en `dl.` y clave minisign; subir AppImage, Flatpak y paquete de Arch.
 4. Actualizador en la app con verificación de firma.
 5. API con identidad por `hasJoined`; luego amigos y presencia.
