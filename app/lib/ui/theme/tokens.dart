@@ -17,10 +17,11 @@ abstract final class Space {
   static const double x10 = 40;
 }
 
+/// Radios del estilo activo (los fija `buildTheme`).
 abstract final class Radii {
-  static const double control = 8;
-  static const double card = 12;
-  static const double panel = 16;
+  static double control = 8;
+  static double card = 12;
+  static double panel = 16;
   static const double pill = 999;
 }
 
@@ -28,9 +29,15 @@ abstract final class Motion {
   static const fast = Duration(milliseconds: 150);
   static const medium = Duration(milliseconds: 220);
   static const curve = Curves.easeOutCubic;
+
+  /// Cambio de sección.
+  static const page = Duration(milliseconds: 260);
+
+  /// Salida exponencial suave (diálogos, secciones, acordeones).
+  static const emphasized = Cubic(0.16, 1, 0.3, 1);
 }
 
-/// Colores de la app. Todo sale del matiz del acento.
+/// Colores de la app (dependen del estilo y del acento).
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -54,6 +61,7 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.warning,
     required this.danger,
     required this.info,
+    this.panelBase,
   });
 
   final Color background;
@@ -79,35 +87,113 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color danger;
   final Color info;
 
+  /// Base casi opaca bajo tarjetas y paneles, para que un fondo con dibujo no
+  /// estorbe al texto. `null` = superficies translúcidas (efecto cristal).
+  final Color? panelBase;
+
+  /// Color de una tarjeta o panel apoyado directamente sobre el fondo.
+  Color card(Color surface) =>
+      panelBase == null ? surface : Color.alphaBlend(surface, panelBase!);
+
   /// Escala completa a partir de un color semilla.
   factory AppColors.fromSeed(Color seed) {
     final hct = Hct.fromInt(seed.toARGB32());
-    final hue = hct.hue;
-    final accent = TonalPalette.of(hue, hct.chroma.clamp(40, 90).toDouble());
-    final tint = TonalPalette.of(hue, 10);
-    final soft = TonalPalette.of(hue, 24);
-    Color t(TonalPalette p, int tone) => Color(p.get(tone));
+    final tint = TonalPalette.of(hct.hue, 10);
+    Color t(int tone) => Color(tint.get(tone));
+    final a = AccentSet.fromSeed(seed);
     return AppColors(
-      background: t(tint, 6),
-      backgroundDeep: t(tint, 4),
-      surface1: Color(0x0FFFFFFF),
-      surface2: Color(0x17FFFFFF),
-      surface3: Color(0x21FFFFFF),
-      border: Color(0x14FFFFFF),
-      borderStrong: Color(0x26FFFFFF),
-      text: t(tint, 96),
-      textSecondary: t(tint, 78),
-      textMuted: t(tint, 60),
-      accent: t(accent, 74),
-      accentHover: t(accent, 82),
-      onAccent: t(accent, 12),
-      accentContainer: t(soft, 26),
-      onAccentContainer: t(accent, 90),
-      glow: t(accent, 60),
+      background: t(6),
+      backgroundDeep: t(4),
+      surface1: const Color(0x0FFFFFFF),
+      surface2: const Color(0x17FFFFFF),
+      surface3: const Color(0x21FFFFFF),
+      border: const Color(0x14FFFFFF),
+      borderStrong: const Color(0x26FFFFFF),
+      text: t(96),
+      textSecondary: t(78),
+      textMuted: t(60),
+      accent: a.accent,
+      accentHover: a.hover,
+      onAccent: a.onAccent,
+      accentContainer: a.container,
+      onAccentContainer: a.onContainer,
+      glow: a.glow,
       success: const Color(0xFF4ADE80),
       warning: const Color(0xFFFBBF24),
       danger: const Color(0xFFF87171),
       info: const Color(0xFF7DD3FC),
+    );
+  }
+
+  /// Gris neutro y plano, con acento blanco de tinta casi negra.
+  factory AppColors.graphite([AccentSet? accent]) {
+    final a = accent ??
+        const AccentSet(
+          accent: Color(0xFFFFFFFF),
+          hover: Color(0xFFE6E6E6),
+          onAccent: Color(0xFF0D0D0D),
+          container: Color(0x29FFFFFF),
+          onContainer: Color(0xFFFFFFFF),
+          glow: Color(0xFFAEBCFF),
+        );
+    return AppColors(
+      background: const Color(0xFF212121),
+      backgroundDeep: const Color(0xFF171717),
+      surface1: const Color(0x0DFFFFFF),
+      surface2: const Color(0x14FFFFFF),
+      surface3: const Color(0x1CFFFFFF),
+      border: const Color(0x1FFFFFFF),
+      borderStrong: const Color(0x33FFFFFF),
+      text: const Color(0xFFECECEC),
+      textSecondary: const Color(0xFFB4B4B4),
+      textMuted: const Color(0xFF8F8F8F),
+      accent: a.accent,
+      accentHover: a.hover,
+      onAccent: a.onAccent,
+      accentContainer: a.container,
+      onAccentContainer: a.onContainer,
+      glow: a.glow,
+      success: const Color(0xFF10A37F),
+      warning: const Color(0xFFE0B04A),
+      danger: const Color(0xFFF87171),
+      info: const Color(0xFF8FD4FF),
+      panelBase: const Color(0xEB212121),
+    );
+  }
+
+  /// Negro profundo con dorado como único acento.
+  factory AppColors.gold([AccentSet? accent]) {
+    final a = accent ??
+        const AccentSet(
+          accent: Color(0xFFF1C40F),
+          hover: Color(0xFFFAC814),
+          onAccent: Color(0xFF121212),
+          container: Color(0x2EF1C40F),
+          onContainer: Color(0xFFF8E187),
+          glow: Color(0xFFF1C40F),
+        );
+    return AppColors(
+      background: const Color(0xFF000000),
+      backgroundDeep: const Color(0xFF000000),
+      surface1: const Color(0x0DFFFFFF),
+      surface2: const Color(0x14FFFFFF),
+      surface3: const Color(0x1FFFFFFF),
+      border: const Color(0x24FFFFFF),
+      borderStrong: const Color(0x38FFFFFF),
+      text: const Color(0xFFE5E5E5),
+      textSecondary: const Color(0xFFA8A8A8),
+      textMuted: const Color(0xFF767676),
+      accent: a.accent,
+      accentHover: a.hover,
+      onAccent: a.onAccent,
+      accentContainer: a.container,
+      onAccentContainer: a.onContainer,
+      glow: a.glow,
+      success: const Color(0xFF21C45D),
+      warning: const Color(0xFFF39C12),
+      danger: const Color(0xFFE74C3C),
+      info: const Color(0xFF7DD3FC),
+      panelBase: const Color(0xF0000000),
     );
   }
 
@@ -139,8 +225,45 @@ class AppColors extends ThemeExtension<AppColors> {
       warning: c(warning, other.warning),
       danger: c(danger, other.danger),
       info: c(info, other.info),
+      panelBase: Color.lerp(panelBase, other.panelBase, t),
     );
   }
+}
+
+/// Colores del acento y sus variantes.
+@immutable
+class AccentSet {
+  const AccentSet({
+    required this.accent,
+    required this.hover,
+    required this.onAccent,
+    required this.container,
+    required this.onContainer,
+    required this.glow,
+  });
+
+  /// Tonos derivados de un color semilla.
+  factory AccentSet.fromSeed(Color seed) {
+    final hct = Hct.fromInt(seed.toARGB32());
+    final p = TonalPalette.of(hct.hue, hct.chroma.clamp(40, 90).toDouble());
+    final soft = TonalPalette.of(hct.hue, 24);
+    Color t(TonalPalette p, int tone) => Color(p.get(tone));
+    return AccentSet(
+      accent: t(p, 74),
+      hover: t(p, 82),
+      onAccent: t(p, 12),
+      container: t(soft, 26),
+      onContainer: t(p, 90),
+      glow: t(p, 60),
+    );
+  }
+
+  final Color accent;
+  final Color hover;
+  final Color onAccent;
+  final Color container;
+  final Color onContainer;
+  final Color glow;
 }
 
 extension AppThemeX on BuildContext {

@@ -1,5 +1,5 @@
-// Fondo de la app según Ajustes › Apariencia: halos del acento, paisaje
-// generado o una imagen propia, con desenfoque y oscurecido.
+// Fondo de la app: el del estilo elegido o una imagen propia (con desenfoque y
+// oscurecido, igual que el paisaje).
 
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -9,7 +9,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui_prefs.dart';
 import '../theme/tokens.dart';
+import '../theme/styles.dart';
 import '../widgets/art.dart';
+import '../widgets/ascii_sphere.dart';
+import '../widgets/atmosphere.dart';
 
 /// Semilla del paisaje de fondo (elegida por cómo queda).
 const kBackdropLandscapeSeed = 'shard-ocaso';
@@ -21,24 +24,28 @@ class AppBackdrop extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = ref.watch(uiPrefsProvider);
     final c = context.colors;
+    final animate = !p.performance;
     final Widget art;
-    switch (p.background) {
-      case BackgroundKind.aurora:
-        return const RepaintBoundary(child: Backdrop());
-      case BackgroundKind.landscape:
-        art = const BlockLandscape(seed: kBackdropLandscapeSeed, block: 26);
-      case BackgroundKind.image:
-        final path = p.backgroundPath;
-        if (path == null || !File(path).existsSync()) {
+    final path = p.backgroundPath;
+    if (p.usesImage && File(path!).existsSync()) {
+      art = Image.file(
+        File(path),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (_, _, _) => const Backdrop(),
+      );
+    } else {
+      switch (p.style) {
+        case AppStyle.graphite:
+          return Atmosphere(background: c.background, animate: animate);
+        case AppStyle.sebaspi:
+          return AsciiSphere(color: c.accent, animate: animate);
+        case AppStyle.aurora:
           return const RepaintBoundary(child: Backdrop());
-        }
-        art = Image.file(
-          File(path),
-          fit: BoxFit.cover,
-          gaplessPlayback: true,
-          filterQuality: FilterQuality.medium,
-          errorBuilder: (_, _, _) => const Backdrop(),
-        );
+        case AppStyle.landscape:
+          art = const BlockLandscape(seed: kBackdropLandscapeSeed, block: 26);
+      }
     }
     final blur = p.performance ? 0.0 : p.blur;
     return RepaintBoundary(

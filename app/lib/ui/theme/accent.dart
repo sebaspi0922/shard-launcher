@@ -9,6 +9,7 @@ import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/ui_prefs.dart';
+import 'styles.dart';
 
 /// Presets propios del acento.
 const kAccentPresets = <Color>[
@@ -22,10 +23,8 @@ const kAccentPresets = <Color>[
   Color(0xFFE879C6), // orquídea
 ];
 
-const kDefaultAccent = Color(0xFF35D69B);
-
-/// Acento del paisaje generado (cuando el acento es automático).
-const kLandscapeAccent = Color(0xFFFFA94D);
+/// Acento del estilo por defecto en lugares sin tema (icono de la bandeja).
+const kDefaultAccent = Color(0xFFFFFFFF);
 
 /// Acento extraído de una imagen de fondo local.
 final imageAccentProvider = FutureProvider.family<Color?, String>((ref, path) async {
@@ -34,18 +33,22 @@ final imageAccentProvider = FutureProvider.family<Color?, String>((ref, path) as
   return accentFromImageBytes(await file.readAsBytes());
 });
 
-/// Acento actual: el preset elegido o, en automático, el del fondo.
-final accentProvider = Provider<Color>((ref) {
+/// Acento elegido por el usuario; `null` = el del estilo.
+final accentOverrideProvider = Provider<Color?>((ref) {
   final p = ref.watch(uiPrefsProvider);
-  final preset = Color(p.accentPreset);
-  if (!p.accentAuto) return preset;
-  return switch (p.background) {
-    BackgroundKind.image when p.backgroundPath != null =>
-      ref.watch(imageAccentProvider(p.backgroundPath!)).value ?? preset,
-    BackgroundKind.landscape => kLandscapeAccent,
-    _ => kDefaultAccent,
+  return switch (p.accent) {
+    AccentMode.style => null,
+    AccentMode.preset => Color(p.accentPreset),
+    AccentMode.auto => p.usesImage
+        ? ref.watch(imageAccentProvider(p.backgroundPath!)).value
+        : null,
   };
 });
+
+/// Acento en uso.
+final accentProvider = Provider<Color>((ref) =>
+    ref.watch(accentOverrideProvider) ??
+    ref.watch(uiPrefsProvider).style.spec.accent);
 
 /// Color dominante «bonito» de una lista de píxeles ARGB (cuantizador + puntuación
 /// de material_color_utilities). `null` si la imagen no tiene color útil.

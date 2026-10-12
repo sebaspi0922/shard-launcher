@@ -7,25 +7,36 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../ui/theme/styles.dart';
 import 'providers.dart';
 
 /// Fondo de la app.
 enum BackgroundKind {
-  /// Halos suaves del acento (por defecto).
-  aurora,
-
-  /// Paisaje de bloques generado.
-  landscape,
+  /// El del estilo elegido.
+  style,
 
   /// Imagen elegida por el usuario.
   image,
 }
 
+/// De dónde sale el color de acento.
+enum AccentMode {
+  /// El propio del estilo.
+  style,
+
+  /// Extraído de la imagen de fondo.
+  auto,
+
+  /// Uno de los presets.
+  preset,
+}
+
 class UiPrefs {
   const UiPrefs({
-    this.accentAuto = false,
+    this.style = AppStyle.graphite,
+    this.accent = AccentMode.style,
     this.accentPreset = 0xFF35D69B,
-    this.background = BackgroundKind.aurora,
+    this.background = BackgroundKind.style,
     this.backgroundPath,
     this.blur = 12,
     this.dim = 0.45,
@@ -33,8 +44,8 @@ class UiPrefs {
     this.firstRunDone,
   });
 
-  /// `true` = acento extraído del fondo.
-  final bool accentAuto;
+  final AppStyle style;
+  final AccentMode accent;
 
   /// Color ARGB del preset elegido.
   final int accentPreset;
@@ -49,7 +60,7 @@ class UiPrefs {
   /// Oscurecido del fondo (0–0,85).
   final double dim;
 
-  /// Sin desenfoque ni efectos de fondo.
+  /// Sin desenfoque ni animaciones de fondo.
   final bool performance;
 
   /// `null` = nunca se marcó (instalación nueva o anterior al asistente).
@@ -63,16 +74,23 @@ class UiPrefs {
       return v is num ? v.toDouble().clamp(min, max) : def;
     }
 
-    final bg = j['background'];
     final firstRun = j['first_run_done'];
     final preset = j['accent_preset'];
+    // Los archivos anteriores a los estilos no tienen `style`: empiezan con el
+    // estilo y el acento por defecto, y conservan su imagen si la usaban.
+    final legacy = !j.containsKey('style');
     return UiPrefs(
-      accentAuto: j['accent'] == 'auto',
+      style: AppStyle.parse(j['style']),
+      accent: legacy
+          ? AccentMode.style
+          : AccentMode.values.firstWhere(
+              (m) => m.name == j['accent'],
+              orElse: () => AccentMode.style,
+            ),
       accentPreset: preset is int ? preset : defaults.accentPreset,
-      background: BackgroundKind.values.firstWhere(
-        (b) => b.name == bg,
-        orElse: () => BackgroundKind.aurora,
-      ),
+      background: j['background'] == 'image'
+          ? BackgroundKind.image
+          : BackgroundKind.style,
       backgroundPath: j['background_path'] is String ? j['background_path'] as String : null,
       blur: number('blur', defaults.blur, 0, 40),
       dim: number('dim', defaults.dim, 0, 0.85),
@@ -91,8 +109,12 @@ class UiPrefs {
     return defaults;
   }
 
+  /// Hay imagen propia y está elegida.
+  bool get usesImage => background == BackgroundKind.image && backgroundPath != null;
+
   Map<String, dynamic> toJson() => {
-        'accent': accentAuto ? 'auto' : 'preset',
+        'style': style.name,
+        'accent': accent.name,
         'accent_preset': accentPreset,
         'background': background.name,
         'background_path': ?backgroundPath,
@@ -103,7 +125,8 @@ class UiPrefs {
       };
 
   UiPrefs copyWith({
-    bool? accentAuto,
+    AppStyle? style,
+    AccentMode? accent,
     int? accentPreset,
     BackgroundKind? background,
     String? Function()? backgroundPath,
@@ -113,7 +136,8 @@ class UiPrefs {
     bool? firstRunDone,
   }) =>
       UiPrefs(
-        accentAuto: accentAuto ?? this.accentAuto,
+        style: style ?? this.style,
+        accent: accent ?? this.accent,
         accentPreset: accentPreset ?? this.accentPreset,
         background: background ?? this.background,
         backgroundPath:
