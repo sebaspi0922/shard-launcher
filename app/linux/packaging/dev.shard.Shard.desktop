@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=Shard
+GenericName=Minecraft Launcher
+GenericName[es]=Launcher de Minecraft
+Comment=Play and manage your Minecraft instances
+Comment[es]=Juega y gestiona tus instancias de Minecraft
+Exec=shard
+Icon=dev.shard.Shard
+Terminal=false
+Categories=Game;
+Keywords=minecraft;launcher;mods;modrinth;modpack;
+StartupWMClass=dev.shard.Shard
+StartupNotify=true

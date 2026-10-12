@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.shard.Shard</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <name>Shard</name>
+  <summary>Personal Minecraft launcher</summary>
+  <summary xml:lang="es">Launcher de Minecraft personal</summary>
+  <description>
+    <p>Creates and launches Minecraft instances with Fabric, Quilt, Forge or NeoForge, installs mods and modpacks from Modrinth and CurseForge, manages worlds, backups, servers and skins, and diagnoses crashes.</p>
+    <p xml:lang="es">Crea y lanza instancias de Minecraft con Fabric, Quilt, Forge o NeoForge, instala mods y modpacks de Modrinth y CurseForge, gestiona mundos, copias, servidores y skins, y diagnostica cierres inesperados.</p>
+  </description>
+  <launchable type="desktop-id">dev.shard.Shard.desktop</launchable>
+  <developer id="dev.shard">
+    <name>Sebastian Pineda</name>
+  </developer>
+  <categories>
+    <category>Game</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-10-11"/>
+  </releases>
+</component>

@@ -1,0 +1,23 @@
+# Paquete local de Shard. No se construye a mano: `tools/package.sh arch`
+# compila la app, prepara el árbol en SHARD_STAGE y llama a makepkg.
+
+pkgname=shard
+pkgver=${SHARD_VERSION:-0.1.0}
+pkgrel=1
+pkgdesc="Launcher de Minecraft personal"
+arch=('x86_64')
+license=('LicenseRef-proprietary')
+depends=('gtk3' 'libepoxy' 'hicolor-icon-theme')
+optdepends=(
+  'xdg-utils: abrir carpetas y enlaces'
+  'gnome-keyring: guardar las sesiones (o cualquier servicio Secret Service)'
+)
+options=('!strip' '!debug')
+
+package() {
+  if [ -z "${SHARD_STAGE:-}" ]; then
+    echo "Usa tools/package.sh arch" >&2
+    return 1
+  fi
+  cp -a "$SHARD_STAGE/." "$pkgdir/"
+}
