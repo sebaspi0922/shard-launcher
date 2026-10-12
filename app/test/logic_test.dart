@@ -4,13 +4,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lcore_app/core/bridge.dart';
-import 'package:lcore_app/core/format.dart';
-import 'package:lcore_app/core/launch.dart';
-import 'package:lcore_app/core/logs.dart';
-import 'package:lcore_app/core/providers.dart';
-import 'package:lcore_app/l10n/app_localizations_es.dart';
-import 'package:lcore_app/ui/theme/accent.dart';
+import 'package:shard/core/bridge.dart';
+import 'package:shard/core/format.dart';
+import 'package:shard/core/launch.dart';
+import 'package:shard/core/logs.dart';
+import 'package:shard/core/providers.dart';
+import 'package:shard/l10n/app_localizations_es.dart';
+import 'package:shard/ui/theme/accent.dart';
 
 import 'support/fake_bridge.dart';
 

@@ -31,7 +31,7 @@ core/                   crate `lcore` (biblioteca) + binario CLI `shard`
   tests/                integración (wiremock, fixtures, golden)
   tests/fixtures/       JSON reales de Mojang, Fabric, Forge, logs y crash reports
 app/                    proyecto Flutter
-  rust/                 crate puente `lcore_bridge` (flutter_rust_bridge); solo adapta tipos
+  rust/                 crate puente `shard_bridge` (flutter_rust_bridge); solo adapta tipos
   lib/                  Dart: UI y estado
 server/                 (hito 5) servicios del home-server
 docs/  research/  tools/

@@ -9,7 +9,7 @@ app/
   .fvmrc                 versión de Flutter fijada
   pubspec.yaml
   flutter_rust_bridge.yaml
-  rust/                  crate `lcore_bridge` (cdylib): adapta `lcore::Core` a frb
+  rust/                  crate `shard_bridge` (cdylib): adapta `lcore::Core` a frb
     src/api/*.rs         funciones expuestas (una por área)
   lib/
     main.dart            arranque: ventana, puente, ProviderScope
@@ -30,6 +30,8 @@ Paquetes:
 - `material_color_utilities` (acento desde la imagen de fondo).
 
 Los plugins de escritorio se validan en Wayland al empezar. Si alguno falla, se busca alternativa o se implementa desde Rust.
+
+Bandeja (validado en niri/Wayland, 2026-10-11): `tray_manager` 0.8 usa nativeapi, que en Linux publica un StatusNotifierItem por D-Bus (GDBus) con su menú por dbusmenu; no necesita `libayatana-appindicator`. Hace falta un panel que aloje SNI (waybar, KDE…); en GNOME, la extensión AppIndicator. El menú solo se exporta con disparador (`ContextMenuTrigger.rightClicked`). El autoarranque crea `~/.config/autostart/Shard.desktop` con `--background` (arranca oculta en la bandeja).
 
 ## 2. Frontera con el núcleo
 

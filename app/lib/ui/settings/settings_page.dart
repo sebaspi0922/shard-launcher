@@ -1,4 +1,5 @@
-// Ajustes globales: general, juego, descargas y acerca de.
+// Ajustes globales: general, apariencia, juego, Java, descargas,
+// integraciones y acerca de.
 
 import 'dart:async';
 
@@ -8,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_info.dart';
 import '../../core/bridge.dart';
+import '../../core/desktop.dart';
 import '../../core/format.dart';
 import '../../core/errors.dart';
 import '../../core/providers.dart';
@@ -19,7 +21,9 @@ import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/common.dart';
 import '../widgets/memory_slider.dart';
+import 'appearance_group.dart';
 import 'curseforge_key_dialog.dart';
+import 'java_group.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -98,7 +102,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             children: [
               Text(l.settingsTitle, style: context.text.headlineMedium),
               const SizedBox(height: Space.x6),
-              _Group(
+              SettingsGroup(
                 title: l.settingsGeneral,
                 icon: Symbols.tune_rounded,
                 children: [
@@ -146,10 +150,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           _change(s.copyWith(allowMultipleGames: v)),
                     ),
                   ),
+                  if (ref.watch(autostartProvider).supported) ...[
+                    const Divider(),
+                    const _AutostartRow(),
+                  ],
                 ],
               ),
               const SizedBox(height: Space.x5),
-              _Group(
+              const AppearanceGroup(),
+              const SizedBox(height: Space.x5),
+              SettingsGroup(
                 title: l.settingsGame,
                 icon: Symbols.sports_esports_rounded,
                 children: [
@@ -188,7 +198,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: Space.x5),
-              _Group(
+              const JavaGroup(),
+              const SizedBox(height: Space.x5),
+              SettingsGroup(
                 title: l.settingsDownloads,
                 icon: Symbols.download_rounded,
                 children: [
@@ -232,7 +244,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: Space.x5),
-              _Group(
+              SettingsGroup(
                 title: l.settingsIntegrations,
                 icon: Symbols.hub_rounded,
                 children: [
@@ -249,7 +261,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
               const SizedBox(height: Space.x5),
-              _Group(
+              SettingsGroup(
                 title: l.settingsAbout,
                 icon: Symbols.info_rounded,
                 children: [
@@ -304,8 +316,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 }
 
-class _Group extends StatelessWidget {
-  const _Group({
+class SettingsGroup extends StatelessWidget {
+  const SettingsGroup({
+    super.key,
     required this.title,
     required this.icon,
     required this.children,
@@ -390,6 +403,30 @@ class _CurseforgeKeyRow extends ConsumerWidget {
             label: Text(has ? l.cfKeyChange : l.cfKeyAdd),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AutostartRow extends ConsumerWidget {
+  const _AutostartRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final on = ref.watch(autostartEnabledProvider).value ?? false;
+    return SettingRow(
+      title: l.settingsAutostart,
+      description: l.settingsAutostartDesc(kAppName),
+      control: Switch(
+        value: on,
+        onChanged: (v) async {
+          try {
+            await ref.read(autostartEnabledProvider.notifier).set(v);
+          } catch (e) {
+            if (context.mounted) showToast(context, errorText(l, e), error: true);
+          }
+        },
       ),
     );
   }

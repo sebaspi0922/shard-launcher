@@ -28,13 +28,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get navSettings => 'Ajustes';
 
   @override
-  String get comingSoonTitle => 'Próximamente';
-
-  @override
-  String get comingSoonSkins =>
-      'Vista 3D de tu skin, subir una nueva y gestionar capas.';
-
-  @override
   String get windowMinimize => 'Minimizar';
 
   @override
@@ -1647,4 +1640,646 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeSeeAllServers => 'Ver todos';
+
+  @override
+  String get settingsAppearance => 'Apariencia';
+
+  @override
+  String get appearanceBackground => 'Fondo';
+
+  @override
+  String get appearanceBackgroundDesc =>
+      'Detrás de toda la app. La imagen se copia a la carpeta de datos.';
+
+  @override
+  String get appearanceAurora => 'Aurora';
+
+  @override
+  String get appearanceLandscape => 'Paisaje';
+
+  @override
+  String get appearanceImage => 'Imagen propia';
+
+  @override
+  String get appearancePickImage => 'Elegir imagen…';
+
+  @override
+  String get appearanceChangeImage => 'Cambiar imagen';
+
+  @override
+  String get appearanceImages => 'Imágenes';
+
+  @override
+  String get appearanceAccent => 'Color de acento';
+
+  @override
+  String get appearanceAccentDesc => 'Botones, selección y detalles.';
+
+  @override
+  String get appearanceAccentAuto => 'Auto';
+
+  @override
+  String get appearanceAccentAutoDesc =>
+      'Automático: se toma del fondo elegido.';
+
+  @override
+  String get appearanceBlur => 'Desenfoque';
+
+  @override
+  String get appearanceBlurDesc => 'Del paisaje o de tu imagen.';
+
+  @override
+  String get appearanceDim => 'Oscurecido';
+
+  @override
+  String get appearanceDimDesc =>
+      'Para que el texto se lea bien sobre el fondo.';
+
+  @override
+  String get appearancePerformance => 'Modo rendimiento';
+
+  @override
+  String get appearancePerformanceDesc =>
+      'Sin desenfoque ni efectos de fondo. Útil en equipos modestos.';
+
+  @override
+  String get settingsAutostart => 'Abrir al iniciar sesión';
+
+  @override
+  String settingsAutostartDesc(Object app) {
+    return '$app arranca con el sistema, oculto en la bandeja.';
+  }
+
+  @override
+  String get settingsJava => 'Java';
+
+  @override
+  String get javaDetected => 'Javas detectadas';
+
+  @override
+  String get javaDetectedDesc =>
+      'Para cada versión se usa la adecuada; si falta, se instala sola al jugar.';
+
+  @override
+  String get javaRescan => 'Volver a buscar';
+
+  @override
+  String get javaNone =>
+      'No se encontró ninguna Java. Se instalará la necesaria al jugar.';
+
+  @override
+  String get javaInstall => 'Instalar Java';
+
+  @override
+  String get javaInstallDesc =>
+      'Descarga un JRE de Eclipse Adoptium a la carpeta de datos.';
+
+  @override
+  String javaInstalling(int major) {
+    return 'Instalando Java $major…';
+  }
+
+  @override
+  String javaInstallingProgress(int major, Object done, Object total) {
+    return 'Instalando Java $major: $done de $total';
+  }
+
+  @override
+  String javaInstalled(int major, Object version) {
+    return 'Java $major instalada ($version)';
+  }
+
+  @override
+  String get javaManaged => 'Gestionada';
+
+  @override
+  String get javaOverride => 'Elegida a mano';
+
+  @override
+  String get javaSystem => 'Del sistema';
+
+  @override
+  String get instanceChangeVersion => 'Cambiar versión';
+
+  @override
+  String changeVersionTitle(Object name) {
+    return 'Cambiar versión de «$name»';
+  }
+
+  @override
+  String changeVersionCurrent(Object version) {
+    return 'Ahora: $version';
+  }
+
+  @override
+  String get changeVersionApply => 'Cambiar versión';
+
+  @override
+  String get changeVersionWarning =>
+      'Bajar de versión puede romper los mundos, y los mods tienen que ser de la nueva versión.';
+
+  @override
+  String get changeVersionBackup => 'Copia antes';
+
+  @override
+  String changeVersionBackupLabel(Object version) {
+    return 'Antes de cambiar desde $version';
+  }
+
+  @override
+  String changeVersionDone(Object version) {
+    return 'Versión cambiada a $version';
+  }
+
+  @override
+  String get trashTitle => 'Papelera';
+
+  @override
+  String trashHint(int days) {
+    return 'Las instancias eliminadas se guardan aquí $days días, con sus copias de seguridad.';
+  }
+
+  @override
+  String get trashEmptyStateTitle => 'La papelera está vacía';
+
+  @override
+  String trashEmptyStateBody(int days) {
+    return 'Lo que elimines se queda aquí $days días por si cambias de idea.';
+  }
+
+  @override
+  String get trashRestore => 'Recuperar';
+
+  @override
+  String trashRestored(Object name) {
+    return '«$name» se recuperó';
+  }
+
+  @override
+  String get trashPurge => 'Borrar para siempre';
+
+  @override
+  String trashPurgeTitle(Object name) {
+    return '¿Borrar «$name» para siempre?';
+  }
+
+  @override
+  String trashEmptyTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '¿Borrar $count instancias para siempre?',
+      one: '¿Borrar 1 instancia para siempre?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trashPurgeBody =>
+      'Se borran sus mundos, mods y copias de seguridad. No se puede deshacer.';
+
+  @override
+  String get trashEmptyAll => 'Vaciar papelera';
+
+  @override
+  String trashDeletedAgo(Object when) {
+    return 'eliminada $when';
+  }
+
+  @override
+  String trashDaysLeft(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'quedan $days días',
+      one: 'queda 1 día',
+      zero: 'se borra hoy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get doctorDiagnose => 'Diagnosticar';
+
+  @override
+  String doctorTitle(Object name) {
+    return 'Doctor · $name';
+  }
+
+  @override
+  String get doctorAnalyzing =>
+      'Revisando el crash report, los registros y los mods…';
+
+  @override
+  String get doctorHealthyTitle => 'No vemos ningún problema';
+
+  @override
+  String get doctorHealthyBody =>
+      'La última partida no dejó errores conocidos. Si el juego sigue fallando, revisa los registros.';
+
+  @override
+  String doctorCritical(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count graves',
+      one: '1 grave',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String doctorWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count avisos',
+      one: '1 aviso',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String doctorInfo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notas',
+      one: '1 nota',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get doctorCrashExcerpt => 'Resumen del cierre';
+
+  @override
+  String get doctorOpenReport => 'Abrir crash report';
+
+  @override
+  String doctorConfidence(int value) {
+    return 'Confianza $value %';
+  }
+
+  @override
+  String get doctorCulprit => 'Culpable';
+
+  @override
+  String get doctorApplyFix => 'Aplicar arreglo';
+
+  @override
+  String get doctorFixApplied => 'Arreglo aplicado';
+
+  @override
+  String get doctorRerun => 'Volver a analizar';
+
+  @override
+  String get crashBannerTitle => 'El juego se cerró inesperadamente';
+
+  @override
+  String trayOpen(Object app) {
+    return 'Abrir $app';
+  }
+
+  @override
+  String trayPlay(Object name) {
+    return 'Jugar «$name»';
+  }
+
+  @override
+  String get trayQuit => 'Salir';
+
+  @override
+  String get firstRunSkip => 'Saltar asistente';
+
+  @override
+  String get firstRunStepWelcome => 'Bienvenida';
+
+  @override
+  String get firstRunStepImport => 'Importar';
+
+  @override
+  String get firstRunStepAccount => 'Cuenta';
+
+  @override
+  String get firstRunStepDone => 'Listo';
+
+  @override
+  String get firstRunRailHint => 'Puedes cambiar todo esto luego en Ajustes.';
+
+  @override
+  String firstRunWelcomeTitle(Object app) {
+    return 'Te damos la bienvenida a $app';
+  }
+
+  @override
+  String get firstRunWelcomeBody =>
+      'Un launcher de Minecraft ligero para tus instancias, mods y servidores. En un par de pasos traemos lo que ya tienes y añadimos tu cuenta.';
+
+  @override
+  String get firstRunLanguageSystem => 'El del sistema';
+
+  @override
+  String get firstRunStart => 'Empezar';
+
+  @override
+  String get firstRunImportTitle => 'Trae lo que ya tienes';
+
+  @override
+  String get firstRunImportBody =>
+      'Primero ves qué se importaría; nada se copia hasta que lo confirmes. Los originales no se tocan.';
+
+  @override
+  String get firstRunImportNoneTitle => 'No encontramos otros launchers';
+
+  @override
+  String get firstRunImportNoneBody =>
+      'Puedes crear instancias desde cero o importar más tarde.';
+
+  @override
+  String get firstRunRoxy => 'Roxy Launcher';
+
+  @override
+  String get firstRunMinecraft => 'Launcher oficial (.minecraft)';
+
+  @override
+  String firstRunRoxySummary(int count, Object size, Object shared) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count instancias · $size',
+      one: '1 instancia · $size',
+      zero: 'Nada nuevo que importar',
+    );
+    return '$_temp0 · reutiliza $shared de librerías y assets';
+  }
+
+  @override
+  String firstRunMinecraftSummary(Object name, Object version, Object size) {
+    return 'Se crea «$name» ($version) con $size:';
+  }
+
+  @override
+  String firstRunBackups(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count copias',
+      one: '1 copia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String firstRunSkipped(Object reason) {
+    return 'se omite: $reason';
+  }
+
+  @override
+  String get firstRunImportAction => 'Importar';
+
+  @override
+  String get firstRunImporting => 'Importando…';
+
+  @override
+  String firstRunImportingFiles(int done, int total) {
+    return '$done de $total archivos';
+  }
+
+  @override
+  String firstRunImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count instancias importadas',
+      one: '1 instancia importada',
+      zero: 'No se importó ninguna instancia',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get firstRunSourceDone => 'Hecho';
+
+  @override
+  String get firstRunNotNow => 'Ahora no';
+
+  @override
+  String get firstRunAccountTitle => 'Añade tu cuenta';
+
+  @override
+  String get firstRunAccountBody =>
+      'Con una cuenta de Microsoft juegas en servidores y usas tu skin. Una offline vale para jugar solo.';
+
+  @override
+  String get firstRunMicrosoftDesc =>
+      'Inicia sesión con un código en el navegador.';
+
+  @override
+  String get firstRunOfflineDesc =>
+      'Solo un nombre. Sin skins ni servidores con verificación.';
+
+  @override
+  String get firstRunAccountsAdded => 'Cuentas añadidas';
+
+  @override
+  String get firstRunDoneTitle => 'Todo listo';
+
+  @override
+  String get firstRunDoneBody =>
+      'Ya puedes jugar. Esto es lo que hemos preparado:';
+
+  @override
+  String get firstRunNoInstances => 'ninguna todavía';
+
+  @override
+  String get firstRunAccount => 'Cuenta';
+
+  @override
+  String get firstRunAppearanceHint => 'fondo y acento en Ajustes';
+
+  @override
+  String firstRunFinish(Object app) {
+    return 'Ir a $app';
+  }
+
+  @override
+  String get sectionSaves => 'Mundos';
+
+  @override
+  String get sectionMods => 'Mods';
+
+  @override
+  String get sectionConfig => 'Configuración';
+
+  @override
+  String get sectionResourcepacks => 'Packs de recursos';
+
+  @override
+  String get sectionShaderpacks => 'Shaders';
+
+  @override
+  String get sectionScreenshots => 'Capturas';
+
+  @override
+  String get sectionOptions => 'Opciones';
+
+  @override
+  String get sectionServers => 'Servidores';
+
+  @override
+  String get skinsTitle => 'Skins';
+
+  @override
+  String get skinsSubtitle =>
+      'Tu skin y tus capas, tal y como te ven los demás';
+
+  @override
+  String get skinsNoAccountTitle => 'Sin cuenta';
+
+  @override
+  String get skinsNoAccountBody =>
+      'Añade una cuenta de Microsoft para ver y cambiar tu skin.';
+
+  @override
+  String get skinsAddAccount => 'Añadir cuenta';
+
+  @override
+  String get skinsOfflineTitle => 'Las skins son de las cuentas de Microsoft';
+
+  @override
+  String skinsOfflineBody(Object name) {
+    return '«$name» es una cuenta offline: el juego le pone una skin por defecto y no se puede cambiar desde aquí. Añade una cuenta de Microsoft para elegir tu skin y tus capas.';
+  }
+
+  @override
+  String get skinsPngFiles => 'Imágenes PNG';
+
+  @override
+  String get skinsInvalidPng =>
+      'La skin debe ser un PNG de 64×64 o 64×32 píxeles.';
+
+  @override
+  String get skinsApplied => 'Skin actualizada';
+
+  @override
+  String get skinsResetTitle => '¿Restablecer la skin?';
+
+  @override
+  String get skinsResetBody =>
+      'Tu cuenta volverá a la skin por defecto. La actual no se guarda: si la quieres, ten a mano el PNG.';
+
+  @override
+  String get skinsReset => 'Restablecer';
+
+  @override
+  String get skinsResetDone => 'Skin restablecida';
+
+  @override
+  String get skinsTextureMissing => 'No se pudo cargar la textura';
+
+  @override
+  String get skinsPreview => 'Vista previa';
+
+  @override
+  String get skinsSlim => 'Delgada';
+
+  @override
+  String get skinsClassic => 'Clásica';
+
+  @override
+  String get skinsSlimDesc => 'Brazos de 3 píxeles';
+
+  @override
+  String get skinsClassicDesc => 'Brazos de 4 píxeles';
+
+  @override
+  String get skinsDragHint => 'Arrastra para girar · doble clic para centrar';
+
+  @override
+  String get skinsFront => 'Frente';
+
+  @override
+  String get skinsBack => 'Espalda';
+
+  @override
+  String get skinsChange => 'Cambiar skin';
+
+  @override
+  String get skinsFromFile => 'Archivo PNG';
+
+  @override
+  String get skinsFromUrl => 'URL';
+
+  @override
+  String get skinsPickPng => 'Elegir un PNG…';
+
+  @override
+  String get skinsPngHint =>
+      '64×64 o 64×32 píxeles. Se ve aquí antes de aplicarla.';
+
+  @override
+  String get skinsUrl => 'URL de la imagen';
+
+  @override
+  String get skinsUrlHint => 'Un enlace directo a un PNG público.';
+
+  @override
+  String get skinsModel => 'Modelo';
+
+  @override
+  String get skinsApply => 'Aplicar skin';
+
+  @override
+  String get skinsCapes => 'Capas';
+
+  @override
+  String skinsCapesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capas',
+      one: '1 capa',
+      zero: 'ninguna',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get skinsNoCapes => 'Esta cuenta no tiene capas.';
+
+  @override
+  String get skinsNoCape => 'Sin capa';
+
+  @override
+  String get skinsCape => 'Capa';
+
+  @override
+  String crashBannerCode(int code) {
+    return 'código $code';
+  }
+
+  @override
+  String get firstRunHighlights => 'Lo que vas a encontrar';
+
+  @override
+  String get firstRunFeatureInstances => 'Instancias separadas';
+
+  @override
+  String get firstRunFeatureInstancesBody =>
+      'Cada una con su versión, loader, mundos y copias.';
+
+  @override
+  String get firstRunFeatureContent => 'Mods y modpacks';
+
+  @override
+  String get firstRunFeatureContentBody =>
+      'Busca e instala desde Modrinth y CurseForge.';
+
+  @override
+  String get firstRunFeatureDoctor => 'Doctor';
+
+  @override
+  String get firstRunFeatureDoctorBody =>
+      'Si el juego se cierra, te dice por qué y lo arregla.';
 }

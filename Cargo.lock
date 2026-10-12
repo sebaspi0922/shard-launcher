@@ -1780,17 +1780,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lcore_bridge"
-version = "0.1.0"
-dependencies = [
- "flutter_rust_bridge",
- "lcore",
- "sysinfo",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "libbz2-rs-sys"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2805,6 +2794,18 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest 0.11.3",
+]
+
+[[package]]
+name = "shard_bridge"
+version = "0.1.0"
+dependencies = [
+ "flutter_rust_bridge",
+ "lcore",
+ "serde_json",
+ "sysinfo",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

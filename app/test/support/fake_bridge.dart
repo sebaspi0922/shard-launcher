@@ -1,8 +1,9 @@
 // Puente falso con datos fijos para tests y goldens.
 
 import 'dart:async';
+import 'dart:typed_data';
 
-import 'package:lcore_app/core/bridge.dart';
+import 'package:shard/core/bridge.dart';
 
 /// «Ahora» fijo de los tests (el reloj de la UI se ajusta a él en `pumpApp`).
 final kTestNow = DateTime(2026, 10, 11, 18, 30);
@@ -274,10 +275,13 @@ class FakeBridge implements LauncherBridge {
   @override
   Future<List<GameView>> runningGames() async => const [];
 
+  /// Comportamiento al cerrar que devuelve `getSettings`.
+  String closeBehavior = 'ask';
+
   @override
   Future<SettingsView> getSettings() async => SettingsView(
         language: language,
-        closeBehavior: 'ask',
+        closeBehavior: closeBehavior,
         allowMultipleGames: false,
         defaultMemoryMb: 4096,
         defaultJvmArgs: const ['-XX:+UseG1GC'],
@@ -724,6 +728,183 @@ class FakeBridge implements LauncherBridge {
               ),
       ];
 
+  // --- Versión y papelera ---------------------------------------------------
+
+  List<TrashedView> trash = sampleTrash();
+  final List<(String, String, String, String?)> versionChanges = [];
+
+  @override
+  Future<InstanceView> changeInstanceVersion({
+    required String id,
+    required String mc,
+    required String loader,
+    String? loaderVersion,
+  }) async {
+    versionChanges.add((id, mc, loader, loaderVersion));
+    final old = instances.firstWhere((i) => i.id == id);
+    final i = fakeInstance(
+      id: old.id,
+      name: old.name,
+      mc: mc,
+      loader: loader,
+      loaderVersion: loaderVersion,
+    );
+    instances = [for (final x in instances) x.id == id ? i : x];
+    return i;
+  }
+
+  @override
+  Future<List<TrashedView>> listTrash() async => trash;
+
+  @override
+  Future<InstanceView> restoreInstance(String trashId) async {
+    final t = trash.firstWhere((t) => t.trashId == trashId);
+    trash = trash.where((x) => x != t).toList();
+    final i = fakeInstance(id: t.id, name: t.name, mc: t.mc, loader: t.loader);
+    instances = [...instances, i];
+    return i;
+  }
+
+  @override
+  Future<void> purgeInstance(String trashId) async =>
+      trash = trash.where((t) => t.trashId != trashId).toList();
+
+  // --- Skins -------------------------------------------------------------------
+
+  ProfileView profile = sampleProfile();
+  final List<String> skinCalls = [];
+
+  ProfileView _withCape(String? capeId) => ProfileView(
+        id: profile.id,
+        name: profile.name,
+        skins: profile.skins,
+        capes: [
+          for (final c in profile.capes)
+            CapeView(id: c.id, active: c.id == capeId, url: c.url, alias: c.alias),
+        ],
+      );
+
+  @override
+  Future<ProfileView> getProfile({String? account}) async => profile;
+
+  @override
+  Future<ProfileView> setSkinUrl(String url, {String? account, required bool slim}) async {
+    skinCalls.add('url:$url:$slim');
+    return profile;
+  }
+
+  @override
+  Future<ProfileView> uploadSkin(String path, {String? account, required bool slim}) async {
+    skinCalls.add('upload:$path:$slim');
+    return profile;
+  }
+
+  @override
+  Future<ProfileView> resetSkin({String? account}) async {
+    skinCalls.add('reset');
+    return profile;
+  }
+
+  @override
+  Future<ProfileView> showCape(String capeId, {String? account}) async =>
+      profile = _withCape(capeId);
+
+  @override
+  Future<ProfileView> hideCape({String? account}) async =>
+      profile = _withCape(null);
+
+  // --- Doctor ------------------------------------------------------------------
+
+  DoctorReportView report = sampleReport();
+  final List<String> appliedFixes = [];
+
+  @override
+  Future<DoctorReportView> diagnose(String instanceId) async => report;
+
+  @override
+  Future<String> applyFix(String instanceId, String diagnosisId) async {
+    appliedFixes.add(diagnosisId);
+    report = DoctorReportView(
+      healthy: report.healthy,
+      diagnoses: report.diagnoses.where((d) => d.id != diagnosisId).toList(),
+      crashExcerpt: report.crashExcerpt,
+      crashReportPath: report.crashReportPath,
+    );
+    return 'Arreglo aplicado';
+  }
+
+  // --- Java --------------------------------------------------------------------
+
+  List<JavaView> javas = sampleJavas();
+
+  /// Se completa a mano para ver la instalación en curso.
+  Completer<JavaView>? javaCompleter;
+
+  @override
+  Future<List<JavaView>> listJava() async => javas;
+
+  @override
+  Future<JavaView> installJava(int major) {
+    final c = javaCompleter;
+    if (c != null) return c.future;
+    final j = JavaView(
+      path: '/home/user/.local/share/shard/java/$major/bin/java',
+      major: major,
+      version: '$major.0.1',
+      vendor: 'Eclipse Adoptium',
+      source: 'managed',
+    );
+    javas = [...javas, j];
+    return Future.value(j);
+  }
+
+  // --- Preferencias de la interfaz -----------------------------------------------
+
+  String uiPrefs = '{"first_run_done":true}';
+
+  @override
+  String getUiPrefs() => uiPrefs;
+
+  @override
+  Future<void> setUiPrefs(String json) async => uiPrefs = json;
+
+  @override
+  Future<String> importBackground(String path) async =>
+      '/home/user/.local/share/shard/backgrounds/fondo.png';
+
+  // --- Importación -------------------------------------------------------------
+
+  ImportSourcesView sources = const ImportSourcesView(
+    roxy: '/home/user/.local/share/.roxy',
+    minecraft: '/home/user/.minecraft',
+  );
+  final List<String> imported = [];
+
+  @override
+  Future<ImportSourcesView> detectImportSources() async => sources;
+
+  @override
+  Future<RoxyPlanView> planRoxyImport() async => sampleRoxyPlan();
+
+  @override
+  Future<RoxyImportView> importRoxy() async {
+    imported.add('roxy');
+    return RoxyImportView(
+      imported: const ['survival-amigos', 'create-aeronautica'],
+      linkedFiles: BigInt.from(4210),
+      copiedFiles: BigInt.from(1862),
+    );
+  }
+
+  @override
+  Future<MinecraftPlanView> planMinecraftImport() async => sampleMinecraftPlan();
+
+  @override
+  Future<String?> importMinecraft() async {
+    imported.add('minecraft');
+    return 'minecraft-1-21-4';
+  }
+
   Future<void> close() => _events.close();
 }
 
@@ -971,3 +1152,188 @@ Map<String, ServerStatusView> sampleStatuses() => {
         motd: 'Create SMP — trenes, molinos y mucha paciencia',
       ),
     };
+
+List<TrashedView> sampleTrash() => [
+      TrashedView(
+        trashId: 'pruebas-viejas~${_ago(const Duration(days: 2))}',
+        id: 'pruebas-viejas',
+        name: 'Pruebas viejas',
+        mc: '1.20.4',
+        loader: 'fabric',
+        playtimeSeconds: BigInt.from(3 * 3600),
+        deletedAt: _ago(const Duration(days: 2)),
+      ),
+      TrashedView(
+        trashId: 'hardcore-1~${_ago(const Duration(days: 19))}',
+        id: 'hardcore-1',
+        name: 'Hardcore 1',
+        mc: '1.21.1',
+        loader: 'vanilla',
+        playtimeSeconds: BigInt.from(41 * 60),
+        deletedAt: _ago(const Duration(days: 19)),
+      ),
+    ];
+
+ProfileView sampleProfile() => const ProfileView(
+      id: '0f3c2b1a9d8e4f7a8b6c5d4e3f2a1b0c',
+      name: 'NadiaK',
+      skins: [
+        SkinView(
+          id: 's1',
+          state: 'ACTIVE',
+          url: 'http://textures.minecraft.net/texture/muestra-skin',
+          slim: true,
+        ),
+      ],
+      capes: [
+        CapeView(
+          id: 'c1',
+          active: true,
+          url: 'http://textures.minecraft.net/texture/muestra-capa-1',
+          alias: 'Pionera',
+        ),
+        CapeView(
+          id: 'c2',
+          active: false,
+          url: 'http://textures.minecraft.net/texture/muestra-capa-2',
+          alias: 'Aniversario',
+        ),
+      ],
+    );
+
+DoctorReportView sampleReport() => const DoctorReportView(
+      healthy: false,
+      crashExcerpt:
+          'Description: Mod resolution failed\n'
+          'Mod sodium-extra requires sodium 0.6.0 or later, found 0.5.11',
+      crashReportPath:
+          '/home/user/.local/share/shard/instances/survival-amigos/minecraft/crash-reports/crash-2026-10-11_18.02.31-client.txt',
+      diagnoses: [
+        DiagnosisView(
+          id: 'mod_dependency',
+          kind: 'mod_dependency',
+          category: 'missing_dependency',
+          severity: 'critical',
+          title: 'Falta una dependencia de un mod',
+          explanation:
+              'sodium-extra necesita una versión más nueva de Sodium. Actualiza Sodium o desactiva sodium-extra.',
+          confidence: 92,
+          culprit: 'sodium-extra-0.5.4+mc1.21.4.jar',
+          fix: 'Desactivar el mod sodium-extra-0.5.4+mc1.21.4.jar',
+        ),
+        DiagnosisView(
+          id: 'low_memory',
+          kind: 'low_memory',
+          category: 'memory',
+          severity: 'warning',
+          title: 'Poca memoria para tantos mods',
+          explanation:
+              'La instancia tiene 87 mods y 2 GB asignados. Con menos de 4 GB es habitual que se quede sin memoria.',
+          confidence: 64,
+          fix: 'Asignar 4096 MB de memoria',
+        ),
+        DiagnosisView(
+          id: 'world_lock',
+          kind: 'world_lock',
+          category: 'world_corruption',
+          severity: 'info',
+          title: 'Quedó un bloqueo de mundo',
+          explanation:
+              'Un session.lock de la última partida sigue ahí. No suele dar problemas, pero puede impedir abrir el mundo.',
+          confidence: 40,
+          culprit: 'saves/Mundo de verano/session.lock',
+        ),
+      ],
+    );
+
+List<JavaView> sampleJavas() => const [
+      JavaView(
+        path: '/home/user/.local/share/shard/java/21/bin/java',
+        major: 21,
+        version: '21.0.5',
+        vendor: 'Eclipse Adoptium',
+        source: 'managed',
+      ),
+      JavaView(
+        path: '/usr/lib/jvm/java-17-openjdk/bin/java',
+        major: 17,
+        version: '17.0.13',
+        vendor: 'Arch Linux',
+        source: 'system',
+      ),
+      JavaView(
+        path: '/usr/lib/jvm/java-8-openjdk/jre/bin/java',
+        major: 8,
+        version: '1.8.0_432',
+        vendor: 'Oracle Corporation',
+        source: 'system',
+      ),
+    ];
+
+RoxyPlanView sampleRoxyPlan() {
+  const gb = 1024 * 1024 * 1024;
+  const mb = 1024 * 1024;
+  PlannedInstanceView p(
+    String id,
+    String name,
+    String mc,
+    String loader,
+    int files,
+    int bytes, {
+    int backups = 0,
+    String? skipped,
+  }) =>
+      PlannedInstanceView(
+        originalId: id,
+        name: name,
+        newId: id,
+        mc: mc,
+        loader: loader,
+        files: BigInt.from(files),
+        bytes: BigInt.from(bytes),
+        backups: backups,
+        skippedReason: skipped,
+      );
+  return RoxyPlanView(
+    source: '/home/user/.local/share/.roxy',
+    instances: [
+      p('survival-amigos', 'Survival con amigos', '1.21.4', 'fabric', 2140, (1.4 * gb).round(), backups: 3),
+      p('create-aeronautica', 'Create: Aeronáutica', '1.20.1', 'forge', 3810, (2.1 * gb).round(), backups: 1),
+      p('vanilla-puro', 'Vanilla puro', '1.21.4', 'vanilla', 312, 412 * mb),
+      p('viejo', 'Pruebas 2023', '1.19.2', 'fabric', 0, 0, skipped: 'ya importada'),
+    ],
+    sharedFiles: BigInt.from(4210),
+    sharedBytes: BigInt.from((1.2 * gb).round()),
+    versionJars: BigInt.from(4),
+    javaMajors: Uint32List.fromList([17, 21]),
+    warnings: const [],
+  );
+}
+
+MinecraftPlanView sampleMinecraftPlan() {
+  const mb = 1024 * 1024;
+  SectionView s(String name, int files, int bytes) => SectionView(
+        section: name,
+        present: files > 0,
+        files: BigInt.from(files),
+        bytes: BigInt.from(bytes),
+      );
+  return MinecraftPlanView(
+    source: '/home/user/.minecraft',
+    name: 'Minecraft 1.21.4',
+    newId: 'minecraft-1-21-4',
+    mc: '1.21.4',
+    loader: 'vanilla',
+    sections: [
+      s('saves', 812, 640 * mb),
+      s('resourcepacks', 3, 92 * mb),
+      s('screenshots', 57, 120 * mb),
+      s('options', 1, 6 * 1024),
+      s('servers', 1, 2 * 1024),
+      s('mods', 0, 0),
+    ],
+    files: BigInt.from(874),
+    bytes: BigInt.from(852 * mb),
+    warnings: const [],
+  );
+}

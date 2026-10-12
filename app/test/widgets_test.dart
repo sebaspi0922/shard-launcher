@@ -2,10 +2,10 @@
 // navegación por el raíl.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lcore_app/ui/accounts/account_dialogs.dart';
-import 'package:lcore_app/ui/instances/instances_page.dart';
-import 'package:lcore_app/ui/settings/settings_page.dart';
-import 'package:lcore_app/ui/widgets/common.dart';
+import 'package:shard/ui/accounts/account_dialogs.dart';
+import 'package:shard/ui/instances/instances_page.dart';
+import 'package:shard/ui/settings/settings_page.dart';
+import 'package:shard/ui/widgets/common.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/fake_bridge.dart';

@@ -28,13 +28,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navSettings => 'Settings';
 
   @override
-  String get comingSoonTitle => 'Coming soon';
-
-  @override
-  String get comingSoonSkins =>
-      '3D view of your skin, upload a new one and manage capes.';
-
-  @override
   String get windowMinimize => 'Minimize';
 
   @override
@@ -1646,4 +1639,642 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeSeeAllServers => 'See all';
+
+  @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get appearanceBackground => 'Background';
+
+  @override
+  String get appearanceBackgroundDesc =>
+      'Behind the whole app. Your image is copied to the data folder.';
+
+  @override
+  String get appearanceAurora => 'Aurora';
+
+  @override
+  String get appearanceLandscape => 'Landscape';
+
+  @override
+  String get appearanceImage => 'Your image';
+
+  @override
+  String get appearancePickImage => 'Choose image…';
+
+  @override
+  String get appearanceChangeImage => 'Change image';
+
+  @override
+  String get appearanceImages => 'Images';
+
+  @override
+  String get appearanceAccent => 'Accent color';
+
+  @override
+  String get appearanceAccentDesc => 'Buttons, selection and highlights.';
+
+  @override
+  String get appearanceAccentAuto => 'Auto';
+
+  @override
+  String get appearanceAccentAutoDesc =>
+      'Automatic: taken from the chosen background.';
+
+  @override
+  String get appearanceBlur => 'Blur';
+
+  @override
+  String get appearanceBlurDesc => 'Of the landscape or your image.';
+
+  @override
+  String get appearanceDim => 'Dimming';
+
+  @override
+  String get appearanceDimDesc => 'Keeps text readable over the background.';
+
+  @override
+  String get appearancePerformance => 'Performance mode';
+
+  @override
+  String get appearancePerformanceDesc =>
+      'No blur or background effects. Handy on modest machines.';
+
+  @override
+  String get settingsAutostart => 'Open at login';
+
+  @override
+  String settingsAutostartDesc(Object app) {
+    return '$app starts with your session, hidden in the tray.';
+  }
+
+  @override
+  String get settingsJava => 'Java';
+
+  @override
+  String get javaDetected => 'Detected Java';
+
+  @override
+  String get javaDetectedDesc =>
+      'Each version uses the right one; if it\'s missing, it\'s installed when you play.';
+
+  @override
+  String get javaRescan => 'Scan again';
+
+  @override
+  String get javaNone =>
+      'No Java found. The right one will be installed when you play.';
+
+  @override
+  String get javaInstall => 'Install Java';
+
+  @override
+  String get javaInstallDesc =>
+      'Downloads an Eclipse Adoptium JRE into the data folder.';
+
+  @override
+  String javaInstalling(int major) {
+    return 'Installing Java $major…';
+  }
+
+  @override
+  String javaInstallingProgress(int major, Object done, Object total) {
+    return 'Installing Java $major: $done of $total';
+  }
+
+  @override
+  String javaInstalled(int major, Object version) {
+    return 'Java $major installed ($version)';
+  }
+
+  @override
+  String get javaManaged => 'Managed';
+
+  @override
+  String get javaOverride => 'Chosen manually';
+
+  @override
+  String get javaSystem => 'System';
+
+  @override
+  String get instanceChangeVersion => 'Change version';
+
+  @override
+  String changeVersionTitle(Object name) {
+    return 'Change version of “$name”';
+  }
+
+  @override
+  String changeVersionCurrent(Object version) {
+    return 'Now: $version';
+  }
+
+  @override
+  String get changeVersionApply => 'Change version';
+
+  @override
+  String get changeVersionWarning =>
+      'Downgrading can break worlds, and mods must match the new version.';
+
+  @override
+  String get changeVersionBackup => 'Back up first';
+
+  @override
+  String changeVersionBackupLabel(Object version) {
+    return 'Before changing from $version';
+  }
+
+  @override
+  String changeVersionDone(Object version) {
+    return 'Version changed to $version';
+  }
+
+  @override
+  String get trashTitle => 'Trash';
+
+  @override
+  String trashHint(int days) {
+    return 'Deleted instances stay here for $days days, with their backups.';
+  }
+
+  @override
+  String get trashEmptyStateTitle => 'The trash is empty';
+
+  @override
+  String trashEmptyStateBody(int days) {
+    return 'Anything you delete stays here for $days days in case you change your mind.';
+  }
+
+  @override
+  String get trashRestore => 'Restore';
+
+  @override
+  String trashRestored(Object name) {
+    return '“$name” restored';
+  }
+
+  @override
+  String get trashPurge => 'Delete forever';
+
+  @override
+  String trashPurgeTitle(Object name) {
+    return 'Delete “$name” forever?';
+  }
+
+  @override
+  String trashEmptyTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Delete $count instances forever?',
+      one: 'Delete 1 instance forever?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get trashPurgeBody =>
+      'Its worlds, mods and backups are deleted. This can\'t be undone.';
+
+  @override
+  String get trashEmptyAll => 'Empty trash';
+
+  @override
+  String trashDeletedAgo(Object when) {
+    return 'deleted $when';
+  }
+
+  @override
+  String trashDaysLeft(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days left',
+      one: '1 day left',
+      zero: 'deleted today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get doctorDiagnose => 'Diagnose';
+
+  @override
+  String doctorTitle(Object name) {
+    return 'Doctor · $name';
+  }
+
+  @override
+  String get doctorAnalyzing => 'Checking the crash report, logs and mods…';
+
+  @override
+  String get doctorHealthyTitle => 'No problems found';
+
+  @override
+  String get doctorHealthyBody =>
+      'The last session left no known errors. If the game keeps failing, check the logs.';
+
+  @override
+  String doctorCritical(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count critical',
+      one: '1 critical',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String doctorWarnings(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count warnings',
+      one: '1 warning',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String doctorInfo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count notes',
+      one: '1 note',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get doctorCrashExcerpt => 'Crash summary';
+
+  @override
+  String get doctorOpenReport => 'Open crash report';
+
+  @override
+  String doctorConfidence(int value) {
+    return 'Confidence $value%';
+  }
+
+  @override
+  String get doctorCulprit => 'Culprit';
+
+  @override
+  String get doctorApplyFix => 'Apply fix';
+
+  @override
+  String get doctorFixApplied => 'Fix applied';
+
+  @override
+  String get doctorRerun => 'Analyze again';
+
+  @override
+  String get crashBannerTitle => 'The game closed unexpectedly';
+
+  @override
+  String trayOpen(Object app) {
+    return 'Open $app';
+  }
+
+  @override
+  String trayPlay(Object name) {
+    return 'Play “$name”';
+  }
+
+  @override
+  String get trayQuit => 'Quit';
+
+  @override
+  String get firstRunSkip => 'Skip setup';
+
+  @override
+  String get firstRunStepWelcome => 'Welcome';
+
+  @override
+  String get firstRunStepImport => 'Import';
+
+  @override
+  String get firstRunStepAccount => 'Account';
+
+  @override
+  String get firstRunStepDone => 'Done';
+
+  @override
+  String get firstRunRailHint =>
+      'You can change all of this later in Settings.';
+
+  @override
+  String firstRunWelcomeTitle(Object app) {
+    return 'Welcome to $app';
+  }
+
+  @override
+  String get firstRunWelcomeBody =>
+      'A lightweight Minecraft launcher for your instances, mods and servers. In a couple of steps we\'ll bring in what you already have and add your account.';
+
+  @override
+  String get firstRunLanguageSystem => 'Same as the system';
+
+  @override
+  String get firstRunStart => 'Get started';
+
+  @override
+  String get firstRunImportTitle => 'Bring what you already have';
+
+  @override
+  String get firstRunImportBody =>
+      'You see what would be imported first; nothing is copied until you confirm. The originals are left untouched.';
+
+  @override
+  String get firstRunImportNoneTitle => 'No other launchers found';
+
+  @override
+  String get firstRunImportNoneBody =>
+      'You can create instances from scratch or import later.';
+
+  @override
+  String get firstRunRoxy => 'Roxy Launcher';
+
+  @override
+  String get firstRunMinecraft => 'Official launcher (.minecraft)';
+
+  @override
+  String firstRunRoxySummary(int count, Object size, Object shared) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count instances · $size',
+      one: '1 instance · $size',
+      zero: 'Nothing new to import',
+    );
+    return '$_temp0 · reuses $shared of libraries and assets';
+  }
+
+  @override
+  String firstRunMinecraftSummary(Object name, Object version, Object size) {
+    return 'Creates “$name” ($version) with $size:';
+  }
+
+  @override
+  String firstRunBackups(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count backups',
+      one: '1 backup',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String firstRunSkipped(Object reason) {
+    return 'skipped: $reason';
+  }
+
+  @override
+  String get firstRunImportAction => 'Import';
+
+  @override
+  String get firstRunImporting => 'Importing…';
+
+  @override
+  String firstRunImportingFiles(int done, int total) {
+    return '$done of $total files';
+  }
+
+  @override
+  String firstRunImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count instances imported',
+      one: '1 instance imported',
+      zero: 'No instances imported',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get firstRunSourceDone => 'Done';
+
+  @override
+  String get firstRunNotNow => 'Not now';
+
+  @override
+  String get firstRunAccountTitle => 'Add your account';
+
+  @override
+  String get firstRunAccountBody =>
+      'A Microsoft account lets you join servers and use your skin. An offline one is fine for playing alone.';
+
+  @override
+  String get firstRunMicrosoftDesc => 'Sign in with a code in your browser.';
+
+  @override
+  String get firstRunOfflineDesc =>
+      'Just a name. No skins or servers that verify accounts.';
+
+  @override
+  String get firstRunAccountsAdded => 'Added accounts';
+
+  @override
+  String get firstRunDoneTitle => 'All set';
+
+  @override
+  String get firstRunDoneBody =>
+      'You\'re ready to play. Here\'s what we set up:';
+
+  @override
+  String get firstRunNoInstances => 'none yet';
+
+  @override
+  String get firstRunAccount => 'Account';
+
+  @override
+  String get firstRunAppearanceHint => 'background and accent in Settings';
+
+  @override
+  String firstRunFinish(Object app) {
+    return 'Go to $app';
+  }
+
+  @override
+  String get sectionSaves => 'Worlds';
+
+  @override
+  String get sectionMods => 'Mods';
+
+  @override
+  String get sectionConfig => 'Config';
+
+  @override
+  String get sectionResourcepacks => 'Resource packs';
+
+  @override
+  String get sectionShaderpacks => 'Shaders';
+
+  @override
+  String get sectionScreenshots => 'Screenshots';
+
+  @override
+  String get sectionOptions => 'Options';
+
+  @override
+  String get sectionServers => 'Servers';
+
+  @override
+  String get skinsTitle => 'Skins';
+
+  @override
+  String get skinsSubtitle => 'Your skin and capes, as other players see them';
+
+  @override
+  String get skinsNoAccountTitle => 'No account';
+
+  @override
+  String get skinsNoAccountBody =>
+      'Add a Microsoft account to see and change your skin.';
+
+  @override
+  String get skinsAddAccount => 'Add account';
+
+  @override
+  String get skinsOfflineTitle => 'Skins belong to Microsoft accounts';
+
+  @override
+  String skinsOfflineBody(Object name) {
+    return '“$name” is an offline account: the game gives it a default skin that can\'t be changed here. Add a Microsoft account to pick your skin and capes.';
+  }
+
+  @override
+  String get skinsPngFiles => 'PNG images';
+
+  @override
+  String get skinsInvalidPng => 'The skin must be a 64×64 or 64×32 PNG.';
+
+  @override
+  String get skinsApplied => 'Skin updated';
+
+  @override
+  String get skinsResetTitle => 'Reset your skin?';
+
+  @override
+  String get skinsResetBody =>
+      'Your account goes back to the default skin. The current one isn\'t kept: keep the PNG if you want it back.';
+
+  @override
+  String get skinsReset => 'Reset';
+
+  @override
+  String get skinsResetDone => 'Skin reset';
+
+  @override
+  String get skinsTextureMissing => 'Couldn\'t load the texture';
+
+  @override
+  String get skinsPreview => 'Preview';
+
+  @override
+  String get skinsSlim => 'Slim';
+
+  @override
+  String get skinsClassic => 'Classic';
+
+  @override
+  String get skinsSlimDesc => '3-pixel arms';
+
+  @override
+  String get skinsClassicDesc => '4-pixel arms';
+
+  @override
+  String get skinsDragHint => 'Drag to rotate · double-click to reset';
+
+  @override
+  String get skinsFront => 'Front';
+
+  @override
+  String get skinsBack => 'Back';
+
+  @override
+  String get skinsChange => 'Change skin';
+
+  @override
+  String get skinsFromFile => 'PNG file';
+
+  @override
+  String get skinsFromUrl => 'URL';
+
+  @override
+  String get skinsPickPng => 'Choose a PNG…';
+
+  @override
+  String get skinsPngHint =>
+      '64×64 or 64×32 pixels. Previewed here before applying.';
+
+  @override
+  String get skinsUrl => 'Image URL';
+
+  @override
+  String get skinsUrlHint => 'A direct link to a public PNG.';
+
+  @override
+  String get skinsModel => 'Model';
+
+  @override
+  String get skinsApply => 'Apply skin';
+
+  @override
+  String get skinsCapes => 'Capes';
+
+  @override
+  String skinsCapesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capes',
+      one: '1 cape',
+      zero: 'none',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get skinsNoCapes => 'This account has no capes.';
+
+  @override
+  String get skinsNoCape => 'No cape';
+
+  @override
+  String get skinsCape => 'Cape';
+
+  @override
+  String crashBannerCode(int code) {
+    return 'exit code $code';
+  }
+
+  @override
+  String get firstRunHighlights => 'What you\'ll find';
+
+  @override
+  String get firstRunFeatureInstances => 'Separate instances';
+
+  @override
+  String get firstRunFeatureInstancesBody =>
+      'Each with its own version, loader, worlds and backups.';
+
+  @override
+  String get firstRunFeatureContent => 'Mods and modpacks';
+
+  @override
+  String get firstRunFeatureContentBody =>
+      'Search and install from Modrinth and CurseForge.';
+
+  @override
+  String get firstRunFeatureDoctor => 'Doctor';
+
+  @override
+  String get firstRunFeatureDoctorBody =>
+      'If the game crashes, it tells you why and fixes it.';
 }

@@ -8,10 +8,15 @@ import '../src/rust/api/accounts.dart' as accounts;
 import '../src/rust/api/app.dart' as app;
 import '../src/rust/api/backups.dart' as backups;
 import '../src/rust/api/content.dart' as content;
+import '../src/rust/api/doctor.dart' as doctor;
+import '../src/rust/api/import.dart' as importer;
 import '../src/rust/api/instances.dart' as instances;
+import '../src/rust/api/java.dart' as java;
 import '../src/rust/api/servers.dart' as servers;
 import '../src/rust/api/settings.dart' as settings;
+import '../src/rust/api/skins.dart' as skins;
 import '../src/rust/api/types.dart';
+import '../src/rust/api/ui_prefs.dart' as ui_prefs;
 import '../src/rust/api/worlds.dart' as worlds;
 
 import '../src/rust/api/backups.dart'
@@ -26,7 +31,13 @@ import '../src/rust/api/content.dart'
         InstallOutcomeView,
         IdentifyView,
         ModpackInstallView;
+import '../src/rust/api/doctor.dart' show DoctorReportView;
+import '../src/rust/api/import.dart'
+    show ImportSourcesView, RoxyPlanView, RoxyImportView, MinecraftPlanView;
+import '../src/rust/api/instances.dart' show TrashedView;
+import '../src/rust/api/java.dart' show JavaView;
 import '../src/rust/api/servers.dart' show ServerView, ServerStatusView;
+import '../src/rust/api/skins.dart' show ProfileView;
 import '../src/rust/api/worlds.dart'
     show WorldView, DatapackView, ScreenshotView;
 
@@ -44,7 +55,19 @@ export '../src/rust/api/content.dart'
         InstallOutcomeView,
         IdentifyView,
         ModpackInstallView;
+export '../src/rust/api/doctor.dart' show DiagnosisView, DoctorReportView;
+export '../src/rust/api/import.dart'
+    show
+        ImportSourcesView,
+        PlannedInstanceView,
+        RoxyPlanView,
+        RoxyImportView,
+        SectionView,
+        MinecraftPlanView;
+export '../src/rust/api/instances.dart' show TrashedView;
+export '../src/rust/api/java.dart' show JavaView;
 export '../src/rust/api/servers.dart' show ServerView, ServerStatusView;
+export '../src/rust/api/skins.dart' show ProfileView, SkinView, CapeView;
 export '../src/rust/api/types.dart';
 export '../src/rust/api/worlds.dart'
     show WorldView, DatapackView, ScreenshotView;
@@ -218,6 +241,49 @@ abstract class LauncherBridge {
   Future<List<ServerView>> moveServer(String id, int index);
   Future<int> importServersDat(String instanceId);
   Future<List<ServerStatusView>> pingServers(List<String> addresses);
+
+  // Versión y papelera de instancias.
+  Future<InstanceView> changeInstanceVersion({
+    required String id,
+    required String mc,
+    required String loader,
+    String? loaderVersion,
+  });
+  Future<List<TrashedView>> listTrash();
+  Future<InstanceView> restoreInstance(String trashId);
+  Future<void> purgeInstance(String trashId);
+
+  // Skins (solo Microsoft). `account` = `null` usa la activa.
+  Future<ProfileView> getProfile({String? account});
+  Future<ProfileView> setSkinUrl(String url, {String? account, required bool slim});
+  Future<ProfileView> uploadSkin(String path, {String? account, required bool slim});
+  Future<ProfileView> resetSkin({String? account});
+  Future<ProfileView> showCape(String capeId, {String? account});
+  Future<ProfileView> hideCape({String? account});
+
+  // Doctor.
+  Future<DoctorReportView> diagnose(String instanceId);
+
+  /// Aplica el arreglo de un diagnóstico (el núcleo lo recalcula).
+  Future<String> applyFix(String instanceId, String diagnosisId);
+
+  // Java.
+  Future<List<JavaView>> listJava();
+  Future<JavaView> installJava(int major);
+
+  // Preferencias de la interfaz (`ui.json`).
+  String getUiPrefs();
+  Future<void> setUiPrefs(String json);
+
+  /// Copia una imagen de fondo a la carpeta de datos y devuelve la copia.
+  Future<String> importBackground(String path);
+
+  // Importación (primer arranque).
+  Future<ImportSourcesView> detectImportSources();
+  Future<RoxyPlanView> planRoxyImport();
+  Future<RoxyImportView> importRoxy();
+  Future<MinecraftPlanView> planMinecraftImport();
+  Future<String?> importMinecraft();
 }
 
 /// Implementación sobre el puente de Rust. `start` ya se llamó en `main`.
@@ -621,6 +687,96 @@ class RustBridge implements LauncherBridge {
   @override
   Future<List<ServerStatusView>> pingServers(List<String> addresses) =>
       servers.pingServers(addresses: addresses);
+
+  @override
+  Future<InstanceView> changeInstanceVersion({
+    required String id,
+    required String mc,
+    required String loader,
+    String? loaderVersion,
+  }) =>
+      instances.changeInstanceVersion(
+        id: id,
+        mc: mc,
+        loader: loader,
+        loaderVersion: loaderVersion,
+      );
+
+  @override
+  Future<List<TrashedView>> listTrash() => instances.listTrash();
+
+  @override
+  Future<InstanceView> restoreInstance(String trashId) =>
+      instances.restoreInstance(trashId: trashId);
+
+  @override
+  Future<void> purgeInstance(String trashId) =>
+      instances.purgeInstance(trashId: trashId);
+
+  @override
+  Future<ProfileView> getProfile({String? account}) =>
+      skins.getProfile(account: account);
+
+  @override
+  Future<ProfileView> setSkinUrl(String url, {String? account, required bool slim}) =>
+      skins.setSkinUrl(account: account, url: url, slim: slim);
+
+  @override
+  Future<ProfileView> uploadSkin(String path, {String? account, required bool slim}) =>
+      skins.uploadSkin(account: account, path: path, slim: slim);
+
+  @override
+  Future<ProfileView> resetSkin({String? account}) =>
+      skins.resetSkin(account: account);
+
+  @override
+  Future<ProfileView> showCape(String capeId, {String? account}) =>
+      skins.showCape(account: account, capeId: capeId);
+
+  @override
+  Future<ProfileView> hideCape({String? account}) =>
+      skins.hideCape(account: account);
+
+  @override
+  Future<DoctorReportView> diagnose(String instanceId) =>
+      doctor.diagnose(instanceId: instanceId);
+
+  @override
+  Future<String> applyFix(String instanceId, String diagnosisId) =>
+      doctor.applyFix(instanceId: instanceId, diagnosisId: diagnosisId);
+
+  @override
+  Future<List<JavaView>> listJava() => java.listJava();
+
+  @override
+  Future<JavaView> installJava(int major) => java.installJava(major: major);
+
+  @override
+  String getUiPrefs() => ui_prefs.getUiPrefs();
+
+  @override
+  Future<void> setUiPrefs(String json) => ui_prefs.setUiPrefs(json: json);
+
+  @override
+  Future<String> importBackground(String path) =>
+      ui_prefs.importBackground(path: path);
+
+  @override
+  Future<ImportSourcesView> detectImportSources() =>
+      importer.detectImportSources();
+
+  @override
+  Future<RoxyPlanView> planRoxyImport() => importer.planRoxyImport();
+
+  @override
+  Future<RoxyImportView> importRoxy() => importer.importRoxy();
+
+  @override
+  Future<MinecraftPlanView> planMinecraftImport() =>
+      importer.planMinecraftImport();
+
+  @override
+  Future<String?> importMinecraft() => importer.importMinecraft();
 }
 
 extension SettingsViewCopy on SettingsView {

@@ -13,12 +13,14 @@ import '../../core/instance_data.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../console/console_view.dart';
+import '../doctor/doctor_dialog.dart';
 import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/common.dart';
 import '../widgets/launch_feedback.dart';
 import '../widgets/play_button.dart';
 import 'backups_tab.dart';
+import 'change_version_dialog.dart';
 import 'content_tab.dart';
 import 'instance_settings_tab.dart';
 import 'screenshots_tab.dart';
@@ -242,6 +244,22 @@ class _MoreMenu extends ConsumerWidget {
     return MenuAnchor(
       alignmentOffset: const Offset(0, 6),
       menuChildren: [
+        MenuItemButton(
+          leadingIcon: const Icon(Symbols.swap_vert_rounded, size: 18),
+          onPressed: () => showChangeVersion(context, instance),
+          child: Text(l.instanceChangeVersion),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Symbols.stethoscope_rounded, size: 18),
+          onPressed: () => showDoctor(context, instance),
+          child: Text(l.doctorDiagnose),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Symbols.folder_open_rounded, size: 18),
+          onPressed: () => launchUrl(Uri.file(instance.gameDir)),
+          child: Text(l.instanceOpenFolder),
+        ),
+        const Divider(height: 9),
         MenuItemButton(
           leadingIcon: Icon(Symbols.delete_rounded, size: 18, color: c.danger),
           onPressed: () => _delete(context, ref),

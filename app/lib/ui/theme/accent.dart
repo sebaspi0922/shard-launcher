@@ -1,11 +1,14 @@
 // Color de acento: preset elegido o extraído de una imagen de fondo.
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:material_ui/material_ui.dart';
+
+import '../../core/ui_prefs.dart';
 
 /// Presets propios del acento.
 const kAccentPresets = <Color>[
@@ -21,17 +24,28 @@ const kAccentPresets = <Color>[
 
 const kDefaultAccent = Color(0xFF35D69B);
 
-/// Acento de la sesión. (Persistirlo queda para Ajustes › Apariencia.)
-class AccentController extends Notifier<Color> {
-  @override
-  Color build() => kDefaultAccent;
+/// Acento del paisaje generado (cuando el acento es automático).
+const kLandscapeAccent = Color(0xFFFFA94D);
 
-  void set(Color c) => state = c;
-}
+/// Acento extraído de una imagen de fondo local.
+final imageAccentProvider = FutureProvider.family<Color?, String>((ref, path) async {
+  final file = File(path);
+  if (!await file.exists()) return null;
+  return accentFromImageBytes(await file.readAsBytes());
+});
 
-final accentProvider = NotifierProvider<AccentController, Color>(
-  AccentController.new,
-);
+/// Acento actual: el preset elegido o, en automático, el del fondo.
+final accentProvider = Provider<Color>((ref) {
+  final p = ref.watch(uiPrefsProvider);
+  final preset = Color(p.accentPreset);
+  if (!p.accentAuto) return preset;
+  return switch (p.background) {
+    BackgroundKind.image when p.backgroundPath != null =>
+      ref.watch(imageAccentProvider(p.backgroundPath!)).value ?? preset,
+    BackgroundKind.landscape => kLandscapeAccent,
+    _ => kDefaultAccent,
+  };
+});
 
 /// Color dominante «bonito» de una lista de píxeles ARGB (cuantizador + puntuación
 /// de material_color_utilities). `null` si la imagen no tiene color útil.
