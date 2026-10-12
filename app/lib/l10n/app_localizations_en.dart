@@ -1648,7 +1648,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceBackgroundDesc =>
-      'Behind the whole app. Your image is copied to the data folder.';
+      'Behind the whole app: the style\'s own or an image of yours (copied to the data folder).';
 
   @override
   String get appearanceAurora => 'Aurora';
@@ -1669,6 +1669,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appearanceImages => 'Images';
 
   @override
+  String get appearanceStyle => 'Style';
+
+  @override
+  String get appearanceStyleDesc =>
+      'Colors, shapes and background for the whole app. Below you can change the background and the accent.';
+
+  @override
+  String get styleGraphite => 'Graphite';
+
+  @override
+  String get styleSebaspi => 'sebaspi';
+
+  @override
+  String get appearanceBackgroundStyle => 'Style\'s own';
+
+  @override
+  String get appearanceAccentStyle => 'Style';
+
+  @override
+  String get appearanceAccentStyleDesc => 'The style\'s own color.';
+
+  @override
   String get appearanceAccent => 'Accent color';
 
   @override
@@ -1679,7 +1701,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearanceAccentAutoDesc =>
-      'Automatic: taken from the chosen background.';
+      'Automatic: taken from your background image.';
 
   @override
   String get appearanceBlur => 'Blur';
@@ -1698,7 +1720,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearancePerformanceDesc =>
-      'No blur or background effects. Handy on modest machines.';
+      'No blur or background animations. Useful on modest computers.';
 
   @override
   String get settingsAutostart => 'Open at login';

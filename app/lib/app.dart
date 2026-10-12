@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'core/app_info.dart';
 import 'core/providers.dart';
+import 'core/ui_prefs.dart';
 import 'l10n/app_localizations.dart';
 import 'ui/content/content_page.dart';
 import 'ui/first_run/first_run_page.dart';
@@ -19,18 +20,29 @@ import 'ui/shell/app_shell.dart';
 import 'ui/shell/ui_scale.dart';
 import 'ui/theme/accent.dart';
 import 'ui/theme/app_theme.dart';
+import 'ui/theme/tokens.dart';
 
 /// Ruta inicial (los tests la cambian para abrir una pantalla concreta).
 final initialLocationProvider = Provider<String>((ref) => '/');
 
-/// Transición corta entre secciones.
+/// Transición entre secciones: la nueva sube unos píxeles mientras aparece.
+/// La opacidad llega antes que el movimiento para que no se sienta lenta.
 Page<void> _fade(GoRouterState state, Widget child) => CustomTransitionPage(
       key: state.pageKey,
       child: child,
-      transitionDuration: const Duration(milliseconds: 180),
-      reverseTransitionDuration: const Duration(milliseconds: 120),
-      transitionsBuilder: (_, anim, _, child) =>
-          FadeTransition(opacity: anim, child: child),
+      transitionDuration: Motion.page,
+      reverseTransitionDuration: Motion.fast,
+      transitionsBuilder: (_, anim, _, child) => FadeTransition(
+        opacity: CurvedAnimation(
+          parent: anim,
+          curve: const Interval(0, 0.45, curve: Curves.easeOut),
+        ),
+        child: SlideTransition(
+          position: Tween(begin: const Offset(0, 0.012), end: Offset.zero)
+              .animate(CurvedAnimation(parent: anim, curve: Motion.emphasized)),
+          child: child,
+        ),
+      ),
     );
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -97,6 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 /// Idioma elegido en ajustes (`null` = el del sistema).
+/// Idioma elegido en ajustes (`null` = el del sistema).
 final localeProvider = Provider<Locale?>((ref) {
   final lang = ref.watch(settingsProvider).value?.language;
   return switch (lang) {
@@ -110,13 +123,14 @@ class LauncherApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = ref.watch(accentProvider);
+    final style = ref.watch(uiPrefsProvider.select((p) => p.style));
+    final theme = buildTheme(style, ref.watch(accentOverrideProvider));
     return MaterialApp.router(
       title: kAppName,
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(accent),
+      theme: theme,
       themeMode: ThemeMode.dark,
-      darkTheme: buildTheme(accent),
+      darkTheme: theme,
       locale: ref.watch(localeProvider),
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [

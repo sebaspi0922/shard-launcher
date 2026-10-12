@@ -360,7 +360,7 @@ class _TabItem extends StatelessWidget {
     final color = selected ? c.text : c.textMuted;
     return InkWell(
       onTap: onTap,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.control)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.control)),
       child: Container(
         padding: const EdgeInsets.fromLTRB(Space.x3, Space.x3, Space.x4, Space.x3),
         decoration: BoxDecoration(

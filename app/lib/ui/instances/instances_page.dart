@@ -210,7 +210,7 @@ class _InstanceCardState extends ConsumerState<InstanceCard> {
       child: AnimatedContainer(
         duration: Motion.fast,
         decoration: BoxDecoration(
-          color: _hover ? c.surface2 : c.surface1,
+          color: c.card(_hover ? c.surface2 : c.surface1),
           borderRadius: BorderRadius.circular(Radii.card + 2),
           border: Border.all(color: _hover ? c.borderStrong : c.border),
         ),
@@ -331,7 +331,7 @@ class InstanceRow extends ConsumerWidget {
     final c = context.colors;
     TextStyle muted = context.text.bodySmall!.copyWith(color: c.textMuted);
     return Material(
-      color: c.surface1,
+      color: c.card(c.surface1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.card),
         side: BorderSide(color: c.border),

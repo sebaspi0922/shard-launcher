@@ -196,7 +196,7 @@ class _ServerCard extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: c.surface1,
+        color: c.card(c.surface1),
         borderRadius: BorderRadius.circular(Radii.card),
         border: Border.all(color: c.border),
       ),

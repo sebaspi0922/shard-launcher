@@ -2777,7 +2777,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceBackgroundDesc.
   ///
   /// In es, this message translates to:
-  /// **'Detrás de toda la app. La imagen se copia a la carpeta de datos.'**
+  /// **'Detrás de toda la app: el del estilo o una imagen tuya (se copia a la carpeta de datos).'**
   String get appearanceBackgroundDesc;
 
   /// No description provided for @appearanceAurora.
@@ -2816,6 +2816,48 @@ abstract class AppLocalizations {
   /// **'Imágenes'**
   String get appearanceImages;
 
+  /// No description provided for @appearanceStyle.
+  ///
+  /// In es, this message translates to:
+  /// **'Estilo'**
+  String get appearanceStyle;
+
+  /// No description provided for @appearanceStyleDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Colores, formas y fondo de toda la app. Debajo puedes cambiar el fondo y el acento.'**
+  String get appearanceStyleDesc;
+
+  /// No description provided for @styleGraphite.
+  ///
+  /// In es, this message translates to:
+  /// **'Grafito'**
+  String get styleGraphite;
+
+  /// No description provided for @styleSebaspi.
+  ///
+  /// In es, this message translates to:
+  /// **'sebaspi'**
+  String get styleSebaspi;
+
+  /// No description provided for @appearanceBackgroundStyle.
+  ///
+  /// In es, this message translates to:
+  /// **'El del estilo'**
+  String get appearanceBackgroundStyle;
+
+  /// No description provided for @appearanceAccentStyle.
+  ///
+  /// In es, this message translates to:
+  /// **'Del estilo'**
+  String get appearanceAccentStyle;
+
+  /// No description provided for @appearanceAccentStyleDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'El color propio del estilo.'**
+  String get appearanceAccentStyleDesc;
+
   /// No description provided for @appearanceAccent.
   ///
   /// In es, this message translates to:
@@ -2837,7 +2879,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearanceAccentAutoDesc.
   ///
   /// In es, this message translates to:
-  /// **'Automático: se toma del fondo elegido.'**
+  /// **'Automático: se toma de tu imagen de fondo.'**
   String get appearanceAccentAutoDesc;
 
   /// No description provided for @appearanceBlur.
@@ -2873,7 +2915,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearancePerformanceDesc.
   ///
   /// In es, this message translates to:
-  /// **'Sin desenfoque ni efectos de fondo. Útil en equipos modestos.'**
+  /// **'Sin desenfoque ni animaciones de fondo. Útil en equipos modestos.'**
   String get appearancePerformanceDesc;
 
   /// No description provided for @settingsAutostart.

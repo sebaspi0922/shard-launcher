@@ -15,13 +15,14 @@ class Panel extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(Space.x5),
     this.level = 1,
-    this.radius = Radii.card,
+    this.radius,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
   final int level;
-  final double radius;
+  /// `null` = radio de tarjeta del estilo.
+  final double? radius;
 
   @override
   Widget build(BuildContext context) {
@@ -29,12 +30,12 @@ class Panel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: switch (level) {
+        color: c.card(switch (level) {
           1 => c.surface1,
           2 => c.surface2,
           _ => c.surface3,
-        },
-        borderRadius: BorderRadius.circular(radius),
+        }),
+        borderRadius: BorderRadius.circular(radius ?? Radii.card),
         border: Border.all(color: c.border),
       ),
       child: child,
