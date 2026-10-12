@@ -912,7 +912,7 @@
   "appearanceDim": "Oscurecido",
   "appearanceDimDesc": "Para que el texto se lea bien sobre el fondo.",
   "appearancePerformance": "Modo rendimiento",
-  "appearancePerformanceDesc": "Sin desenfoque ni animaciones de fondo. Útil en equipos modestos.",
+  "appearancePerformanceDesc": "Sin desenfoque ni animaciones de fondo, y cambio de página instantáneo. Útil en equipos modestos.",
   "settingsAutostart": "Abrir al iniciar sesión",
   "settingsAutostartDesc": "{app} arranca con el sistema, oculto en la bandeja.",
   "@settingsAutostartDesc": {

@@ -469,7 +469,7 @@
   "appearanceDim": "Dimming",
   "appearanceDimDesc": "Keeps text readable over the background.",
   "appearancePerformance": "Performance mode",
-  "appearancePerformanceDesc": "No blur or background animations. Useful on modest computers.",
+  "appearancePerformanceDesc": "No blur or background animations, and instant page changes. Useful on modest computers.",
   "settingsAutostart": "Open at login",
   "settingsAutostartDesc": "{app} starts with your session, hidden in the tray.",
   "settingsJava": "Java",

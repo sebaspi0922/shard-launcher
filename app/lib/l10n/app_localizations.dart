@@ -2915,7 +2915,7 @@ abstract class AppLocalizations {
   /// No description provided for @appearancePerformanceDesc.
   ///
   /// In es, this message translates to:
-  /// **'Sin desenfoque ni animaciones de fondo. Útil en equipos modestos.'**
+  /// **'Sin desenfoque ni animaciones de fondo, y cambio de página instantáneo. Útil en equipos modestos.'**
   String get appearancePerformanceDesc;
 
   /// No description provided for @settingsAutostart.

@@ -1720,7 +1720,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearancePerformanceDesc =>
-      'No blur or background animations. Useful on modest computers.';
+      'No blur or background animations, and instant page changes. Useful on modest computers.';
 
   @override
   String get settingsAutostart => 'Open at login';
