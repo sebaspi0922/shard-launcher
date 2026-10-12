@@ -35,7 +35,7 @@ const FORGE_PROMOTIONS: &str =
 const NEOFORGE_MAVEN: &str = "https://maven.neoforged.net/releases";
 
 /// `launcher_profiles.json` mínimo que exigen los instaladores.
-const PROFILES_STUB: &str = r#"{"profiles":{},"selectedProfile":null,"clientToken":"","authenticationDatabase":{},"launcherVersion":{"name":"lcore","format":21},"settings":{},"version":3}"#;
+const PROFILES_STUB: &str = r#"{"profiles":{},"selectedProfile":null,"clientToken":"","authenticationDatabase":{},"launcherVersion":{"name":"shard","format":21},"settings":{},"version":3}"#;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Flavor {

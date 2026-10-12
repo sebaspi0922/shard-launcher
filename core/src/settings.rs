@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 pub const SETTINGS_SCHEMA: u32 = 1;
 
 /// Variable de entorno que fija el client ID de Azure sin tocar los ajustes.
-pub const MSA_CLIENT_ID_ENV: &str = "LCORE_MSA_CLIENT_ID";
+pub const MSA_CLIENT_ID_ENV: &str = "SHARD_MSA_CLIENT_ID";
 
 /// Client ID de la app de Azure propia, cuando exista (docs/guia-azure.md).
 pub const DEFAULT_MSA_CLIENT_ID: Option<&str> = None;

@@ -161,7 +161,7 @@ async fn check_dest(dest: &Path, expected_sha1: Option<&str>) -> Result<DestStat
             return Ok(DestState::Identical { disabled });
         }
         return Err(Error::InvalidInput(format!(
-            "ya existe {} y no es el mismo archivo; quítalo o muévelo antes (`lcore content remove`)",
+            "ya existe {} y no es el mismo archivo; quítalo o muévelo antes (`shard content remove`)",
             path.display()
         )));
     }
@@ -397,7 +397,7 @@ impl Content {
             return plan.soft(
                 root,
                 format!(
-                    "«{}» es un modpack: instálalo con `lcore modpack install`",
+                    "«{}» es un modpack: instálalo con `shard modpack install`",
                     project.title
                 ),
             );

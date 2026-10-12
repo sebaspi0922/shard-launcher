@@ -163,7 +163,7 @@ async fn login_completo_guarda_cuenta_sin_tokens_en_disco() {
 
     // Los secretos están en el almacén, no en accounts.json.
     assert_eq!(
-        env.secrets.get("lcore.msa", UUID).unwrap().as_deref(),
+        env.secrets.get("shard.msa", UUID).unwrap().as_deref(),
         Some("MSA_REFRESH_1")
     );
     let on_disk = std::fs::read_to_string(env.core.paths().accounts_file()).unwrap();
@@ -206,7 +206,7 @@ async fn refresco_rota_el_refresh_token() {
     let account = env.core.refresh_account(UUID).await.unwrap();
     assert_eq!(account.name, "Jugador");
     assert_eq!(
-        env.secrets.get("lcore.msa", UUID).unwrap().as_deref(),
+        env.secrets.get("shard.msa", UUID).unwrap().as_deref(),
         Some("MSA_REFRESH_2")
     );
     let session = env.core.session(Some("Jugador")).await.unwrap();
@@ -371,8 +371,8 @@ async fn cuentas_offline_y_borrado_de_secretos() {
     assert!(env.core.profile(None).await.is_err());
 
     env.core.remove_account(UUID).await.unwrap();
-    assert_eq!(env.secrets.get("lcore.msa", UUID).unwrap(), None);
-    assert_eq!(env.secrets.get("lcore.mc", UUID).unwrap(), None);
+    assert_eq!(env.secrets.get("shard.msa", UUID).unwrap(), None);
+    assert_eq!(env.secrets.get("shard.mc", UUID).unwrap(), None);
     let file = env.core.accounts().await.unwrap();
     assert_eq!(file.accounts.len(), 1);
     assert_eq!(file.active.as_deref(), Some(offline.id.as_str()));

@@ -25,9 +25,9 @@ Base: inventario de la fase 1 (`research/02`–`08`) y D1 (Rust + Flutter). Aqu�
 
 ```
 Cargo.toml              workspace: core, app/rust (y server/ cuando exista)
-core/                   crate `lcore`: biblioteca + binario CLI `lcore`
+core/                   crate `lcore` (biblioteca) + binario CLI `shard`
   src/lib.rs            fachada pública (`Core`) y re-exports
-  src/bin/lcore.rs      CLI (clap); feature `cli`, activa por defecto
+  src/bin/shard.rs      CLI (clap); feature `cli`, activa por defecto
   tests/                integración (wiremock, fixtures, golden)
   tests/fixtures/       JSON reales de Mojang, Fabric, Forge, logs y crash reports
 app/                    proyecto Flutter
@@ -121,7 +121,7 @@ La CLI los imprime (barra de progreso con `indicatif`, logs en la terminal). La 
 ### 3.7 CLI
 
 ```
-lcore [--data-dir DIR] [--offline] [--json]
+shard [--data-dir DIR] [--offline] [--json]
   account  login | list | use <id> | remove <id> | add-offline <nombre> | refresh
   version  list [--snapshots] | install <id>
   loader   versions <fabric|quilt|forge|neoforge> <mc>
@@ -151,7 +151,7 @@ lcore [--data-dir DIR] [--offline] [--json]
 
 ## 4. Datos en disco
 
-Raíz `<data>`: `~/.local/share/<app-id>` (Linux), `%APPDATA%\<app-id>` (Windows), `~/Library/Application Support/<app-id>` (macOS). Configurable con `--data-dir` o la variable `LCORE_DATA_DIR`.
+Raíz `<data>`: `~/.local/share/<app-id>` (Linux), `%APPDATA%\<app-id>` (Windows), `~/Library/Application Support/<app-id>` (macOS). Configurable con `--data-dir` o la variable `SHARD_DATA_DIR`.
 
 ```
 <data>/

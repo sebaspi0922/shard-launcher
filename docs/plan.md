@@ -41,10 +41,10 @@ La fase 3 empieza por H0 y H1.
 
 ## H0 – Esqueleto (corto)
 
-- Workspace Cargo con `core/` (lib + bin `lcore`) y `.gitignore` de Rust.
+- Workspace Cargo con `core/` (lib + bin `shard`) y `.gitignore` de Rust.
 - `paths`, `settings`, `net` (cliente, reintentos, caché), `events`, `Error` y la CLI vacía con `--data-dir`, `--json` y `--offline`.
 - Fixtures descargados de fuentes públicas (manifiesto de Mojang, JSON de 1.8.9, 1.20.1 y 26.2, perfiles de Fabric y Quilt).
-- **Hecho cuando**: `cargo test`, `cargo clippy -D warnings` y `cargo fmt --check` pasan; `lcore --help` funciona.
+- **Hecho cuando**: `cargo test`, `cargo clippy -D warnings` y `cargo fmt --check` pasan; `shard --help` funciona.
 
 ## H1 – Login de Microsoft y cuentas
 
@@ -57,7 +57,7 @@ La fase 3 empieza por H0 y H1.
 - CLI: `account login|list|use|remove|add-offline|refresh`, `skin …`.
 - Pruebas: cadena completa con wiremock (incluidos 403 de app no aprobada y XErr), keyring con backend de prueba.
 - **Depende del usuario**: registro de la app de Azure y solicitud de acceso a la API de Minecraft (`docs/guia-azure.md`). Hasta que Mojang apruebe, se prueba en real hasta XSTS y el resto con mocks; el lanzamiento se prueba con cuentas offline.
-- **Hecho cuando**: con una app aprobada, `lcore account login` deja una cuenta usable que sobrevive a un reinicio (refresco desde el keyring).
+- **Hecho cuando**: con una app aprobada, `shard account login` deja una cuenta usable que sobrevive a un reinicio (refresco desde el keyring).
 
 ## H2 – Instancias, instalación y lanzamiento
 

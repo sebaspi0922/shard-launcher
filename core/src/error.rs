@@ -51,7 +51,7 @@ pub enum Error {
     #[error("la versión {0} no existe")]
     VersionNotFound(String),
 
-    #[error("hace falta Java {major}: instálala con `lcore java install {major}`")]
+    #[error("hace falta Java {major}: instálala con `shard java install {major}`")]
     JavaRequired { major: u32 },
 
     #[error("ya hay una partida en marcha (activa «permitir varias partidas» para lanzar otra)")]
@@ -64,7 +64,7 @@ pub enum Error {
     AccountNotFound(String),
 
     #[error(
-        "falta la clave de API de CurseForge: guárdala con `lcore settings set-curseforge-key`"
+        "falta la clave de API de CurseForge: guárdala con `shard settings set-curseforge-key`"
     )]
     CurseForgeKeyMissing,
 
