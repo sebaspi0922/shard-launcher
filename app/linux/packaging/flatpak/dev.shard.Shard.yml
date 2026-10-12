@@ -24,7 +24,6 @@ finish-args:
   # Sesiones en el llavero, bandeja del sistema y notificaciones.
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.StatusNotifierWatcher
-  - --own-name=org.kde.StatusNotifierItem-*
   - --talk-name=org.freedesktop.Notifications
 modules:
   - name: shard
