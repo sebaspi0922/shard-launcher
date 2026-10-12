@@ -25,22 +25,36 @@ import 'ui/theme/tokens.dart';
 /// Ruta inicial (los tests la cambian para abrir una pantalla concreta).
 final initialLocationProvider = Provider<String>((ref) => '/');
 
-/// Transición entre secciones: la nueva sube unos píxeles mientras aparece.
-/// La opacidad llega antes que el movimiento para que no se sienta lenta.
-Page<void> _fade(GoRouterState state, Widget child) => CustomTransitionPage(
+/// Transición entre secciones: la anterior se desvanece primero y luego entra
+/// la nueva subiendo unos píxeles, sin que se lleguen a superponer.
+Page<void> _fade(BuildContext context, GoRouterState state, Widget child) =>
+    // Modo rendimiento o «reducir movimiento» del sistema: cambio instantáneo.
+    MediaQuery.disableAnimationsOf(context)
+        ? NoTransitionPage(key: state.pageKey, child: child)
+        : CustomTransitionPage(
       key: state.pageKey,
       child: child,
       transitionDuration: Motion.page,
-      reverseTransitionDuration: Motion.fast,
-      transitionsBuilder: (_, anim, _, child) => FadeTransition(
-        opacity: CurvedAnimation(
-          parent: anim,
-          curve: const Interval(0, 0.45, curve: Curves.easeOut),
+      reverseTransitionDuration: Motion.page,
+      transitionsBuilder: (_, anim, secondary, child) => FadeTransition(
+        // Sale cuando otra página entra encima.
+        opacity: ReverseAnimation(
+          CurvedAnimation(parent: secondary, curve: const Interval(0, 0.35)),
         ),
-        child: SlideTransition(
-          position: Tween(begin: const Offset(0, 0.012), end: Offset.zero)
-              .animate(CurvedAnimation(parent: anim, curve: Motion.emphasized)),
-          child: child,
+        child: FadeTransition(
+          opacity: CurvedAnimation(
+            parent: anim,
+            curve: const Interval(0.35, 0.8, curve: Curves.easeOut),
+          ),
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(
+              CurvedAnimation(
+                parent: anim,
+                curve: const Interval(0.35, 1, curve: Motion.emphasized),
+              ),
+            ),
+            child: child,
+          ),
         ),
       ),
     );
@@ -51,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/welcome',
-        pageBuilder: (_, s) => _fade(s, const FirstRunPage()),
+        pageBuilder: (c, s) => _fade(c, s, const FirstRunPage()),
       ),
       ShellRoute(
         builder: (context, state, child) =>
@@ -59,15 +73,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/',
-            pageBuilder: (_, s) => _fade(s, const HomePage()),
+            pageBuilder: (c, s) => _fade(c, s, const HomePage()),
           ),
           GoRoute(
             path: '/instances',
-            pageBuilder: (_, s) => _fade(s, const InstancesPage()),
+            pageBuilder: (c, s) => _fade(c, s, const InstancesPage()),
             routes: [
               GoRoute(
                 path: ':id',
-                pageBuilder: (_, s) => _fade(
+                pageBuilder: (c, s) => _fade(
+                  c,
                   s,
                   InstanceDetailPage(
                     id: s.pathParameters['id']!,
@@ -79,7 +94,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/content',
-            pageBuilder: (_, s) => _fade(
+            pageBuilder: (c, s) => _fade(
+              c,
               s,
               ContentPage(
                 instanceId: s.uri.queryParameters['instance'],
@@ -90,15 +106,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/servers',
-            pageBuilder: (_, s) => _fade(s, const ServersPage()),
+            pageBuilder: (c, s) => _fade(c, s, const ServersPage()),
           ),
           GoRoute(
             path: '/skins',
-            pageBuilder: (_, s) => _fade(s, const SkinsPage()),
+            pageBuilder: (c, s) => _fade(c, s, const SkinsPage()),
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (_, s) => _fade(s, const SettingsPage()),
+            pageBuilder: (c, s) => _fade(c, s, const SettingsPage()),
           ),
         ],
       ),
@@ -145,7 +161,14 @@ class LauncherApp extends ConsumerWidget {
         return const Locale('es');
       },
       routerConfig: ref.watch(routerProvider),
-      builder: (context, child) => UiScale(child: child!),
+      builder: (context, child) {
+        final calm = ref.watch(uiPrefsProvider.select((p) => p.performance));
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(disableAnimations: mq.disableAnimations || calm),
+          child: UiScale(child: child!),
+        );
+      },
     );
   }
 }
