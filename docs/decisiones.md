@@ -83,3 +83,13 @@ Consecuencias:
 
 - La CLI y la app usan la misma fachada, así que todo se puede probar y depurar sin UI.
 - Si algún día se cambia la UI (plan B de D1: Electron), el núcleo no cambia.
+
+## D8 – Actualizaciones firmadas desde R2 (2026-10-12)
+
+**Elegido: un `latest.json` en `dl.shardlauncher.com` (R2) con, por paquete, la URL, el tamaño, el SHA-256 y la firma minisign del archivo. La app consulta al arrancar y cada 6 horas (desactivable). Solo el AppImage se sustituye solo; con Flatpak y pacman avisa y enlaza la descarga.**
+
+- El comentario confiable de cada firma es `shard <versión> <plataforma>-<paquete>`. La app lo compara con el manifiesto, así que reutilizar una firma vieja para hacer pasar otra versión u otro paquete no funciona.
+- Clave pública incorporada en el núcleo (`tools/release/minisign.pub`). La privada está en `~/.config/shard-release/minisign.key`, fuera del repo y sin contraseña para poder firmar desde `tools/release.sh`. Si se pierde, las instalaciones existentes ya no aceptan actualizaciones y hay que reinstalar a mano.
+- Versión = `pubspec` + número de commits (`0.1.0.r27`), metida en la compilación con `--dart-define=SHARD_VERSION`. Las compilaciones sin empaquetar no buscan solas.
+- `latest.json` vive en R2 junto a los archivos, no en el Worker de la web: una release es una sola subida y no obliga a redesplegar la web.
+- Descartado: `AppImageUpdate`/zsync (depende de una herramienta externa y no cubre Flatpak ni pacman) y un repositorio Flatpak propio (más infraestructura que un aviso, para uso personal).

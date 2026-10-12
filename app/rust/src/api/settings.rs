@@ -19,6 +19,7 @@ fn view(s: &lcore::settings::Settings) -> SettingsView {
         default_jvm_args: s.default_jvm_args.clone(),
         max_concurrent_downloads: s.max_concurrent_downloads as u32,
         discord_rpc: s.discord_rpc,
+        check_updates: s.check_updates,
         msa_client_id_set: s.effective_msa_client_id().is_some(),
     }
 }
@@ -47,6 +48,7 @@ pub async fn save_settings(settings: SettingsView) -> Result<SettingsView, Bridg
                 s.max_concurrent_downloads =
                     settings.max_concurrent_downloads.clamp(1, 64) as usize;
                 s.discord_rpc = settings.discord_rpc;
+                s.check_updates = settings.check_updates;
             })
             .await?;
         Ok(view(&s))

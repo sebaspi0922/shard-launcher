@@ -6,7 +6,8 @@
 #   tools/package.sh appimage      AppImage en dist/ (necesita appimagetool)
 #   tools/package.sh flatpak       Flatpak (.flatpak) en dist/ (necesita flatpak-builder)
 #
-# SHARD_SKIP_BUILD=1 reutiliza la compilación release existente.
+# SHARD_SKIP_BUILD=1 reutiliza la compilación release existente (ojo: lleva
+# compilada la versión del commit en que se hizo).
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -23,7 +24,8 @@ pkgver="$version.r$(git -C "$root" rev-list --count HEAD)"
 
 build() {
   if [ "${SHARD_SKIP_BUILD:-0}" != 1 ] || [ ! -x "$bundle/shard" ]; then
-    "$here/flutter.sh" build linux --release
+    # La app compara esta versión con la de `latest.json` (actualizador).
+    "$here/flutter.sh" build linux --release --dart-define=SHARD_VERSION="$pkgver"
   fi
 }
 

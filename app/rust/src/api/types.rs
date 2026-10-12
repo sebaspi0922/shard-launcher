@@ -113,6 +113,7 @@ pub struct SettingsView {
     pub default_jvm_args: Vec<String>,
     pub max_concurrent_downloads: u32,
     pub discord_rpc: bool,
+    pub check_updates: bool,
     pub msa_client_id_set: bool,
 }
 

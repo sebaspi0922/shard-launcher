@@ -224,6 +224,7 @@ class SettingsView {
   final List<String> defaultJvmArgs;
   final int maxConcurrentDownloads;
   final bool discordRpc;
+  final bool checkUpdates;
   final bool msaClientIdSet;
 
   const SettingsView({
@@ -234,6 +235,7 @@ class SettingsView {
     required this.defaultJvmArgs,
     required this.maxConcurrentDownloads,
     required this.discordRpc,
+    required this.checkUpdates,
     required this.msaClientIdSet,
   });
 
@@ -246,6 +248,7 @@ class SettingsView {
       defaultJvmArgs.hashCode ^
       maxConcurrentDownloads.hashCode ^
       discordRpc.hashCode ^
+      checkUpdates.hashCode ^
       msaClientIdSet.hashCode;
 
   @override
@@ -260,6 +263,7 @@ class SettingsView {
           defaultJvmArgs == other.defaultJvmArgs &&
           maxConcurrentDownloads == other.maxConcurrentDownloads &&
           discordRpc == other.discordRpc &&
+          checkUpdates == other.checkUpdates &&
           msaClientIdSet == other.msaClientIdSet;
 }
 

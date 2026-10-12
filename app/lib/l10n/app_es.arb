@@ -1266,5 +1266,43 @@
   "firstRunFeatureContent": "Mods y modpacks",
   "firstRunFeatureContentBody": "Busca e instala desde Modrinth y CurseForge.",
   "firstRunFeatureDoctor": "Doctor",
-  "firstRunFeatureDoctorBody": "Si el juego se cierra, te dice por qué y lo arregla."
+  "firstRunFeatureDoctorBody": "Si el juego se cierra, te dice por qué y lo arregla.",
+  "updateAvailableTitle": "Shard {version} disponible",
+  "@updateAvailableTitle": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "updateAvailableBody": "Tienes la {current}.",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": {}
+    }
+  },
+  "updateInstall": "Actualizar",
+  "updateDownload": "Descargar",
+  "updateNotes": "Novedades",
+  "updateInstalling": "Descargando y verificando…",
+  "updateReady": "Lista. Reinicia Shard para usar la nueva versión.",
+  "updateRestart": "Reiniciar",
+  "updateFailed": "No se pudo actualizar",
+  "updateManualHint": "Este paquete se actualiza a mano: descarga el nuevo e instálalo.",
+  "settingsUpdates": "Actualizaciones",
+  "settingsUpdatesCurrent": "Versión {version}.",
+  "@settingsUpdatesCurrent": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "settingsUpdatesUpToDate": "Tienes la última versión ({version}).",
+  "@settingsUpdatesUpToDate": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "settingsUpdatesChecking": "Buscando…",
+  "settingsUpdatesCheck": "Buscar",
+  "settingsUpdatesAuto": "Buscar actualizaciones automáticamente",
+  "settingsUpdatesAutoDesc": "Al abrir Shard y cada 6 horas. No se instala nada sin tu permiso.",
+  "errUpdateRejected": "La actualización no tiene una firma válida y no se instaló."
 }

@@ -19,9 +19,10 @@ import 'package:shard/ui/content/project_sheet.dart';
 import 'package:shard/ui/instances/backups_tab.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/servers/server_dialog.dart';
-import 'package:material_ui/material_ui.dart' show showDialog;
+import 'package:material_ui/material_ui.dart' show SingleChildScrollView, showDialog;
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:shard/core/crash_notice.dart';
+import 'package:shard/core/updates.dart';
 import 'package:shard/ui/doctor/doctor_dialog.dart';
 import 'package:shard/ui/first_run/first_run_page.dart';
 import 'package:shard/ui/instances/change_version_dialog.dart';
@@ -30,6 +31,7 @@ import 'package:shard/ui/shell/backdrop.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
+import 'support/updates.dart';
 
 /// Compara con el golden y devuelve las sombras a su valor de test (el
 /// framework comprueba esa variable antes de los tearDown).
@@ -325,6 +327,34 @@ void round3() {
         );
     await settle(tester);
     await expectGolden('crash_banner_es');
+  });
+
+  testWidgets('aviso de actualización (AppImage)', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(updateProvider.notifier).debugSet(
+          const UpdateState(status: UpdateStatus.available, info: appImageUpdate),
+        );
+    await settle(tester);
+    await expectGolden('update_banner_es');
+  });
+
+  testWidgets('ajustes con actualización manual (Flatpak, en)', (tester) async {
+    final c = await pumpApp(
+      tester,
+      location: '/settings',
+      bridge: FakeBridge(language: 'en')..updatePackage = 'flatpak',
+    );
+    c.read(updateProvider.notifier).debugSet(
+          const UpdateState(status: UpdateStatus.available, info: flatpakUpdate, dismissed: true),
+        );
+    await settle(tester);
+    await tester.dragUntilVisible(
+      find.text('Check for updates automatically'),
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -300),
+    );
+    await settle(tester);
+    await expectGolden('settings_update_en');
   });
 
   testWidgets('menú de la instancia', (tester) async {

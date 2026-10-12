@@ -11,4 +11,5 @@ pub mod settings;
 pub mod skins;
 pub mod types;
 pub mod ui_prefs;
+pub mod update;
 pub mod worlds;

@@ -31,6 +31,7 @@ String errorText(AppLocalizations l, Object error) {
     'invalid_input' => l.errInvalidInput,
     'curseforge_key_missing' => l.errCurseforgeKey,
     'secrets' => l.errSecrets,
+    'update_rejected' => l.errUpdateRejected,
     _ => l.errGeneric,
   };
 }

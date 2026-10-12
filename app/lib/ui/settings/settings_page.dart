@@ -14,8 +14,10 @@ import '../../core/format.dart';
 import '../../core/errors.dart';
 import '../../core/providers.dart';
 import '../../core/servers_state.dart';
+import '../../core/updates.dart';
 import '../../l10n/app_localizations.dart';
 import '../instances/instance_settings_tab.dart' show splitArgs;
+import '../shell/update_banner.dart' show UpdateDetails;
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 import '../widgets/art.dart';
@@ -287,6 +289,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   ),
                   const Divider(),
+                  const _UpdateRow(),
+                  const Divider(),
+                  SettingRow(
+                    title: l.settingsUpdatesAuto,
+                    description: l.settingsUpdatesAutoDesc,
+                    control: Switch(
+                      value: s.checkUpdates,
+                      onChanged: (v) => _change(s.copyWith(checkUpdates: v)),
+                    ),
+                  ),
+                  const Divider(),
                   SettingRow(
                     title: l.settingsDataDir,
                     description: bridge.dataDir,
@@ -311,6 +324,48 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Estado de las actualizaciones; con versión nueva, sus acciones.
+class _UpdateRow extends ConsumerWidget {
+  const _UpdateRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final state = ref.watch(updateProvider);
+    final ctrl = ref.read(updateProvider.notifier);
+    final info = state.info;
+    if (info != null && state.status != UpdateStatus.checking) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: Space.x3),
+        child: UpdateDetails(state: state, info: info),
+      );
+    }
+    final version = ctrl.currentVersion;
+    final checking = state.status == UpdateStatus.checking;
+    final description = switch (state.status) {
+      UpdateStatus.checking => l.settingsUpdatesChecking,
+      UpdateStatus.upToDate => l.settingsUpdatesUpToDate(version),
+      UpdateStatus.failed when state.error != null =>
+        '${l.updateFailed}: ${errorText(l, state.error!)}',
+      _ => l.settingsUpdatesCurrent(version),
+    };
+    return SettingRow(
+      title: l.settingsUpdates,
+      description: description,
+      control: OutlinedButton.icon(
+        onPressed: checking ? null : ctrl.check,
+        icon: checking
+            ? const SizedBox.square(
+                dimension: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Symbols.refresh_rounded, size: 18),
+        label: Text(l.settingsUpdatesCheck),
       ),
     );
   }
