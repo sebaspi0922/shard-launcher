@@ -21,6 +21,7 @@ import 'package:shard/ui/instances/trash_dialog.dart';
 import 'package:shard/ui/shell/tray_controller.dart';
 import 'package:shard/ui/skins/skin_mesh.dart';
 import 'package:shard/ui/theme/accent.dart';
+import 'package:shard/ui/theme/styles.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
@@ -41,7 +42,8 @@ void main() {
   group('preferencias de la interfaz', () {
     test('ida y vuelta por JSON', () {
       const p = UiPrefs(
-        accentAuto: true,
+        style: AppStyle.sebaspi,
+        accent: AccentMode.auto,
         accentPreset: 0xFF4FA8FF,
         background: BackgroundKind.image,
         backgroundPath: '/datos/backgrounds/fondo.png',
@@ -51,7 +53,8 @@ void main() {
         firstRunDone: true,
       );
       final back = UiPrefs.parse(jsonEncode(p.toJson()));
-      expect(back.accentAuto, isTrue);
+      expect(back.style, AppStyle.sebaspi);
+      expect(back.accent, AccentMode.auto);
       expect(back.accentPreset, 0xFF4FA8FF);
       expect(back.background, BackgroundKind.image);
       expect(back.backgroundPath, '/datos/backgrounds/fondo.png');
@@ -62,11 +65,13 @@ void main() {
     });
 
     test('valores dañados o fuera de rango', () {
-      expect(UiPrefs.parse('no es json').background, BackgroundKind.aurora);
+      expect(UiPrefs.parse('no es json').style, AppStyle.graphite);
+      expect(UiPrefs.parse('no es json').background, BackgroundKind.style);
       final p = UiPrefs.parse('{"blur": 999, "dim": -1, "background": "x"}');
       expect(p.blur, 40);
       expect(p.dim, 0);
-      expect(p.background, BackgroundKind.aurora);
+      expect(p.background, BackgroundKind.style);
+      expect(p.style, AppStyle.graphite);
       expect(p.firstRunDone, isNull);
     });
 
@@ -84,16 +89,38 @@ void main() {
       );
     });
 
-    test('el acento sigue al preset o al fondo', () {
-      final bridge = FakeBridge()..uiPrefs = '{"accent":"preset","accent_preset":${0xFF9B7BFF}}';
+    test('el acento sigue al estilo, al preset o a la imagen', () {
+      final bridge = FakeBridge()
+        ..uiPrefs = '{"style":"aurora","accent":"preset","accent_preset":${0xFF9B7BFF}}';
       final c = ProviderContainer(overrides: [bridgeProvider.overrideWithValue(bridge)]);
       addTearDown(c.dispose);
       expect(c.read(accentProvider), const Color(0xFF9B7BFF));
       c.read(uiPrefsProvider.notifier).update(
-            (p) => p.copyWith(accentAuto: true, background: BackgroundKind.landscape),
+            (p) => p.copyWith(accent: AccentMode.style, style: AppStyle.sebaspi),
           );
-      expect(c.read(accentProvider), kLandscapeAccent);
-      expect(jsonDecode(bridge.uiPrefs)['accent'], 'auto');
+      expect(c.read(accentProvider), AppStyle.sebaspi.spec.accent);
+      expect(c.read(accentOverrideProvider), isNull);
+      // «Auto» sin imagen propia vuelve al acento del estilo.
+      c.read(uiPrefsProvider.notifier).update(
+            (p) => p.copyWith(accent: AccentMode.auto, style: AppStyle.landscape),
+          );
+      expect(c.read(accentProvider), AppStyle.landscape.spec.accent);
+      final saved = jsonDecode(bridge.uiPrefs);
+      expect(saved['accent'], 'auto');
+      expect(saved['style'], 'landscape');
+    });
+
+    test('un ui.json anterior a los estilos empieza en Grafito', () {
+      final p = UiPrefs.parse(
+        '{"accent":"preset","accent_preset":${0xFF9B7BFF},"background":"aurora"}',
+      );
+      expect(p.style, AppStyle.graphite);
+      expect(p.accent, AccentMode.style);
+      expect(p.background, BackgroundKind.style);
+      final img = UiPrefs.parse(
+        '{"background":"image","background_path":"/d/fondo.png"}',
+      );
+      expect(img.usesImage, isTrue);
     });
   });
 
@@ -237,20 +264,20 @@ void main() {
     expect(bridge.skinCalls.single, endsWith(':false'));
   });
 
-  testUi('apariencia: elegir el paisaje se guarda', (tester) async {
+  testUi('apariencia: elegir el estilo paisaje se guarda', (tester) async {
     final bridge = FakeBridge();
     await pumpApp(tester, location: '/settings', bridge: bridge);
     await tester.drag(find.text('General'), const Offset(0, -300));
     await settle(tester);
     await tester.tap(find.text('Paisaje'));
     await settle(tester);
-    expect(jsonDecode(bridge.uiPrefs)['background'], 'landscape');
+    expect(jsonDecode(bridge.uiPrefs)['style'], 'landscape');
   });
 
   testUi('Java: instalar una versión', (tester) async {
     final bridge = FakeBridge();
     await pumpApp(tester, location: '/settings', bridge: bridge);
-    await tester.drag(find.text('General'), const Offset(0, -900));
+    await tester.ensureVisible(find.text('Java 25'));
     await settle(tester);
     await tester.tap(find.text('Java 25'));
     await settle(tester);

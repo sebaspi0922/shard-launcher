@@ -493,7 +493,7 @@ class _ProjectCardState extends ConsumerState<ProjectCard> {
     final p = widget.project;
     final isPack = p.kind == 'modpack';
     return Material(
-      color: c.surface1,
+      color: c.card(c.surface1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.card),
         side: BorderSide(color: c.border),

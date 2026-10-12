@@ -1649,7 +1649,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get appearanceBackgroundDesc =>
-      'Detrás de toda la app. La imagen se copia a la carpeta de datos.';
+      'Detrás de toda la app: el del estilo o una imagen tuya (se copia a la carpeta de datos).';
 
   @override
   String get appearanceAurora => 'Aurora';
@@ -1670,6 +1670,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appearanceImages => 'Imágenes';
 
   @override
+  String get appearanceStyle => 'Estilo';
+
+  @override
+  String get appearanceStyleDesc =>
+      'Colores, formas y fondo de toda la app. Debajo puedes cambiar el fondo y el acento.';
+
+  @override
+  String get styleGraphite => 'Grafito';
+
+  @override
+  String get styleSebaspi => 'sebaspi';
+
+  @override
+  String get appearanceBackgroundStyle => 'El del estilo';
+
+  @override
+  String get appearanceAccentStyle => 'Del estilo';
+
+  @override
+  String get appearanceAccentStyleDesc => 'El color propio del estilo.';
+
+  @override
   String get appearanceAccent => 'Color de acento';
 
   @override
@@ -1680,7 +1702,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get appearanceAccentAutoDesc =>
-      'Automático: se toma del fondo elegido.';
+      'Automático: se toma de tu imagen de fondo.';
 
   @override
   String get appearanceBlur => 'Desenfoque';
@@ -1700,7 +1722,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get appearancePerformanceDesc =>
-      'Sin desenfoque ni efectos de fondo. Útil en equipos modestos.';
+      'Sin desenfoque ni animaciones de fondo. Útil en equipos modestos.';
 
   @override
   String get settingsAutostart => 'Abrir al iniciar sesión';

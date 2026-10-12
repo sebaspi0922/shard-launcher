@@ -776,7 +776,7 @@ class _SourceCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           InkWell(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(Radii.card)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.card)),
             onTap: enabled ? () => onChanged(!selected) : null,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(Space.x4, Space.x3, Space.x3, Space.x3),

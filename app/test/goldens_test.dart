@@ -363,15 +363,20 @@ void round3() {
     await expectGolden('settings_java_es');
   });
 
-  testWidgets('fondo de paisaje', (tester) async {
-    await pumpApp(
-      tester,
-      location: '/',
-      bridge: FakeBridge()
-        ..uiPrefs = '{"first_run_done":true,"background":"landscape","accent":"auto","blur":10,"dim":0.5}',
-    );
-    await expectGolden('home_landscape_es');
-  });
+  for (final style in ['graphite', 'sebaspi', 'landscape', 'aurora']) {
+    testWidgets('estilo $style', (tester) async {
+      await pumpApp(
+        tester,
+        location: '/',
+        bridge: FakeBridge()
+          ..uiPrefs = '{"first_run_done":true,"style":"$style","blur":10,"dim":0.5}',
+      );
+      // Atlas de glifos y grano del fondo (se crean de forma asíncrona).
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(milliseconds: 100));
+      await expectGolden('home_style_${style}_es');
+    });
+  }
 
   testWidgets('primer arranque: bienvenida', (tester) async {
     await pumpApp(

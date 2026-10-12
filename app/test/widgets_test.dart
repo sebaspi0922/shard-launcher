@@ -6,10 +6,15 @@ import 'package:shard/ui/accounts/account_dialogs.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/settings/settings_page.dart';
 import 'package:shard/ui/widgets/common.dart';
+import 'package:shard/ui/widgets/side_tooltip.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
+
+/// Botón del raíl por su etiqueta (usa un tooltip lateral propio).
+Finder findRail(String label) =>
+    find.byWidgetPredicate((w) => w is SideTooltip && w.message == label);
 
 void main() {
   tearDown(() => debugDisableShadows = true);
@@ -53,10 +58,10 @@ void main() {
 
   testWidgets('el raíl navega entre secciones', (tester) async {
     await pumpApp(tester, location: '/');
-    await tester.tap(find.byTooltip('Instancias'));
+    await tester.tap(findRail('Instancias'));
     await settle(tester);
     expect(find.byType(InstancesPage), findsOneWidget);
-    await tester.tap(find.byTooltip('Ajustes'));
+    await tester.tap(findRail('Ajustes'));
     await settle(tester);
     expect(find.byType(SettingsPage), findsOneWidget);
     debugDisableShadows = true;

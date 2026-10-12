@@ -2,13 +2,19 @@
 
 import 'package:material_ui/material_ui.dart';
 
+import 'styles.dart';
 import 'tokens.dart';
 
 const kFontFamily = 'Inter';
 const kMonoFamily = 'JetBrainsMono';
 
-ThemeData buildTheme(Color seed) {
-  final c = AppColors.fromSeed(seed);
+/// Tema del estilo con su acento o, si se da, con [accent].
+ThemeData buildTheme(AppStyle style, [Color? accent]) {
+  final spec = style.spec;
+  Radii.control = spec.control;
+  Radii.card = spec.card;
+  Radii.panel = spec.panel;
+  final c = spec.palette(accent);
   final scheme = ColorScheme(
     brightness: Brightness.dark,
     primary: c.accent,

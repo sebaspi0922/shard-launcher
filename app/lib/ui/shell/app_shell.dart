@@ -18,6 +18,7 @@ import '../doctor/crash_banner.dart';
 import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/avatar.dart';
+import '../widgets/side_tooltip.dart';
 import 'backdrop.dart';
 import 'title_bar.dart';
 import 'tray_controller.dart';
@@ -157,7 +158,7 @@ class _NavRail extends ConsumerWidget {
             child: SizedBox(
               height: 72,
               child: Center(
-                child: Tooltip(
+                child: SideTooltip(
                   message: kAppName,
                   child: const BrandMark(size: 30),
                 ),
@@ -186,9 +187,8 @@ class _NavRail extends ConsumerWidget {
             color: c.border,
           ),
           const SizedBox(height: Space.x3),
-          Tooltip(
+          SideTooltip(
             message: account?.name ?? l.accountNone,
-            preferBelow: false,
             child: InkWell(
               borderRadius: BorderRadius.circular(Radii.card),
               onTap: () => showAccountPanel(context),
@@ -251,11 +251,8 @@ class _RailItemState extends State<_RailItem> {
     final sel = widget.selected;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Tooltip(
+      child: SideTooltip(
         message: widget.label,
-        preferBelow: false,
-        verticalOffset: 0,
-        margin: const EdgeInsets.only(left: 64),
         child: MouseRegion(
           onEnter: (_) => setState(() => _hover = true),
           onExit: (_) => setState(() => _hover = false),

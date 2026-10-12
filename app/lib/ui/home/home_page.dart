@@ -303,7 +303,7 @@ class _RecentCard extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final c = context.colors;
     return Material(
-      color: c.surface1,
+      color: c.card(c.surface1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(Radii.card),
         side: BorderSide(color: c.border),
