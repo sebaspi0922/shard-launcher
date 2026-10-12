@@ -26,6 +26,18 @@ La fase 3 empieza por H0 y H1.
   - Servidores rápidos con ping propio (SLP + SRV).
   - Importación de `.minecraft` y Prism/MultiMC.
   - Probado con las instancias reales: mundos de 26.2, backups importados y actualizaciones detectadas.
+- **Revisión del núcleo** (Opus, 2026-10-11): 11 defectos encontrados; corregidos 9.
+  - Partida en marcha detectada también fuera del proceso.
+  - Backups que acompañan a la instancia a la papelera; ids que no heredan backups ajenos.
+  - Borrar una instancia exige el juego cerrado.
+  - `.part` único por descarga.
+  - Token fuera de la serialización.
+  - Registro de partida no fatal; candado en `instance.json`; sin doble conteo del tiempo.
+  - Reserva atómica de ids.
+  - Secretos borrados antes que la cuenta.
+- **Limitaciones conocidas:**
+  - Los backups omiten los enlaces simbólicos a carpetas (p. ej. `saves` enlazado fuera) y solo lo avisan en el log.
+  - Con `--detach` la salida del juego va al log sin enmascarar el token. Minecraft no lo imprime, pero un mod podría.
 
 ## H0 – Esqueleto (corto)
 
