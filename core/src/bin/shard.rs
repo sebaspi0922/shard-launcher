@@ -28,9 +28,9 @@ use lcore::{Core, Error, Options, Result};
 use serde::Serialize;
 
 #[derive(Parser)]
-#[command(name = "lcore", version, about = "Núcleo del launcher de Minecraft")]
+#[command(name = "shard", version, about = "Shard: launcher de Minecraft (CLI)")]
 struct Cli {
-    /// Directorio de datos (por defecto, el del SO o LCORE_DATA_DIR).
+    /// Directorio de datos (por defecto, el del SO o SHARD_DATA_DIR).
     #[arg(long, global = true)]
     data_dir: Option<PathBuf>,
     /// No usar la red: solo lo que haya en caché.
@@ -658,7 +658,7 @@ enum CapeCmd {
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    // Que `lcore … | head` termine en silencio en vez de abortar.
+    // Que `shard … | head` termine en silencio en vez de abortar.
     #[cfg(unix)]
     // SAFETY: se restaura la acción por defecto de SIGPIPE antes de crear hilos de E/S.
     unsafe {
@@ -807,7 +807,7 @@ async fn run(cli: Cli) -> Result<()> {
                     eprintln!("aviso: {w}");
                 }
                 println!(
-                    "Instala el juego y el loader con `lcore launch {} --print`.",
+                    "Instala el juego y el loader con `shard launch {} --print`.",
                     i.id
                 );
             });
@@ -1241,7 +1241,7 @@ async fn instance(core: &Core, out: &Out, cmd: InstanceCmd) -> Result<()> {
             let list = core.list_instances().await?;
             out.value(&list, || {
                 if list.is_empty() {
-                    println!("No hay instancias. Crea una con `lcore instance create`.");
+                    println!("No hay instancias. Crea una con `shard instance create`.");
                 }
                 for i in &list {
                     println!(
@@ -1497,7 +1497,7 @@ async fn java(core: &Core, out: &Out, cmd: JavaCmd) -> Result<()> {
             let list = core.list_java().await?;
             out.value(&list, || {
                 if list.is_empty() {
-                    println!("No se encontró ninguna Java. Usa `lcore java install <versión>`.");
+                    println!("No se encontró ninguna Java. Usa `shard java install <versión>`.");
                 }
                 for j in &list {
                     print_java(j);
@@ -1616,7 +1616,7 @@ fn print_report(name: &str, id: &str, report: &lcore::doctor::DoctorReport) {
         }
         if let Some(f) = &d.fix {
             println!(
-                "    Arreglo: {}  ->  lcore doctor {id} --fix {}",
+                "    Arreglo: {}  ->  shard doctor {id} --fix {}",
                 f.describe(),
                 d.id
             );
@@ -1630,7 +1630,7 @@ async fn account(core: &Core, out: &Out, cmd: AccountCmd) -> Result<()> {
             let file = core.accounts().await?;
             out.value(&file, || {
                 if file.accounts.is_empty() {
-                    println!("No hay cuentas. Usa `lcore account login` o `lcore account add-offline <nombre>`.");
+                    println!("No hay cuentas. Usa `shard account login` o `shard account add-offline <nombre>`.");
                 }
                 for a in &file.accounts {
                     let mark = if file.active.as_deref() == Some(&a.id) { "*" } else { " " };
@@ -1708,7 +1708,7 @@ async fn servers(core: &Core, out: &Out, cmd: ServersCmd, offline: bool) -> Resu
             let list = core.list_servers().await?;
             out.value(&list, || {
                 if list.is_empty() {
-                    println!("No hay servidores. Usa `lcore servers add <dirección>`.");
+                    println!("No hay servidores. Usa `shard servers add <dirección>`.");
                 }
                 for (i, s) in list.iter().enumerate() {
                     let via = s.instance_id.as_deref().unwrap_or("-");
@@ -1774,7 +1774,7 @@ async fn servers(core: &Core, out: &Out, cmd: ServersCmd, offline: bool) -> Resu
             let statuses = lcore::servers::ping_servers(&addresses).await;
             out.value(&statuses, || {
                 if statuses.is_empty() {
-                    println!("No hay servidores. Usa `lcore servers add <dirección>`.");
+                    println!("No hay servidores. Usa `shard servers add <dirección>`.");
                 }
                 for (label, st) in labels.iter().zip(&statuses) {
                     print_status(label, st);
@@ -2152,7 +2152,7 @@ async fn backup(core: &Core, out: &Out, cmd: BackupCmd) -> Result<()> {
             let list = core.list_backups(&id).await?;
             out.value(&list, || {
                 if list.is_empty() {
-                    println!("No hay backups. Crea uno con `lcore backup create`.");
+                    println!("No hay backups. Crea uno con `shard backup create`.");
                 }
                 for b in &list {
                     print_backup(b);

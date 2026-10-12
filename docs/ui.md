@@ -1,6 +1,6 @@
 # App Flutter: diseño (spec H4, 2026-10-11)
 
-Reimplementa el flujo de Roxy (`research/03-ui-pantallas.md`) sin su cuenta, su ecosistema ni sus assets, con diseño propio. La app solo pinta y gestiona estado. Todo lo demás lo hace `lcore` a través del puente (D7).
+Reimplementa el flujo de Roxy (`research/03-ui-pantallas.md`) sin su cuenta, su ecosistema ni sus assets, con diseño propio. La app solo pinta y gestiona estado. Todo lo demás lo hace `shard` a través del puente (D7).
 
 ## 1. Estructura
 
@@ -34,7 +34,7 @@ Los plugins de escritorio se validan en Wayland al empezar. Si alguno falla, se 
 ## 2. Frontera con el núcleo
 
 - **Llamadas:** funciones `async` en `app/rust/src/api/` que delegan en `Core` y devuelven tipos planos (structs/enums que frb traduce a clases Dart). Los errores llegan como una excepción con el `kind` estable de `lcore::Error` más su mensaje. La UI traduce por `kind`.
-- **Eventos:** `subscribe_events(sink: StreamSink<UiEvent>)` reenvía el bus de `lcore`: progreso, logs, juego iniciado/cerrado/crash y cambios de cuentas. Riverpod los reparte con un `StreamProvider`.
+- **Eventos:** `subscribe_events(sink: StreamSink<UiEvent>)` reenvía el bus de `shard`: progreso, logs, juego iniciado/cerrado/crash y cambios de cuentas. Riverpod los reparte con un `StreamProvider`.
 - **Operaciones largas** (instalar, lanzar, modpack, backup): devuelven en seguida un `task_id`. El progreso llega por eventos.
 - **Logs:** el puente agrupa líneas (cada 50 ms o 200 líneas) para no saturar el canal. Cada partida tiene un anillo de 5000 líneas en Rust (`logs::LogBuffer`) y la consola pide el histórico al abrirse.
 - **Un solo `Core`** por proceso, creado al arrancar. Al lanzar la app se llama a `reconcile_sessions`, y el planificador de backups corre en segundo plano.

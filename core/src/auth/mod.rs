@@ -53,7 +53,7 @@ pub(crate) fn join(base: &str, path: &str) -> String {
 #[derive(Debug, thiserror::Error)]
 pub enum AuthError {
     #[error(
-        "no hay client ID de Azure configurado: usa `lcore settings set msa-client-id <id>` (docs/guia-azure.md)"
+        "no hay client ID de Azure configurado: usa `shard settings set msa-client-id <id>` (docs/guia-azure.md)"
     )]
     MissingClientId,
 

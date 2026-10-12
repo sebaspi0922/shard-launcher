@@ -37,9 +37,13 @@ Consecuencias:
   - macOS: dmg. Sin firma de Apple hay que abrirlo con clic derecho la primera vez.
 - Durante la partida, el launcher se puede cerrar o minimizar sin dejar procesos pesados.
 
-## D2 – Nombre e identidad (2026-10-11, pendiente)
+## D2 – Nombre e identidad (2026-10-11)
 
-El nombre visible y el identificador de la app (`<app-id>`: directorio de datos, servicio del keyring, id de escritorio) están sin decidir. No pueden contener «Roxy». Mientras tanto se usa `lcore` como nombre interno del crate y de la CLI, y el `<app-id>` vive en una sola constante para cambiarlo sin migraciones. Hay que decidirlo antes del hito 4.
+**Elegido por el usuario: «Shard».**
+
+- `APP_ID` = `shard`: directorio de datos `~/.local/share/shard` (Windows `%APPDATA%\shard`, macOS `~/Library/Application Support/shard`), servicios del keyring `shard.msa`, `shard.mc` y `shard.curseforge`, y variables `SHARD_DATA_DIR` y `SHARD_MSA_CLIENT_ID`.
+- La CLI se llama `shard`. El crate del núcleo conserva el nombre interno `lcore`, que no se ve.
+- Los datos importados que estaban en `~/.local/share/lcore` se movieron con `mv` y se conservan los enlaces duros con Roxy.
 
 ## D3 – Cuentas sin servidor propio (2026-10-11)
 

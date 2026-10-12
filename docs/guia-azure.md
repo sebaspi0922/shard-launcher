@@ -31,7 +31,7 @@ Los menús del portal cambian con frecuencia: si algún nombre no coincide, busc
 4. **Plazo**: no hay uno publicado. Hay reportes de días a semanas, y de solicitudes sin respuesta; algún foro de Microsoft sugiere además el programa de Xbox para desarrolladores, pero eso no es una respuesta oficial. Mientras tanto:
    - El launcher se desarrolla con pruebas simuladas y se prueba en real hasta el paso de Xbox (XSTS), que no depende de la aprobación.
    - Las partidas se prueban con cuentas offline (un jugador y servidores en modo offline).
-5. Cuando llegue la aprobación (o un rechazo), avísame. Con la app aprobada, `lcore account login` debe completar la cadena entera.
+5. Cuando llegue la aprobación (o un rechazo), avísame. Con la app aprobada, `shard account login` debe completar la cadena entera.
 
 **Errores que puedes ver después:**
 - `403 Invalid app registration` en `login_with_xbox`: la app aún no está aprobada.
@@ -47,6 +47,6 @@ Los menús del portal cambian con frecuencia: si algún nombre no coincide, busc
 ## 4. (Opcional) Clave de API de CurseForge
 
 1. <https://console.curseforge.com> → inicia sesión → solicita una API key para un proyecto personal (también pasa por revisión).
-2. Esta clave **sí es secreta**: no la pegues en el chat. El launcher te la pedirá en Ajustes (o con `lcore settings set-curseforge-key`) y la guardará en el keyring.
+2. Esta clave **sí es secreta**: no la pegues en el chat. El launcher te la pedirá en Ajustes (o con `shard settings set-curseforge-key`) y la guardará en el keyring.
 
 Sin clave, el launcher funciona solo con Modrinth.

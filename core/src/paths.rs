@@ -5,11 +5,11 @@ use std::path::{Component, Path, PathBuf};
 use crate::{Error, Result};
 
 /// Identificador de la app: directorio de datos, servicios del keyring.
-/// Provisional hasta decidir el nombre (D2).
-pub const APP_ID: &str = "lcore";
+/// Nombre de la app: Shard (D2).
+pub const APP_ID: &str = "shard";
 
 /// Variable de entorno que fija el directorio de datos.
-pub const DATA_DIR_ENV: &str = "LCORE_DATA_DIR";
+pub const DATA_DIR_ENV: &str = "SHARD_DATA_DIR";
 
 #[derive(Debug, Clone)]
 pub struct Paths {
@@ -21,7 +21,7 @@ impl Paths {
         Self { root: root.into() }
     }
 
-    /// `LCORE_DATA_DIR` o el directorio de datos del SO.
+    /// `SHARD_DATA_DIR` o el directorio de datos del SO.
     pub fn default_root() -> Result<PathBuf> {
         if let Some(dir) = std::env::var_os(DATA_DIR_ENV).filter(|v| !v.is_empty()) {
             return Ok(PathBuf::from(dir));
