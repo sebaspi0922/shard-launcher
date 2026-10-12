@@ -230,47 +230,41 @@ class BrandMark extends StatelessWidget {
       );
 }
 
-/// Pinta la marca (también se usa para el icono de la bandeja).
+/// Pinta la marca: una S hecha con dos fragmentos inclinados y desplazados,
+/// en cuatro tonos del acento (también se usa para el icono de la bandeja).
 class BrandMarkPainter extends CustomPainter {
   const BrandMarkPainter(this.accent);
 
   final Color accent;
 
+  // Diseño en una caja de 256 (docs/logo/opciones/4-monograma.svg).
+  static const _topLight = [Offset(206, 30), Offset(98, 30), Offset(158, 122)];
+  static const _topDark = [Offset(98, 30), Offset(50, 122), Offset(158, 122)];
+  static const _bottomLight = [Offset(50, 226), Offset(98, 134), Offset(158, 226)];
+  static const _bottomDark = [Offset(158, 226), Offset(206, 134), Offset(98, 134)];
+
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
     final hct = Hct.fromInt(accent.toARGB32());
     Color t(double tone) => Color(Hct.from(hct.hue, hct.chroma, tone).toInt());
-    final top = Path()
-      ..moveTo(w * 0.5, h * 0.06)
-      ..lineTo(w * 0.92, h * 0.29)
-      ..lineTo(w * 0.5, h * 0.52)
-      ..lineTo(w * 0.08, h * 0.29)
-      ..close();
-    final left = Path()
-      ..moveTo(w * 0.08, h * 0.29)
-      ..lineTo(w * 0.5, h * 0.52)
-      ..lineTo(w * 0.5, h * 0.96)
-      ..lineTo(w * 0.08, h * 0.73)
-      ..close();
-    final right = Path()
-      ..moveTo(w * 0.92, h * 0.29)
-      ..lineTo(w * 0.92, h * 0.73)
-      ..lineTo(w * 0.5, h * 0.96)
-      ..lineTo(w * 0.5, h * 0.52)
-      ..close();
-    canvas.drawPath(top, Paint()..color = t(86));
-    canvas.drawPath(left, Paint()..color = t(66));
-    canvas.drawPath(right, Paint()..color = t(46));
-    // Hueco en la cara superior: un bloque «encajado».
-    final inner = Path()
-      ..moveTo(w * 0.5, h * 0.19)
-      ..lineTo(w * 0.69, h * 0.29)
-      ..lineTo(w * 0.5, h * 0.39)
-      ..lineTo(w * 0.31, h * 0.29)
-      ..close();
-    canvas.drawPath(inner, Paint()..color = t(56));
+    // Algo más grande que el diseño para aprovechar la caja.
+    final k = size.shortestSide / 256 * 1.14;
+    canvas
+      ..save()
+      ..translate(size.width / 2, size.height / 2)
+      ..scale(k)
+      ..translate(-128, -128);
+    void tri(List<Offset> p, Color color) => canvas.drawPath(
+          Path()..addPolygon(p, true),
+          Paint()
+            ..color = color
+            ..isAntiAlias = true,
+        );
+    tri(_topLight, t(88));
+    tri(_topDark, t(72));
+    tri(_bottomLight, t(56));
+    tri(_bottomDark, t(42));
+    canvas.restore();
   }
 
   @override
