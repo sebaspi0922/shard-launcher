@@ -79,7 +79,7 @@ here=$(dirname "$(readlink -f "$0")")
 exec "$here/usr/lib/shard/shard" "$@"
 EOF
   chmod +x "$dir/AppRun"
-  ARCH=x86_64 "$tool" --no-appstream "$dir" "$dist/Shard-$version-x86_64.AppImage"
+  ARCH=x86_64 "$tool" --no-appstream "$dir" "$dist/Shard-$pkgver-x86_64.AppImage"
 }
 
 flatpak() {
