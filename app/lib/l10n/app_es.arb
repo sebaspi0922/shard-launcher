@@ -1,0 +1,426 @@
+{
+  "@@locale": "es",
+  "navHome": "Inicio",
+  "navInstances": "Instancias",
+  "navContent": "Contenido",
+  "navServers": "Servidores",
+  "navSkins": "Skins",
+  "navSettings": "Ajustes",
+  "comingSoonTitle": "Próximamente",
+  "comingSoonContent": "Buscador de mods, paquetes de recursos, shaders y modpacks de Modrinth y CurseForge.",
+  "comingSoonServers": "Tus servidores con su estado, jugadores y ping, listos para entrar con la instancia que elijas.",
+  "comingSoonSkins": "Vista 3D de tu skin, subir una nueva y gestionar capas.",
+  "windowMinimize": "Minimizar",
+  "windowMaximize": "Maximizar",
+  "windowRestore": "Restaurar",
+  "windowClose": "Cerrar",
+  "closeDialogTitle": "¿Cerrar {app}?",
+  "@closeDialogTitle": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "closeDialogBody": "Puedes dejarlo en segundo plano o salir del todo. Las partidas abiertas no se cierran.",
+  "closeDialogMinimize": "Dejar en segundo plano",
+  "closeDialogQuit": "Salir",
+  "closeDialogRemember": "Recordar mi elección",
+  "cancel": "Cancelar",
+  "save": "Guardar",
+  "create": "Crear",
+  "delete": "Eliminar",
+  "remove": "Quitar",
+  "copy": "Copiar",
+  "copied": "Copiado",
+  "retry": "Reintentar",
+  "close": "Cerrar",
+  "back": "Volver",
+  "discard": "Descartar",
+  "details": "Detalles",
+  "loading": "Cargando…",
+  "accountsTitle": "Cuentas",
+  "accountsEmpty": "Aún no hay cuentas",
+  "accountsAddMicrosoft": "Añadir cuenta de Microsoft",
+  "accountsAddOffline": "Añadir cuenta offline",
+  "accountMicrosoft": "Microsoft",
+  "accountOffline": "Offline",
+  "accountActive": "Activa",
+  "accountUse": "Usar esta cuenta",
+  "accountRemoveTitle": "¿Quitar «{name}»?",
+  "@accountRemoveTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "accountRemoveBody": "Se borra de {app} junto con su sesión. Podrás volver a añadirla cuando quieras.",
+  "@accountRemoveBody": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "accountRemoved": "Cuenta «{name}» quitada",
+  "@accountRemoved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "accountAdded": "Cuenta «{name}» añadida",
+  "@accountAdded": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "accountNone": "Sin cuenta",
+  "accountNoneHint": "Añade una cuenta para jugar",
+  "offlineTitle": "Cuenta offline",
+  "offlineBody": "Para jugar sin conexión o en servidores que no verifican cuentas. No permite cambiar la skin.",
+  "offlineNameLabel": "Nombre de jugador",
+  "offlineNameHint": "De 3 a 16 letras, números o _",
+  "offlineNameInvalid": "Usa de 3 a 16 caracteres: letras, números o guion bajo.",
+  "add": "Añadir",
+  "msTitle": "Iniciar sesión con Microsoft",
+  "msRequesting": "Pidiendo un código a Microsoft…",
+  "msStep": "Abre la página de Microsoft e introduce este código:",
+  "msOpenBrowser": "Abrir navegador",
+  "msCopyCode": "Copiar código",
+  "msWaiting": "Esperando confirmación…",
+  "msExpiresIn": "Caduca en {time}",
+  "@msExpiresIn": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "msExpired": "El código ha caducado.",
+  "msRequestNew": "Pedir otro código",
+  "msSignedIn": "Sesión iniciada como {name}",
+  "@msSignedIn": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "errAuthMissingClientId": "Falta el identificador de la aplicación de Microsoft, así que no se puede iniciar sesión. Configúralo en el núcleo o usa una cuenta offline.",
+  "errAuthAppNotApproved": "Microsoft aún no ha aprobado esta aplicación para usar los servicios de Minecraft.",
+  "errAuthNotEntitled": "Esta cuenta de Microsoft no tiene Minecraft: Java Edition.",
+  "errAuthNoProfile": "La cuenta tiene el juego, pero aún no tiene perfil. Entra una vez en minecraft.net para elegir tu nombre.",
+  "errAuthXbox": "Xbox Live rechazó el inicio de sesión (cuenta infantil, región o perfil de Xbox sin crear).",
+  "errAuthDeclined": "Se rechazó el inicio de sesión en la página de Microsoft.",
+  "errAuthExpired": "El código caducó antes de terminar. Pide otro.",
+  "errAuthSessionExpired": "La sesión de esta cuenta caducó. Vuelve a iniciar sesión.",
+  "errAuthGeneric": "No se pudo iniciar sesión con Microsoft.",
+  "errNetwork": "No hay conexión o el servidor no responde.",
+  "errOffline": "Sin conexión y sin copia guardada de lo que hace falta.",
+  "errJavaRequired": "Falta la versión de Java que necesita esta instancia.",
+  "errGameAlreadyRunning": "Ya hay una partida abierta. Activa «Permitir varias partidas» en Ajustes para abrir otra.",
+  "errInstanceNotFound": "La instancia ya no existe.",
+  "errAccountNotFound": "No hay ninguna cuenta para jugar. Añade una desde el avatar de abajo a la izquierda.",
+  "errVersionNotFound": "Esa versión no existe.",
+  "errHashMismatch": "Un archivo descargado llegó dañado. Vuelve a intentarlo.",
+  "errIo": "No se pudo leer o escribir en el disco.",
+  "errInvalidInput": "Hay un dato que no es válido.",
+  "errGeneric": "Algo salió mal.",
+  "homeGreeting": "Hola, {name}",
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "homeGreetingAnon": "Te damos la bienvenida",
+  "homeSubtitle": "¿A qué jugamos hoy?",
+  "homeContinue": "Continuar",
+  "homeNeverPlayed": "Sin jugar todavía",
+  "homeChangeInstance": "Cambiar instancia",
+  "homeRecent": "Recientes",
+  "homeSeeAll": "Ver todas",
+  "homeNoInstancesTitle": "Crea tu primera instancia",
+  "homeNoInstancesBody": "Una instancia es una carpeta de juego con su versión, sus mods y sus mundos, separada de las demás.",
+  "homeSession": "Sesión",
+  "homeChangeAccount": "Cambiar",
+  "homeQuickServers": "Servidores rápidos",
+  "homeQuickServersSoon": "Pronto podrás entrar a tus servidores favoritos desde aquí.",
+  "homeRunningNow": "En marcha",
+  "homeNothingRunning": "Ninguna partida abierta",
+  "play": "Jugar",
+  "launchPreparing": "Preparando…",
+  "launchDownloading": "Descargando {done}/{total}",
+  "@launchDownloading": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "launchStarting": "Iniciando…",
+  "launchRunning": "En juego",
+  "launchFailed": "No se pudo iniciar",
+  "launchCrashed": "El juego se cerró con un error",
+  "launchExitCode": "El juego terminó con el código {code}.",
+  "@launchExitCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "launchCrashReport": "Informe del fallo: {path}",
+  "@launchCrashReport": {
+    "placeholders": {
+      "path": {}
+    }
+  },
+  "launchSeeLogs": "Ver registros",
+  "stageLibraries": "Librerías",
+  "stageAssets": "Recursos",
+  "stageOther": "Archivos",
+  "playtimeHours": "{h} h",
+  "@playtimeHours": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      }
+    }
+  },
+  "playtimeMinutes": "{m} min",
+  "@playtimeMinutes": {
+    "placeholders": {
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "playtimeHoursMinutes": "{h} h {m} min",
+  "@playtimeHoursMinutes": {
+    "placeholders": {
+      "h": {
+        "type": "int"
+      },
+      "m": {
+        "type": "int"
+      }
+    }
+  },
+  "playtimeNone": "0 min",
+  "lastPlayedNever": "Nunca",
+  "relJustNow": "Ahora mismo",
+  "relMinutes": "{n, plural, one{hace 1 minuto} other{hace {n} minutos}}",
+  "@relMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relHours": "{n, plural, one{hace 1 hora} other{hace {n} horas}}",
+  "@relHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relDays": "{n, plural, one{ayer} other{hace {n} días}}",
+  "@relDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relMonths": "{n, plural, one{hace 1 mes} other{hace {n} meses}}",
+  "@relMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relYears": "{n, plural, one{hace 1 año} other{hace {n} años}}",
+  "@relYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "instancesTitle": "Instancias",
+  "instancesCount": "{n, plural, =0{Ninguna instancia} one{1 instancia} other{{n} instancias}}",
+  "@instancesCount": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "instancesSearch": "Buscar por nombre, versión o loader",
+  "instancesNew": "Nueva instancia",
+  "instancesEmptyTitle": "Aún no tienes instancias",
+  "instancesEmptyBody": "Crea una para elegir versión de Minecraft y loader.",
+  "instancesNoResults": "Nada coincide con «{q}»",
+  "@instancesNoResults": {
+    "placeholders": {
+      "q": {}
+    }
+  },
+  "viewGrid": "Cuadrícula",
+  "viewList": "Lista",
+  "instancePlaytime": "Tiempo jugado",
+  "instanceLastPlayed": "Última partida",
+  "instanceOpenFolder": "Abrir carpeta",
+  "instanceDelete": "Eliminar instancia",
+  "instanceDeleteTitle": "¿Eliminar «{name}»?",
+  "@instanceDeleteTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "instanceDeleteBody": "Se moverá a la papelera de {app}, donde podrás recuperarla durante un tiempo.",
+  "@instanceDeleteBody": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "instanceDeleted": "«{name}» se movió a la papelera",
+  "@instanceDeleted": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "instanceMore": "Más opciones",
+  "instanceNotFound": "Esta instancia ya no existe.",
+  "tabContent": "Contenido",
+  "tabWorlds": "Mundos",
+  "tabScreenshots": "Capturas",
+  "tabBackups": "Copias",
+  "tabLogs": "Registros",
+  "tabSettings": "Ajustes",
+  "tabSoonContent": "Mods, paquetes de recursos y shaders de esta instancia: activar, quitar, actualizar e identificar.",
+  "tabSoonWorlds": "Lista de mundos con sus detalles, datapacks y opciones para editarlos o borrarlos.",
+  "tabSoonScreenshots": "Galería de las capturas que hagas en el juego con F2.",
+  "tabSoonBackups": "Copias de seguridad manuales y automáticas, fijarlas y restaurarlas.",
+  "createTitle": "Nueva instancia",
+  "createName": "Nombre",
+  "createNameHint": "Mi mundo de supervivencia",
+  "createVersion": "Versión de Minecraft",
+  "createSnapshots": "Snapshots",
+  "createSearchVersion": "Buscar versión",
+  "createLoader": "Loader",
+  "createLoaderVersion": "Versión del loader",
+  "createLoaderLatest": "La más reciente",
+  "createNoLoaderVersions": "No hay versiones de {loader} para {mc}.",
+  "@createNoLoaderVersions": {
+    "placeholders": {
+      "loader": {},
+      "mc": {}
+    }
+  },
+  "createNoVersions": "No se encontraron versiones.",
+  "createNameRequired": "Ponle un nombre.",
+  "createDone": "Instancia «{name}» creada",
+  "@createDone": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "createLatestRelease": "Última",
+  "loaderVanilla": "Vanilla",
+  "loaderCustom": "Personalizado",
+  "isGeneral": "General",
+  "isName": "Nombre",
+  "isMemory": "Memoria",
+  "isMemoryDesc": "RAM máxima para el juego.",
+  "isUseGlobal": "Usar el valor global",
+  "isMemoryGlobal": "Global: {value}",
+  "@isMemoryGlobal": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "isMemoryWarning": "Supera el 75 % de la RAM del equipo ({total}); el sistema podría ir lento.",
+  "@isMemoryWarning": {
+    "placeholders": {
+      "total": {}
+    }
+  },
+  "isJvm": "Argumentos de JVM",
+  "isJvmDesc": "Opciones extra de Java, separadas por espacios.",
+  "isWindow": "Ventana del juego",
+  "isResolution": "Resolución",
+  "isResolutionDesc": "Vacío = tamaño por defecto del juego.",
+  "isWidth": "Ancho",
+  "isHeight": "Alto",
+  "isFullscreen": "Pantalla completa",
+  "isFullscreenDesc": "Abrir el juego a pantalla completa.",
+  "saved": "Cambios guardados",
+  "unsavedChanges": "Hay cambios sin guardar",
+  "consoleFilter": "Filtrar líneas",
+  "consoleFollow": "Seguir al final",
+  "consoleCopy": "Copiar",
+  "consoleClear": "Limpiar",
+  "consoleEmptyTitle": "Aún no hay registros",
+  "consoleEmptyBody": "Lanza la instancia para ver aquí la salida del juego.",
+  "consoleCopied": "{n, plural, one{1 línea copiada} other{{n} líneas copiadas}}",
+  "@consoleCopied": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "consoleLines": "{n, plural, one{1 línea} other{{n} líneas}}",
+  "@consoleLines": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "consoleNoMatches": "Ninguna línea coincide con el filtro.",
+  "logLevelError": "Errores",
+  "logLevelWarn": "Avisos",
+  "logLevelInfo": "Info",
+  "logLevelDebug": "Depuración",
+  "settingsTitle": "Ajustes",
+  "settingsGeneral": "General",
+  "settingsLanguage": "Idioma",
+  "settingsLanguageDesc": "Idioma de la interfaz.",
+  "languageSystem": "Del sistema",
+  "settingsClose": "Al cerrar la ventana",
+  "settingsCloseDesc": "Qué hacer al pulsar el botón de cerrar.",
+  "closeAsk": "Preguntar",
+  "closeTray": "Segundo plano",
+  "closeQuit": "Salir",
+  "settingsMultiple": "Permitir varias partidas",
+  "settingsMultipleDesc": "Abrir más de una instancia a la vez.",
+  "settingsGame": "Juego",
+  "settingsMemory": "Memoria por defecto",
+  "settingsMemoryDesc": "Para las instancias sin un valor propio. Este equipo tiene {total}.",
+  "@settingsMemoryDesc": {
+    "placeholders": {
+      "total": {}
+    }
+  },
+  "settingsJvm": "Argumentos de JVM por defecto",
+  "settingsJvmDesc": "Separados por espacios.",
+  "settingsDownloads": "Descargas",
+  "settingsConcurrency": "Descargas simultáneas",
+  "settingsConcurrencyDesc": "Con buena conexión, más es más rápido.",
+  "settingsAbout": "Acerca de",
+  "settingsAboutBody": "Launcher de Minecraft para uso personal. Núcleo {version}.",
+  "@settingsAboutBody": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "settingsDataDir": "Carpeta de datos",
+  "settingsMsa": "Inicio de sesión de Microsoft",
+  "msaConfigured": "Disponible",
+  "msaNotConfigured": "Sin configurar",
+  "settingsSaveFailed": "No se pudieron guardar los ajustes",
+  "memoryGb": "{value} GB",
+  "@memoryGb": {
+    "placeholders": {
+      "value": {}
+    }
+  }
+}

@@ -1,5 +1,5 @@
 name: lcore_app
-description: "A new Flutter project."
+description: "Launcher de Minecraft propio (UI)."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -9,10 +9,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
   flutter_rust_bridge: 2.13.0
   freezed_annotation: ^3.1.0
+  go_router: ^18.0.2
+  intl: ^0.20.3
   lcore_bridge:
     path: rust_builder
+  material_color_utilities: ^0.13.0
+  material_symbols_icons: ^4.2960.0
+  material_ui: ^1.6.0
+  url_launcher: ^6.3.3
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +35,21 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500

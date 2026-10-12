@@ -44,7 +44,8 @@ pub async fn save_settings(settings: SettingsView) -> Result<SettingsView, Bridg
                 s.allow_multiple_games = settings.allow_multiple_games;
                 s.default_memory_mb = settings.default_memory_mb.max(512);
                 s.default_jvm_args = settings.default_jvm_args;
-                s.max_concurrent_downloads = settings.max_concurrent_downloads.clamp(1, 64) as usize;
+                s.max_concurrent_downloads =
+                    settings.max_concurrent_downloads.clamp(1, 64) as usize;
                 s.discord_rpc = settings.discord_rpc;
             })
             .await?;
