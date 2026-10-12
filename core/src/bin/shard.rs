@@ -664,6 +664,20 @@ async fn main() -> ExitCode {
     unsafe {
         libc::signal(libc::SIGPIPE, libc::SIG_DFL);
     }
+    // Relé del log de `launch --detach` (lo arranca el propio núcleo).
+    let mut argv = std::env::args_os().skip(1);
+    if argv
+        .next()
+        .is_some_and(|a| a == lcore::launch::LOG_RELAY_ARG)
+    {
+        let Some(log) = argv.next() else {
+            return ExitCode::FAILURE;
+        };
+        return match lcore::launch::run_log_relay(std::path::Path::new(&log)) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(_) => ExitCode::FAILURE,
+        };
+    }
     let cli = Cli::parse();
     init_tracing(cli.verbose);
     let json = cli.json;
