@@ -17,6 +17,8 @@ dist="$root/dist"
 work="$root/target/package"
 app_id="dev.shard.Shard"
 version=$(sed -n 's/^version: *\([0-9.]*\).*/\1/p' "$app/pubspec.yaml")
+# Versión de paquete creciente entre commits: 0.1.0.r23.
+pkgver="$version.r$(git -C "$root" rev-list --count HEAD)"
 
 build() {
   if [ "${SHARD_SKIP_BUILD:-0}" != 1 ] || [ ! -x "$bundle/shard" ]; then
@@ -52,7 +54,7 @@ arch() {
   cp "$pkgfiles/arch/PKGBUILD" "$work/arch/"
   (
     cd "$work/arch"
-    SHARD_STAGE="$work/arch/stage" SHARD_VERSION="$version" \
+    SHARD_STAGE="$work/arch/stage" SHARD_VERSION="$pkgver" \
       PKGDEST="$dist" BUILDDIR="$work/arch/build" makepkg -f --nodeps
   )
 }
