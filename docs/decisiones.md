@@ -36,3 +36,46 @@ Consecuencias:
   - Windows: instalador.
   - macOS: dmg. Sin firma de Apple hay que abrirlo con clic derecho la primera vez.
 - Durante la partida, el launcher se puede cerrar o minimizar sin dejar procesos pesados.
+
+## D2 – Nombre e identidad (2026-10-11, pendiente)
+
+El nombre visible y el identificador de la app (`<app-id>`: directorio de datos, servicio del keyring, id de escritorio) están sin decidir. No pueden contener «Roxy». Mientras tanto se usa `lcore` como nombre interno del crate y de la CLI, y el `<app-id>` vive en una sola constante para cambiarlo sin migraciones. Hay que decidirlo antes del hito 4.
+
+## D3 – Cuentas sin servidor propio (2026-10-11)
+
+**Elegido: el launcher no tiene cuenta propia. Las cuentas son de Microsoft (app de Azure propia) u offline, y los secretos solo se guardan en el keyring del sistema.**
+
+- El original bloqueaba todo el launcher si su servidor no respondía y guardaba el refresh token de Microsoft en su backend (`research/05` §2). Las dos cosas se eliminan.
+- Login por device code (igual que el original y apto para la CLI). El login con navegador y redirect a `localhost` queda como mejora de la UI.
+- Alternativa descartada: reutilizar el client ID de Roxy o de otro launcher. No es nuestro, puede revocarse y va contra las reglas del proyecto.
+
+## D4 – Migración no destructiva (2026-10-11)
+
+**Elegido: importar desde `.roxy` en modo solo lectura, copiando las instancias y enlazando con enlaces duros el contenido inmutable (libraries, assets, jars del cliente y backups).**
+
+- Instancias copiadas (2,7 GB) en vez de enlazadas: el juego modifica mundos y configs en el sitio y un enlace duro alteraría también la copia de Roxy.
+- Mismo sistema de archivos (ext4, sin reflinks): los enlaces duros no ocupan espacio extra.
+- Alternativa descartada: mover las carpetas. Es irreversible y deja a Roxy inservible si su servidor vuelve.
+- Detalle en `docs/migracion.md`.
+
+## D5 – Layout de datos propio (2026-10-11)
+
+**Elegido: metadatos del launcher fuera del `gameDir` (`instances/<id>/{instance.json, content.json, game/}`) y backups en `backups/<id>/`, fuera de la instancia.**
+
+- En Roxy el directorio de la instancia era el `gameDir` y los backups vivían dentro, así que cada backup podía incluir los anteriores si cambiaba la exclusión, y los mods veían archivos del launcher.
+- `libraries/`, `assets/` y `versions/` siguen el layout estándar de Mojang, compatible con lo que ya hay en `.roxy`.
+- Detalle en `docs/arquitectura.md` §4.
+
+## D6 – Forge y NeoForge con el instalador oficial (2026-10-11)
+
+**Elegido para empezar: ejecutar el instalador oficial con `--installClient` sobre el directorio de datos, como el original.**
+
+- Es lo más rápido y lo que soportan los propios proyectos.
+- Riesgo: depende del comportamiento del instalador en cada versión y SO (`research/06` §3). Si falla en alguna combinación, se pasa a ejecutar los processors del `install_profile.json` en el núcleo, como Prism Launcher o Modrinth App.
+
+## D7 – Frontera Rust/Flutter (2026-10-11)
+
+**Elegido: `core/` no depende de Flutter ni de flutter_rust_bridge. Un crate puente aparte (`app/rust`) adapta la fachada `Core` a tipos planos y expone los eventos como stream.**
+
+- La CLI y la app usan la misma fachada, así que todo se puede probar y depurar sin UI.
+- Si algún día se cambia la UI (plan B de D1: Electron), el núcleo no cambia.
