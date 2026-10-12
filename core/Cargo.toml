@@ -1,0 +1,50 @@
+[package]
+name = "lcore"
+description = "Núcleo del launcher: cuentas, instancias, descargas y lanzamiento"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[features]
+default = ["cli"]
+cli = ["dep:clap", "dep:tracing-subscriber"]
+
+[[bin]]
+name = "lcore"
+path = "src/bin/lcore.rs"
+required-features = ["cli"]
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"], optional = true }
+directories = "6.0.0"
+fastnbt = "2.6.3"
+fastrand = "2.5.0"
+flate2 = "1.1.10"
+hex = "0.4.3"
+hickory-resolver = "0.26.3"
+keyring = "4.2.0"
+md-5 = "0.11.0"
+regex = "1.13.1"
+reqwest = { version = "0.13.5", features = ["json", "form", "stream", "gzip", "multipart"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha1 = "0.11.0"
+sha2 = "0.11.0"
+sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
+tar = "0.4.46"
+thiserror = "2.0.21"
+tokio = { version = "1.53.2", features = ["rt-multi-thread", "macros", "fs", "process", "sync", "time", "io-util", "net", "signal"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"], optional = true }
+url = "2.5.8"
+uuid = { version = "1.28.0", features = ["v4", "serde"] }
+zip = "9.0.1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.190"
+
+[dev-dependencies]
+insta = "1.49.0"
+tempfile = "3.27.0"
+tokio = { version = "1.53.2", features = ["test-util", "rt-multi-thread", "macros"] }
+wiremock = "0.6.5"
