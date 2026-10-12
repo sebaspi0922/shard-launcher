@@ -26,6 +26,7 @@ import 'package:shard/ui/doctor/doctor_dialog.dart';
 import 'package:shard/ui/first_run/first_run_page.dart';
 import 'package:shard/ui/instances/change_version_dialog.dart';
 import 'package:shard/ui/instances/trash_dialog.dart';
+import 'package:shard/ui/shell/backdrop.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
@@ -377,6 +378,21 @@ void round3() {
       await expectGolden('home_style_${style}_es');
     });
   }
+
+  // Para la web: el fondo se anima allí, detrás de esta captura transparente.
+  testWidgets('web: inicio sin fondo', (tester) async {
+    debugHideBackdrop = true;
+    try {
+      await pumpApp(
+        tester,
+        location: '/',
+        bridge: FakeBridge()..uiPrefs = '{"first_run_done":true,"style":"graphite"}',
+      );
+      await expectGolden('web_home_graphite_es');
+    } finally {
+      debugHideBackdrop = false;
+    }
+  });
 
   testWidgets('primer arranque: bienvenida', (tester) async {
     await pumpApp(

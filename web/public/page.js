@@ -9,5 +9,7 @@ for (const tab of tabs) {
     next.src = tab.dataset.img;
     next.alt = tab.dataset.alt;
     shot.replaceWith(next);
+    // Solo Grafito tiene el fondo animado detrás de la captura.
+    document.getElementById("style-frame").classList.toggle("live", "live" in tab.dataset);
   });
 }
