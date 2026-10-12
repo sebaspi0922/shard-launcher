@@ -26,6 +26,10 @@ La fase 3 empieza por H0 y H1.
   - Servidores rápidos con ping propio (SLP + SRV).
   - Importación de `.minecraft` y Prism/MultiMC.
   - Probado con las instancias reales: mundos de 26.2, backups importados y actualizaciones detectadas.
+- **H4**: interfaz hecha en 3 rondas, probada con pruebas golden y con el puente sobre los datos reales en solo lectura.
+  - Pantallas: Inicio, Instancias con todas sus pestañas, Contenido, Servidores, Skins con visor 3D, Ajustes, Doctor, primer arranque y bandeja.
+  - Ejecutable `shard`.
+  - Falta: probarla a mano en el equipo (barra de título sin bordes en Wayland, bandeja), empaquetado (AppImage, Flatpak, `PKGBUILD`) y compilar para Windows y macOS (necesita rustup).
 - **Revisión del núcleo** (Opus, 2026-10-11): 11 defectos encontrados; corregidos 9.
   - Partida en marcha detectada también fuera del proceso.
   - Backups que acompañan a la instancia a la papelera; ids que no heredan backups ajenos.
