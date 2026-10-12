@@ -11,6 +11,39 @@ pub const APP_ID: &str = "shard";
 /// Variable de entorno que fija el directorio de datos.
 pub const DATA_DIR_ENV: &str = "SHARD_DATA_DIR";
 
+/// Directorio de datos del usuario en el sistema (`~/.local/share` en Linux).
+///
+/// Dentro de Flatpak, `XDG_DATA_HOME` apunta a `~/.var/app/<id>/data`; se usa el
+/// del sistema para compartir los datos con la versión nativa (el manifiesto da
+/// acceso a esas carpetas).
+pub fn host_data_dir() -> Option<PathBuf> {
+    host_data_dir_with(
+        in_flatpak(),
+        std::env::var_os("HOST_XDG_DATA_HOME"),
+        directories::BaseDirs::new()
+            .map(|d| (d.home_dir().to_path_buf(), d.data_dir().to_path_buf())),
+    )
+}
+
+fn in_flatpak() -> bool {
+    std::env::var_os("FLATPAK_ID").is_some() || Path::new("/.flatpak-info").exists()
+}
+
+fn host_data_dir_with(
+    flatpak: bool,
+    host_xdg: Option<std::ffi::OsString>,
+    dirs: Option<(PathBuf, PathBuf)>,
+) -> Option<PathBuf> {
+    let (home, data) = dirs?;
+    if !flatpak {
+        return Some(data);
+    }
+    match host_xdg.filter(|v| !v.is_empty()) {
+        Some(dir) => Some(PathBuf::from(dir)),
+        None => Some(home.join(".local/share")),
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Paths {
     root: PathBuf,
@@ -26,8 +59,8 @@ impl Paths {
         if let Some(dir) = std::env::var_os(DATA_DIR_ENV).filter(|v| !v.is_empty()) {
             return Ok(PathBuf::from(dir));
         }
-        directories::ProjectDirs::from("", "", APP_ID)
-            .map(|d| d.data_dir().to_path_buf())
+        host_data_dir()
+            .map(|d| d.join(APP_ID))
             .ok_or_else(|| Error::InvalidPath("no se encontró el directorio de usuario".into()))
     }
 
@@ -129,6 +162,26 @@ pub fn safe_join(base: &Path, rel: &str) -> Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn datos_del_sistema_dentro_de_flatpak() {
+        let dirs = Some((
+            PathBuf::from("/home/u"),
+            PathBuf::from("/home/u/.var/app/dev.shard.Shard/data"),
+        ));
+        assert_eq!(
+            host_data_dir_with(true, None, dirs.clone()),
+            Some(PathBuf::from("/home/u/.local/share"))
+        );
+        assert_eq!(
+            host_data_dir_with(true, Some("/datos".into()), dirs.clone()),
+            Some(PathBuf::from("/datos"))
+        );
+        assert_eq!(
+            host_data_dir_with(false, None, dirs),
+            Some(PathBuf::from("/home/u/.var/app/dev.shard.Shard/data"))
+        );
+    }
 
     #[test]
     fn single_segment_rechaza_rutas() {

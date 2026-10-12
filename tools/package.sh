@@ -4,6 +4,7 @@
 #   tools/package.sh stage <dir>   árbol /usr con la app, .desktop, metainfo e iconos
 #   tools/package.sh arch          paquete de pacman en dist/ (no lo instala)
 #   tools/package.sh appimage      AppImage en dist/ (necesita appimagetool)
+#   tools/package.sh flatpak       Flatpak (.flatpak) en dist/ (necesita flatpak-builder)
 #
 # SHARD_SKIP_BUILD=1 reutiliza la compilación release existente.
 set -eu
@@ -81,9 +82,27 @@ EOF
   ARCH=x86_64 "$tool" --no-appstream "$dir" "$dist/Shard-$version-x86_64.AppImage"
 }
 
+flatpak() {
+  build
+  mkdir -p "$dist" "$work/flatpak"
+  stage "$work/flatpak/stage"
+  cp "$pkgfiles/flatpak/$app_id.yml" "$work/flatpak/"
+  # Runtime y SDK de GNOME desde Flathub, en la instalación del usuario.
+  command flatpak remote-add --user --if-not-exists flathub \
+    https://dl.flathub.org/repo/flathub.flatpakrepo
+  (
+    cd "$work/flatpak"
+    flatpak-builder --user --install-deps-from=flathub --force-clean \
+      --repo=repo build "$app_id.yml"
+  )
+  command flatpak build-bundle "$work/flatpak/repo" \
+    "$dist/Shard-$pkgver-x86_64.flatpak" "$app_id"
+}
+
 case ${1:-} in
   stage) build; stage "${2:?falta el directorio}" ;;
   arch) arch ;;
   appimage) appimage ;;
-  *) sed -n '2,8p' "$0"; exit 2 ;;
+  flatpak) flatpak ;;
+  *) sed -n '2,9p' "$0"; exit 2 ;;
 esac
