@@ -4,7 +4,7 @@ Orden pedido: login MS → instancias y lanzamiento → mods → UI completa →
 
 La fase 3 empieza por H0 y H1.
 
-## Estado (2026-10-11)
+## Estado (2026-10-12)
 
 - **H0**: hecho.
 - **H1**: hecho en el núcleo y probado contra un servidor simulado y el keyring real. Falta la prueba real con Microsoft (client ID de Azure y aprobación de Mojang).
@@ -29,7 +29,10 @@ La fase 3 empieza por H0 y H1.
 - **H4**: interfaz hecha en 3 rondas, probada con pruebas golden y con el puente sobre los datos reales en solo lectura.
   - Pantallas: Inicio, Instancias con todas sus pestañas, Contenido, Servidores, Skins con visor 3D, Ajustes, Doctor, primer arranque y bandeja.
   - Ejecutable `shard`.
-  - Falta: probarla a mano en el equipo (barra de título sin bordes en Wayland, bandeja), empaquetado (AppImage, Flatpak, `PKGBUILD`) y compilar para Windows y macOS (necesita rustup).
+  - Empaquetado hecho y probado: AppImage, Flatpak y `PKGBUILD` local (`tools/package.sh`).
+  - Probado en el equipo (niri, Wayland, 2026-10-12): arranque sin errores, marco propio sin bordes, diálogo de cierre, bandeja (icono registrado y «Abrir» desde el icono). Corregido: con `--background` la ventana se mostraba igualmente; el runner ya no la muestra si Dart la arranca oculta.
+  - Falta: probar a mano arrastre, maximizar y el flujo completo desde la app (cuenta, instancia, mods, jugar, consola, Doctor). En niri, «minimizar» no hace nada: el compositor no tiene minimizado.
+  - Falta compilar para Windows y macOS (necesita rustup).
 - **Revisión del núcleo** (Opus, 2026-10-11): 11 defectos encontrados; corregidos 9.
   - Partida en marcha detectada también fuera del proceso.
   - Backups que acompañan a la instancia a la papelera; ids que no heredan backups ajenos.
@@ -39,9 +42,9 @@ La fase 3 empieza por H0 y H1.
   - Registro de partida no fatal; candado en `instance.json`; sin doble conteo del tiempo.
   - Reserva atómica de ids.
   - Secretos borrados antes que la cuenta.
-- **Limitaciones conocidas:**
-  - Los backups omiten los enlaces simbólicos a carpetas (p. ej. `saves` enlazado fuera) y solo lo avisan en el log.
-  - Con `--detach` la salida del juego va al log sin enmascarar el token. Minecraft no lo imprime, pero un mod podría.
+- **Defectos restantes de la revisión** (corregidos el 2026-10-12):
+  - Los backups siguen los enlaces a carpetas fuera del juego (p. ej. `saves` en otro disco), sin bucles. Los enlaces a archivos de fuera se siguen omitiendo.
+  - Con `--detach`, la salida del juego pasa por un relé (`shard __mask-log`) que oculta el token antes de escribir el log. Probado en real con la instancia técnica.
 
 ## H0 – Esqueleto (corto)
 
