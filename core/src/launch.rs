@@ -19,7 +19,7 @@ use crate::meta::rules::{Features, Platform};
 use crate::meta::version::ArgEntry;
 use crate::{Error, Result};
 
-pub const LAUNCHER_NAME: &str = "lcore";
+pub const LAUNCHER_NAME: &str = "shard";
 const MIN_HEAP_MB: u32 = 512;
 const KEPT_LOGS: usize = 10;
 

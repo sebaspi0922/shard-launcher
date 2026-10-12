@@ -11,7 +11,11 @@ use sha2::{Digest, Sha256};
 use crate::fsutil::{now_secs, read_json, write_json};
 use crate::{Error, Result};
 
-pub const USER_AGENT: &str = concat!("lcore/", env!("CARGO_PKG_VERSION"), " (personal launcher)");
+pub const USER_AGENT: &str = concat!(
+    "Shard/",
+    env!("CARGO_PKG_VERSION"),
+    " (personal Minecraft launcher)"
+);
 
 #[derive(Debug, Clone)]
 pub struct RetryPolicy {

@@ -1,6 +1,6 @@
 # Migración desde `~/.local/share/.roxy` (spec, 2026-10-11)
 
-Objetivo: pasar las instancias y el contenido descargado de Roxy al launcher nuevo sin perder mundos, mods ni ajustes, sin tocar el original y sin copiar ningún token. Se implementa como `lcore import roxy` en el hito 2 y se ofrece también desde la UI (hito 4).
+Objetivo: pasar las instancias y el contenido descargado de Roxy al launcher nuevo sin perder mundos, mods ni ajustes, sin tocar el original y sin copiar ningún token. Se implementa como `shard import roxy` en el hito 2 y se ofrece también desde la UI (hito 4).
 
 ## 1. Principios
 

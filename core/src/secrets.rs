@@ -110,7 +110,7 @@ mod tests {
     use super::*;
 
     fn roundtrip(store: &dyn SecretStore) {
-        let (svc, user) = ("lcore.test", "prueba");
+        let (svc, user) = ("shard.test", "prueba");
         store.delete(svc, user).unwrap();
         assert_eq!(store.get(svc, user).unwrap(), None);
         store.set(svc, user, "valor-de-prueba").unwrap();
