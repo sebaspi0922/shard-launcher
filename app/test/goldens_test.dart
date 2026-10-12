@@ -1,15 +1,25 @@
 // Capturas de las pantallas clave a 1280×800 con fuentes reales.
 // Regenerar: tools/flutter.sh test --update-goldens test/goldens_test.dart
 
+import 'dart:async';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lcore_app/app.dart';
 import 'package:lcore_app/core/bridge.dart';
 import 'package:lcore_app/core/launch.dart';
+import 'package:lcore_app/core/providers.dart';
 import 'package:lcore_app/ui/accounts/account_dialogs.dart';
 import 'package:lcore_app/ui/accounts/account_panel.dart';
 import 'package:lcore_app/ui/instances/create_instance_dialog.dart';
+import 'package:lcore_app/core/content_search.dart';
+import 'package:lcore_app/core/tasks.dart';
+import 'package:lcore_app/ui/content/modpack_dialog.dart';
+import 'package:lcore_app/ui/content/project_sheet.dart';
+import 'package:lcore_app/ui/instances/backups_tab.dart';
 import 'package:lcore_app/ui/instances/instances_page.dart';
+import 'package:lcore_app/ui/servers/server_dialog.dart';
+import 'package:material_ui/material_ui.dart' show showDialog;
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
@@ -120,9 +130,124 @@ void main() {
     await expectGolden('instance_logs_es');
   });
 
+  testWidgets('detalle: contenido', (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=content');
+    await expectGolden('instance_content_es');
+  });
+
+  testWidgets('detalle: mundos', (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=worlds');
+    await expectGolden('instance_worlds_es');
+  });
+
+  testWidgets('detalle: capturas', (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=screenshots');
+    await expectGolden('instance_screenshots_es');
+  });
+
+  testWidgets('detalle: copias', (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=backups');
+    await expectGolden('instance_backups_es');
+  });
+
+  testWidgets('restaurar copia', (tester) async {
+    final bridge = FakeBridge();
+    final c = await pumpApp(
+      tester,
+      location: '/instances/survival-amigos?tab=backups',
+      bridge: bridge,
+    );
+    final i = c.read(instanceByIdProvider('survival-amigos'))!;
+    showDialog<void>(
+      context: pageContext(tester),
+      builder: (_) => RestoreBackupDialog(instance: i, backup: bridge.backups[1]),
+    );
+    await settle(tester);
+    await expectGolden('backup_restore_es');
+  });
+
+  testWidgets('contenido: búsqueda', (tester) async {
+    await pumpApp(tester, location: '/content');
+    await expectGolden('content_search_es');
+  });
+
+  testWidgets('contenido: desde una instancia', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/content?instance=survival-amigos&kind=mod',
+    );
+    await expectGolden('content_target_es');
+  });
+
+  testWidgets('contenido: CurseForge sin clave (en)', (tester) async {
+    final c = await pumpApp(
+      tester,
+      location: '/content',
+      bridge: FakeBridge(language: 'en'),
+    );
+    final n = c.read(contentSearchProvider.notifier);
+    n.setFilters(c.read(contentSearchProvider).filters.copyWith(source: 'curseforge'));
+    await settle(tester);
+    await expectGolden('content_curseforge_en');
+  });
+
+  testWidgets('ficha de proyecto', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(
+      tester,
+      location: '/content?instance=survival-amigos&kind=mod',
+      bridge: bridge,
+    );
+    showProjectSheet(pageContext(tester), bridge.searchResults.first);
+    await settle(tester);
+    await expectGolden('project_sheet_es');
+  });
+
+  testWidgets('modpack instalándose', (tester) async {
+    final bridge = FakeBridge()..modpackCompleter = Completer();
+    final c = await pumpApp(tester, location: '/content', bridge: bridge);
+    showModpackInstall(
+      pageContext(tester),
+      source: 'https://cdn.modrinth.com/data/fo/pack.mrpack',
+      name: 'Fabulously Optimized',
+    );
+    await settle(tester);
+    await tester.tap(find.text('Instalar modpack').last);
+    c.read(tasksProvider.notifier).debugSet(
+          TaskProgress(
+            id: BigInt.from(9),
+            stage: 'modpack',
+            done: 87,
+            total: 212,
+            bytes: false,
+          ),
+        );
+    await settle(tester);
+    await expectGolden('modpack_installing_es');
+  });
+
+  testWidgets('servidores', (tester) async {
+    await pumpApp(tester, location: '/servers');
+    await expectGolden('servers_es');
+  });
+
+  testWidgets('añadir servidor (en)', (tester) async {
+    await pumpApp(tester, location: '/servers', bridge: FakeBridge(language: 'en'));
+    showServerDialog(pageContext(tester));
+    await settle(tester);
+    await expectGolden('server_dialog_en');
+  });
+
   testWidgets('ajustes', (tester) async {
     await pumpApp(tester, location: '/settings');
     await expectGolden('settings_es');
+  });
+
+  testWidgets('ajustes: integraciones', (tester) async {
+    await pumpApp(tester, location: '/settings', bridge: FakeBridge()..curseforgeKey = true);
+    await tester.drag(find.text('Juego'), const Offset(0, -420));
+    await settle(tester);
+    await expectGolden('settings_integrations_es');
   });
 
   testWidgets('panel de cuentas', (tester) async {
@@ -157,7 +282,7 @@ void main() {
 }
 
 final sampleLog = [
-  for (final (text, err) in [
+  for (final (i, (text, err)) in [
     ('[18:02:11] [main/INFO]: Loading Minecraft 1.21.4 with Fabric Loader 0.16.10', false),
     ('[18:02:11] [main/INFO]: Loading 87 mods:', false),
     ('\t- fabric-api 0.119.2+1.21.4', false),
@@ -179,6 +304,6 @@ final sampleLog = [
     ('[18:02:27] [Server thread/WARN]: Can\'t keep up! Is the server overloaded? Running 2140ms or 42 ticks behind', false),
     ('[18:02:28] [Render thread/INFO]: Loaded 1290 advancements', false),
     ('[18:02:29] [Server thread/INFO]: NadiaK joined the game', false),
-  ])
-    LogLineView(text: text, stderr: err),
+  ].indexed)
+    LogLineView(text: text, stderr: err, seq: BigInt.from(i)),
 ];

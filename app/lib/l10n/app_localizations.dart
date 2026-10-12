@@ -140,18 +140,6 @@ abstract class AppLocalizations {
   /// **'Próximamente'**
   String get comingSoonTitle;
 
-  /// No description provided for @comingSoonContent.
-  ///
-  /// In es, this message translates to:
-  /// **'Buscador de mods, paquetes de recursos, shaders y modpacks de Modrinth y CurseForge.'**
-  String get comingSoonContent;
-
-  /// No description provided for @comingSoonServers.
-  ///
-  /// In es, this message translates to:
-  /// **'Tus servidores con su estado, jugadores y ping, listos para entrar con la instancia que elijas.'**
-  String get comingSoonServers;
-
   /// No description provided for @comingSoonSkins.
   ///
   /// In es, this message translates to:
@@ -668,12 +656,6 @@ abstract class AppLocalizations {
   /// **'Servidores rápidos'**
   String get homeQuickServers;
 
-  /// No description provided for @homeQuickServersSoon.
-  ///
-  /// In es, this message translates to:
-  /// **'Pronto podrás entrar a tus servidores favoritos desde aquí.'**
-  String get homeQuickServersSoon;
-
   /// No description provided for @homeRunningNow.
   ///
   /// In es, this message translates to:
@@ -973,30 +955,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ajustes'**
   String get tabSettings;
-
-  /// No description provided for @tabSoonContent.
-  ///
-  /// In es, this message translates to:
-  /// **'Mods, paquetes de recursos y shaders de esta instancia: activar, quitar, actualizar e identificar.'**
-  String get tabSoonContent;
-
-  /// No description provided for @tabSoonWorlds.
-  ///
-  /// In es, this message translates to:
-  /// **'Lista de mundos con sus detalles, datapacks y opciones para editarlos o borrarlos.'**
-  String get tabSoonWorlds;
-
-  /// No description provided for @tabSoonScreenshots.
-  ///
-  /// In es, this message translates to:
-  /// **'Galería de las capturas que hagas en el juego con F2.'**
-  String get tabSoonScreenshots;
-
-  /// No description provided for @tabSoonBackups.
-  ///
-  /// In es, this message translates to:
-  /// **'Copias de seguridad manuales y automáticas, fijarlas y restaurarlas.'**
-  String get tabSoonBackups;
 
   /// No description provided for @createTitle.
   ///
@@ -1447,6 +1405,1374 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{value} GB'**
   String memoryGb(Object value);
+
+  /// No description provided for @openFolder.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir carpeta'**
+  String get openFolder;
+
+  /// No description provided for @previous.
+  ///
+  /// In es, this message translates to:
+  /// **'Anterior'**
+  String get previous;
+
+  /// No description provided for @next.
+  ///
+  /// In es, this message translates to:
+  /// **'Siguiente'**
+  String get next;
+
+  /// No description provided for @install.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar'**
+  String get install;
+
+  /// No description provided for @unknownValue.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconocido'**
+  String get unknownValue;
+
+  /// No description provided for @closeGameFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Cierra el juego de esta instancia primero'**
+  String get closeGameFirst;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get filterAll;
+
+  /// No description provided for @filterAny.
+  ///
+  /// In es, this message translates to:
+  /// **'Cualquiera'**
+  String get filterAny;
+
+  /// No description provided for @filterVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión'**
+  String get filterVersion;
+
+  /// No description provided for @filterLoader.
+  ///
+  /// In es, this message translates to:
+  /// **'Loader'**
+  String get filterLoader;
+
+  /// No description provided for @sourceUnknown.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconocido'**
+  String get sourceUnknown;
+
+  /// No description provided for @byAuthor.
+  ///
+  /// In es, this message translates to:
+  /// **'de {author}'**
+  String byAuthor(Object author);
+
+  /// No description provided for @errCurseforgeKey.
+  ///
+  /// In es, this message translates to:
+  /// **'Falta la clave de API de CurseForge. Añádela en Ajustes › Integraciones.'**
+  String get errCurseforgeKey;
+
+  /// No description provided for @errSecrets.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo usar el almacén de claves del sistema.'**
+  String get errSecrets;
+
+  /// No description provided for @kindMods.
+  ///
+  /// In es, this message translates to:
+  /// **'Mods'**
+  String get kindMods;
+
+  /// No description provided for @kindResourcepacks.
+  ///
+  /// In es, this message translates to:
+  /// **'Paquetes de recursos'**
+  String get kindResourcepacks;
+
+  /// No description provided for @kindShaders.
+  ///
+  /// In es, this message translates to:
+  /// **'Shaders'**
+  String get kindShaders;
+
+  /// No description provided for @kindDatapacks.
+  ///
+  /// In es, this message translates to:
+  /// **'Datapacks'**
+  String get kindDatapacks;
+
+  /// No description provided for @kindModpacks.
+  ///
+  /// In es, this message translates to:
+  /// **'Modpacks'**
+  String get kindModpacks;
+
+  /// No description provided for @kindMod.
+  ///
+  /// In es, this message translates to:
+  /// **'Mod'**
+  String get kindMod;
+
+  /// No description provided for @kindResourcepack.
+  ///
+  /// In es, this message translates to:
+  /// **'Paquete de recursos'**
+  String get kindResourcepack;
+
+  /// No description provided for @kindShader.
+  ///
+  /// In es, this message translates to:
+  /// **'Shader'**
+  String get kindShader;
+
+  /// No description provided for @kindDatapack.
+  ///
+  /// In es, this message translates to:
+  /// **'Datapack'**
+  String get kindDatapack;
+
+  /// No description provided for @kindModpack.
+  ///
+  /// In es, this message translates to:
+  /// **'Modpack'**
+  String get kindModpack;
+
+  /// No description provided for @contentAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir'**
+  String get contentAdd;
+
+  /// No description provided for @contentBrowse.
+  ///
+  /// In es, this message translates to:
+  /// **'Explorar contenido'**
+  String get contentBrowse;
+
+  /// No description provided for @contentCheckUpdates.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar actualizaciones'**
+  String get contentCheckUpdates;
+
+  /// No description provided for @contentFilterHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Filtrar…'**
+  String get contentFilterHint;
+
+  /// No description provided for @contentEnable.
+  ///
+  /// In es, this message translates to:
+  /// **'Activar'**
+  String get contentEnable;
+
+  /// No description provided for @contentDisable.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivar'**
+  String get contentDisable;
+
+  /// No description provided for @contentDisabled.
+  ///
+  /// In es, this message translates to:
+  /// **'Desactivado'**
+  String get contentDisabled;
+
+  /// No description provided for @contentEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin contenido todavía'**
+  String get contentEmptyTitle;
+
+  /// No description provided for @contentEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade mods, paquetes de recursos o shaders desde Modrinth o CurseForge.'**
+  String get contentEmptyBody;
+
+  /// No description provided for @contentNoMatches.
+  ///
+  /// In es, this message translates to:
+  /// **'Nada coincide con el filtro.'**
+  String get contentNoMatches;
+
+  /// No description provided for @contentIdentify.
+  ///
+  /// In es, this message translates to:
+  /// **'Identificar'**
+  String get contentIdentify;
+
+  /// No description provided for @contentUpdateAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar todo'**
+  String get contentUpdateAll;
+
+  /// No description provided for @contentUpdatesAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 actualización disponible} other{{count} actualizaciones disponibles}}'**
+  String contentUpdatesAvailable(int count);
+
+  /// No description provided for @contentUnknownFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 archivo de origen desconocido} other{{count} archivos de origen desconocido}}'**
+  String contentUnknownFiles(int count);
+
+  /// No description provided for @contentUpdateTo.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar a {version}'**
+  String contentUpdateTo(Object version);
+
+  /// No description provided for @contentUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} actualizado a {version}'**
+  String contentUpdated(Object name, Object version);
+
+  /// No description provided for @contentUpdatedAll.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 archivo actualizado} other{{count} archivos actualizados}}'**
+  String contentUpdatedAll(int count);
+
+  /// No description provided for @contentUpdatedSome.
+  ///
+  /// In es, this message translates to:
+  /// **'{ok} actualizados, {failed} con error'**
+  String contentUpdatedSome(int ok, int failed);
+
+  /// No description provided for @contentIdentified.
+  ///
+  /// In es, this message translates to:
+  /// **'Reconocidos: {found}. Sin reconocer: {missing}.'**
+  String contentIdentified(int found, int missing);
+
+  /// No description provided for @contentRemoveTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quitar «{name}»?'**
+  String contentRemoveTitle(Object name);
+
+  /// No description provided for @contentRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra el archivo de la instancia.'**
+  String get contentRemoveBody;
+
+  /// No description provided for @contentRemoved.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» quitado'**
+  String contentRemoved(Object name);
+
+  /// No description provided for @modeSurvival.
+  ///
+  /// In es, this message translates to:
+  /// **'Supervivencia'**
+  String get modeSurvival;
+
+  /// No description provided for @modeCreative.
+  ///
+  /// In es, this message translates to:
+  /// **'Creativo'**
+  String get modeCreative;
+
+  /// No description provided for @modeAdventure.
+  ///
+  /// In es, this message translates to:
+  /// **'Aventura'**
+  String get modeAdventure;
+
+  /// No description provided for @modeSpectator.
+  ///
+  /// In es, this message translates to:
+  /// **'Espectador'**
+  String get modeSpectator;
+
+  /// No description provided for @diffPeaceful.
+  ///
+  /// In es, this message translates to:
+  /// **'Pacífica'**
+  String get diffPeaceful;
+
+  /// No description provided for @diffEasy.
+  ///
+  /// In es, this message translates to:
+  /// **'Fácil'**
+  String get diffEasy;
+
+  /// No description provided for @diffNormal.
+  ///
+  /// In es, this message translates to:
+  /// **'Normal'**
+  String get diffNormal;
+
+  /// No description provided for @diffHard.
+  ///
+  /// In es, this message translates to:
+  /// **'Difícil'**
+  String get diffHard;
+
+  /// No description provided for @worldsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay mundos'**
+  String get worldsEmptyTitle;
+
+  /// No description provided for @worldsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Los mundos que crees al jugar con esta instancia aparecerán aquí.'**
+  String get worldsEmptyBody;
+
+  /// No description provided for @worldsNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta instancia no tiene mundos todavía.'**
+  String get worldsNone;
+
+  /// No description provided for @worldUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo leer level.dat'**
+  String get worldUnreadable;
+
+  /// No description provided for @worldRename.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar nombre'**
+  String get worldRename;
+
+  /// No description provided for @worldName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre del mundo'**
+  String get worldName;
+
+  /// No description provided for @worldLockedRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'El juego está abierto: ciérralo para editar el mundo.'**
+  String get worldLockedRunning;
+
+  /// No description provided for @worldGame.
+  ///
+  /// In es, this message translates to:
+  /// **'Partida'**
+  String get worldGame;
+
+  /// No description provided for @worldMode.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo de juego'**
+  String get worldMode;
+
+  /// No description provided for @worldDifficulty.
+  ///
+  /// In es, this message translates to:
+  /// **'Dificultad'**
+  String get worldDifficulty;
+
+  /// No description provided for @worldHardcore.
+  ///
+  /// In es, this message translates to:
+  /// **'Hardcore'**
+  String get worldHardcore;
+
+  /// No description provided for @worldHardcoreDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Una sola vida: al morir, el mundo queda en modo espectador.'**
+  String get worldHardcoreDesc;
+
+  /// No description provided for @worldCheats.
+  ///
+  /// In es, this message translates to:
+  /// **'Permitir trucos'**
+  String get worldCheats;
+
+  /// No description provided for @worldCheatsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Habilita los comandos como /gamemode o /tp.'**
+  String get worldCheatsDesc;
+
+  /// No description provided for @worldDelete.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar el mundo'**
+  String get worldDelete;
+
+  /// No description provided for @worldDeleteDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra para siempre, sin pasar por la papelera.'**
+  String get worldDeleteDesc;
+
+  /// No description provided for @worldDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar «{name}»?'**
+  String worldDeleteTitle(Object name);
+
+  /// No description provided for @worldDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El mundo se borra para siempre y no se puede recuperar. Si quieres conservarlo, crea antes una copia en la pestaña Copias.'**
+  String get worldDeleteBody;
+
+  /// No description provided for @worldDeleteAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar para siempre'**
+  String get worldDeleteAction;
+
+  /// No description provided for @worldDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Mundo «{name}» borrado'**
+  String worldDeleted(Object name);
+
+  /// No description provided for @datapacksAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir datapacks'**
+  String get datapacksAdd;
+
+  /// No description provided for @datapacksEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Este mundo no tiene datapacks.'**
+  String get datapacksEmpty;
+
+  /// No description provided for @datapackRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra el datapack de este mundo.'**
+  String get datapackRemoveBody;
+
+  /// No description provided for @screenshotsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin capturas'**
+  String get screenshotsEmptyTitle;
+
+  /// No description provided for @screenshotsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Pulsa F2 mientras juegas y tus capturas aparecerán aquí.'**
+  String get screenshotsEmptyBody;
+
+  /// No description provided for @screenshotsCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 captura} other{{count} capturas}}'**
+  String screenshotsCount(int count);
+
+  /// No description provided for @screenshotOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir con el visor del sistema'**
+  String get screenshotOpen;
+
+  /// No description provided for @screenshotDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar la captura?'**
+  String get screenshotDeleteTitle;
+
+  /// No description provided for @screenshotDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra «{file}» del disco.'**
+  String screenshotDeleteBody(Object file);
+
+  /// No description provided for @backupsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Copias de seguridad'**
+  String get backupsTitle;
+
+  /// No description provided for @backupsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 copia} other{{count} copias}} · {size} en total'**
+  String backupsSummary(int count, Object size);
+
+  /// No description provided for @backupsEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin copias todavía'**
+  String get backupsEmptyTitle;
+
+  /// No description provided for @backupsEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Crea una copia antes de cambios grandes. Incluye mundos, mods y configuración (no los registros).'**
+  String get backupsEmptyBody;
+
+  /// No description provided for @backupCreate.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear copia'**
+  String get backupCreate;
+
+  /// No description provided for @backupCreateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva copia de seguridad'**
+  String get backupCreateTitle;
+
+  /// No description provided for @backupCreateBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda todo el contenido de la instancia: mundos, mods, recursos y configuración.'**
+  String get backupCreateBody;
+
+  /// No description provided for @backupLabelOptional.
+  ///
+  /// In es, this message translates to:
+  /// **'Etiqueta (opcional)'**
+  String get backupLabelOptional;
+
+  /// No description provided for @backupLabelHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de instalar Create'**
+  String get backupLabelHint;
+
+  /// No description provided for @backupLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Etiqueta'**
+  String get backupLabel;
+
+  /// No description provided for @backupLabelTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar etiqueta'**
+  String get backupLabelTitle;
+
+  /// No description provided for @backupPinOnCreate.
+  ///
+  /// In es, this message translates to:
+  /// **'Fijar esta copia'**
+  String get backupPinOnCreate;
+
+  /// No description provided for @backupPinnedNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Las copias fijadas nunca se borran solas.'**
+  String get backupPinnedNote;
+
+  /// No description provided for @backupCreating.
+  ///
+  /// In es, this message translates to:
+  /// **'Creando la copia…'**
+  String get backupCreating;
+
+  /// No description provided for @backupCreated.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia creada'**
+  String get backupCreated;
+
+  /// No description provided for @backupAutomatic.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia automática'**
+  String get backupAutomatic;
+
+  /// No description provided for @backupManual.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia manual'**
+  String get backupManual;
+
+  /// No description provided for @backupAutoBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Automática'**
+  String get backupAutoBadge;
+
+  /// No description provided for @backupPinnedBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Fijada'**
+  String get backupPinnedBadge;
+
+  /// No description provided for @backupPin.
+  ///
+  /// In es, this message translates to:
+  /// **'Fijar'**
+  String get backupPin;
+
+  /// No description provided for @backupUnpin.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejar de fijar'**
+  String get backupUnpin;
+
+  /// No description provided for @backupRestore.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar'**
+  String get backupRestore;
+
+  /// No description provided for @backupDeleteTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Eliminar la copia?'**
+  String get backupDeleteTitle;
+
+  /// No description provided for @backupDeleteBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borra «{name}» del disco.'**
+  String backupDeleteBody(Object name);
+
+  /// No description provided for @backupAutoTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Copias automáticas'**
+  String get backupAutoTitle;
+
+  /// No description provided for @backupAutoDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Mientras la app está abierta y el juego cerrado.'**
+  String get backupAutoDesc;
+
+  /// No description provided for @backupInterval.
+  ///
+  /// In es, this message translates to:
+  /// **'Frecuencia'**
+  String get backupInterval;
+
+  /// No description provided for @backupDaily.
+  ///
+  /// In es, this message translates to:
+  /// **'A diario'**
+  String get backupDaily;
+
+  /// No description provided for @backupWeekly.
+  ///
+  /// In es, this message translates to:
+  /// **'Semanal'**
+  String get backupWeekly;
+
+  /// No description provided for @backupEveryHours.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada {hours} h'**
+  String backupEveryHours(int hours);
+
+  /// No description provided for @backupEveryDays.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada {days} días'**
+  String backupEveryDays(int days);
+
+  /// No description provided for @backupKeep.
+  ///
+  /// In es, this message translates to:
+  /// **'Copias automáticas que se conservan'**
+  String get backupKeep;
+
+  /// No description provided for @backupKeepCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count}'**
+  String backupKeepCount(int count);
+
+  /// No description provided for @backupRestoreTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar copia'**
+  String get backupRestoreTitle;
+
+  /// No description provided for @backupRestoreFrom.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia «{name}» del {date}.'**
+  String backupRestoreFrom(Object name, Object date);
+
+  /// No description provided for @backupModeFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo'**
+  String get backupModeFull;
+
+  /// No description provided for @backupModeFullDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Mundos, mods, recursos, shaders y configuración del juego.'**
+  String get backupModeFullDesc;
+
+  /// No description provided for @backupModeWorlds.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo los mundos'**
+  String get backupModeWorlds;
+
+  /// No description provided for @backupModeWorldsDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sustituye la carpeta de mundos; los mods y la configuración se quedan como están.'**
+  String get backupModeWorldsDesc;
+
+  /// No description provided for @backupWarnFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo lo que hay ahora en la instancia se sustituye por la copia. Los cambios posteriores a la copia se pierden.'**
+  String get backupWarnFull;
+
+  /// No description provided for @backupWarnWorlds.
+  ///
+  /// In es, this message translates to:
+  /// **'Los mundos actuales se sustituyen por los de la copia. El progreso posterior a la copia se pierde.'**
+  String get backupWarnWorlds;
+
+  /// No description provided for @backupSafety.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear antes una copia del estado actual'**
+  String get backupSafety;
+
+  /// No description provided for @backupSafetyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de restaurar'**
+  String get backupSafetyLabel;
+
+  /// No description provided for @backupRestoreFull.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar todo'**
+  String get backupRestoreFull;
+
+  /// No description provided for @backupRestoreWorlds.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar mundos'**
+  String get backupRestoreWorlds;
+
+  /// No description provided for @backupRestoring.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurando…'**
+  String get backupRestoring;
+
+  /// No description provided for @backupRestored.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia «{name}» restaurada'**
+  String backupRestored(Object name);
+
+  /// No description provided for @contentTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Contenido'**
+  String get contentTitle;
+
+  /// No description provided for @contentSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Mods, paquetes de recursos, shaders, datapacks y modpacks.'**
+  String get contentSubtitle;
+
+  /// No description provided for @contentSearchHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar {kind}…'**
+  String contentSearchHint(Object kind);
+
+  /// No description provided for @contentResults.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 resultado} other{{count} resultados}}'**
+  String contentResults(int count);
+
+  /// No description provided for @contentNoResultsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin resultados'**
+  String get contentNoResultsTitle;
+
+  /// No description provided for @contentNoResultsBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Prueba con otras palabras o quita algún filtro.'**
+  String get contentNoResultsBody;
+
+  /// No description provided for @contentEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay más resultados'**
+  String get contentEnd;
+
+  /// No description provided for @contentInstalled.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalado'**
+  String get contentInstalled;
+
+  /// No description provided for @contentAlreadyInstalled.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya está instalado en esta instancia ({version}).'**
+  String contentAlreadyInstalled(Object version);
+
+  /// No description provided for @contentTargetPrefix.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadiendo a '**
+  String get contentTargetPrefix;
+
+  /// No description provided for @contentTargetWorld.
+  ///
+  /// In es, this message translates to:
+  /// **'mundo «{world}»'**
+  String contentTargetWorld(Object world);
+
+  /// No description provided for @contentBackToInstance.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a la instancia'**
+  String get contentBackToInstance;
+
+  /// No description provided for @contentClearTarget.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar sin instancia'**
+  String get contentClearTarget;
+
+  /// No description provided for @sortRelevance.
+  ///
+  /// In es, this message translates to:
+  /// **'Relevancia'**
+  String get sortRelevance;
+
+  /// No description provided for @sortDownloads.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargas'**
+  String get sortDownloads;
+
+  /// No description provided for @sortFollows.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguidores'**
+  String get sortFollows;
+
+  /// No description provided for @sortNewest.
+  ///
+  /// In es, this message translates to:
+  /// **'Más nuevos'**
+  String get sortNewest;
+
+  /// No description provided for @sortUpdated.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizados'**
+  String get sortUpdated;
+
+  /// No description provided for @installIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar en'**
+  String get installIn;
+
+  /// No description provided for @installInWorld.
+  ///
+  /// In es, this message translates to:
+  /// **'Mundo'**
+  String get installInWorld;
+
+  /// No description provided for @chooseInstance.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una instancia'**
+  String get chooseInstance;
+
+  /// No description provided for @chooseInstanceFirst.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige una instancia para ver las versiones compatibles.'**
+  String get chooseInstanceFirst;
+
+  /// No description provided for @chooseWorld.
+  ///
+  /// In es, this message translates to:
+  /// **'Elige un mundo'**
+  String get chooseWorld;
+
+  /// No description provided for @installLatest.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar la última'**
+  String get installLatest;
+
+  /// No description provided for @versionsCompatible.
+  ///
+  /// In es, this message translates to:
+  /// **'Versiones compatibles'**
+  String get versionsCompatible;
+
+  /// No description provided for @versionsNoneCompatible.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay versiones para esta versión de Minecraft y este loader.'**
+  String get versionsNoneCompatible;
+
+  /// No description provided for @releaseStable.
+  ///
+  /// In es, this message translates to:
+  /// **'Estable'**
+  String get releaseStable;
+
+  /// No description provided for @releaseBeta.
+  ///
+  /// In es, this message translates to:
+  /// **'Beta'**
+  String get releaseBeta;
+
+  /// No description provided for @releaseAlpha.
+  ///
+  /// In es, this message translates to:
+  /// **'Alfa'**
+  String get releaseAlpha;
+
+  /// No description provided for @installedIn.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} instalado en {instance}'**
+  String installedIn(Object name, Object instance);
+
+  /// No description provided for @installedWithDeps.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} instalado en {instance} con {count, plural, =1{1 dependencia} other{{count} dependencias}}'**
+  String installedWithDeps(Object name, Object instance, int count);
+
+  /// No description provided for @installPartial.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} instalado, pero se omitieron {count, plural, =1{1 dependencia} other{{count} dependencias}}'**
+  String installPartial(Object name, int count);
+
+  /// No description provided for @cfKeyNeededTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'CurseForge necesita una clave de API'**
+  String get cfKeyNeededTitle;
+
+  /// No description provided for @cfKeyNeededBody.
+  ///
+  /// In es, this message translates to:
+  /// **'CurseForge solo permite buscar con una clave personal. Puedes pedirla gratis en console.curseforge.com y guardarla aquí; se queda en el llavero del sistema.'**
+  String get cfKeyNeededBody;
+
+  /// No description provided for @cfKeyAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir clave'**
+  String get cfKeyAdd;
+
+  /// No description provided for @cfKeyChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar clave'**
+  String get cfKeyChange;
+
+  /// No description provided for @cfKeyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de API de CurseForge'**
+  String get cfKeyTitle;
+
+  /// No description provided for @cfKeyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de API'**
+  String get cfKeyLabel;
+
+  /// No description provided for @cfKeyHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'Se guarda en el llavero del sistema y no se vuelve a mostrar.'**
+  String get cfKeyHelper;
+
+  /// No description provided for @cfKeySaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave guardada'**
+  String get cfKeySaved;
+
+  /// No description provided for @cfKeySet.
+  ///
+  /// In es, this message translates to:
+  /// **'Configurada'**
+  String get cfKeySet;
+
+  /// No description provided for @cfKeyNotSet.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin configurar'**
+  String get cfKeyNotSet;
+
+  /// No description provided for @cfKeyRemoveTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quitar la clave de CurseForge?'**
+  String get cfKeyRemoveTitle;
+
+  /// No description provided for @cfKeyRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejarás de poder buscar en CurseForge hasta que añadas otra.'**
+  String get cfKeyRemoveBody;
+
+  /// No description provided for @modpackImport.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar modpack'**
+  String get modpackImport;
+
+  /// No description provided for @modpackImportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar un modpack'**
+  String get modpackImportTitle;
+
+  /// No description provided for @modpackInstallTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar «{name}»'**
+  String modpackInstallTitle(Object name);
+
+  /// No description provided for @modpackBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se crea una instancia nueva con el Minecraft, el loader y los mods del modpack.'**
+  String get modpackBody;
+
+  /// No description provided for @modpackFromFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo'**
+  String get modpackFromFile;
+
+  /// No description provided for @modpackFromUrl.
+  ///
+  /// In es, this message translates to:
+  /// **'URL'**
+  String get modpackFromUrl;
+
+  /// No description provided for @modpackChooseFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir un .mrpack o .zip…'**
+  String get modpackChooseFile;
+
+  /// No description provided for @modpackFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'Modpacks'**
+  String get modpackFiles;
+
+  /// No description provided for @modpackName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre de la instancia'**
+  String get modpackName;
+
+  /// No description provided for @modpackNameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El del modpack'**
+  String get modpackNameHint;
+
+  /// No description provided for @modpackInstall.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar modpack'**
+  String get modpackInstall;
+
+  /// No description provided for @modpackInstalling.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargando los archivos del modpack…'**
+  String get modpackInstalling;
+
+  /// No description provided for @modpackInstallingHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede tardar unos minutos. Si algo falla, la instancia a medias se borra.'**
+  String get modpackInstallingHint;
+
+  /// No description provided for @modpackDoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Modpack instalado'**
+  String get modpackDoneTitle;
+
+  /// No description provided for @modpackDoneBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se descargaron {done} de {total} archivos.'**
+  String modpackDoneBody(int done, int total);
+
+  /// No description provided for @modpackOpenInstance.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir instancia'**
+  String get modpackOpenInstance;
+
+  /// No description provided for @serversTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Servidores'**
+  String get serversTitle;
+
+  /// No description provided for @serversSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tus servidores con su estado, listos para entrar.'**
+  String get serversSubtitle;
+
+  /// No description provided for @serversCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 servidor} other{{count} servidores}} · {online} en línea'**
+  String serversCount(int count, int online);
+
+  /// No description provided for @serversRefresh.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar estado'**
+  String get serversRefresh;
+
+  /// No description provided for @serversImport.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar'**
+  String get serversImport;
+
+  /// No description provided for @serversImported.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 servidor importado} other{{count} servidores importados}} de {instance}'**
+  String serversImported(int count, Object instance);
+
+  /// No description provided for @serversImportNone.
+  ///
+  /// In es, this message translates to:
+  /// **'{instance} no tiene servidores nuevos'**
+  String serversImportNone(Object instance);
+
+  /// No description provided for @serversEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Aún no hay servidores'**
+  String get serversEmptyTitle;
+
+  /// No description provided for @serversEmptyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade uno a mano o impórtalos de la lista de servidores de una instancia.'**
+  String get serversEmptyBody;
+
+  /// No description provided for @serverAdd.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir servidor'**
+  String get serverAdd;
+
+  /// No description provided for @serverEdit.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar servidor'**
+  String get serverEdit;
+
+  /// No description provided for @serverAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Dirección'**
+  String get serverAddress;
+
+  /// No description provided for @serverAddressInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribe una dirección válida (host o host:puerto).'**
+  String get serverAddressInvalid;
+
+  /// No description provided for @serverName.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre (opcional)'**
+  String get serverName;
+
+  /// No description provided for @serverNameHint.
+  ///
+  /// In es, this message translates to:
+  /// **'El de la dirección'**
+  String get serverNameHint;
+
+  /// No description provided for @serverInstance.
+  ///
+  /// In es, this message translates to:
+  /// **'Instancia con la que entrar'**
+  String get serverInstance;
+
+  /// No description provided for @serverInstanceNone.
+  ///
+  /// In es, this message translates to:
+  /// **'Ninguna'**
+  String get serverInstanceNone;
+
+  /// No description provided for @serverAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get serverAccount;
+
+  /// No description provided for @serverAccountActive.
+  ///
+  /// In es, this message translates to:
+  /// **'La cuenta activa'**
+  String get serverAccountActive;
+
+  /// No description provided for @serverJoin.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get serverJoin;
+
+  /// No description provided for @serverJoinWith.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar con {instance}'**
+  String serverJoinWith(Object instance);
+
+  /// No description provided for @serverAlreadyRunning.
+  ///
+  /// In es, this message translates to:
+  /// **'{instance} ya está abierta'**
+  String serverAlreadyRunning(Object instance);
+
+  /// No description provided for @serverNoInstance.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin instancia asignada'**
+  String get serverNoInstance;
+
+  /// No description provided for @serverOffline.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin conexión'**
+  String get serverOffline;
+
+  /// No description provided for @serverUnreachable.
+  ///
+  /// In es, this message translates to:
+  /// **'No responde'**
+  String get serverUnreachable;
+
+  /// No description provided for @serverPinging.
+  ///
+  /// In es, this message translates to:
+  /// **'Consultando…'**
+  String get serverPinging;
+
+  /// No description provided for @serverPing.
+  ///
+  /// In es, this message translates to:
+  /// **'{ms} ms'**
+  String serverPing(int ms);
+
+  /// No description provided for @serverCopyAddress.
+  ///
+  /// In es, this message translates to:
+  /// **'Copiar dirección'**
+  String get serverCopyAddress;
+
+  /// No description provided for @serverRemoveTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Quitar «{name}»?'**
+  String serverRemoveTitle(Object name);
+
+  /// No description provided for @serverRemoveBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se quita de la lista. Puedes volver a añadirlo cuando quieras.'**
+  String get serverRemoveBody;
+
+  /// No description provided for @homeQuickServersEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade tus servidores favoritos para entrar con un clic.'**
+  String get homeQuickServersEmpty;
+
+  /// No description provided for @settingsIntegrations.
+  ///
+  /// In es, this message translates to:
+  /// **'Integraciones'**
+  String get settingsIntegrations;
+
+  /// No description provided for @settingsCurseforge.
+  ///
+  /// In es, this message translates to:
+  /// **'CurseForge'**
+  String get settingsCurseforge;
+
+  /// No description provided for @settingsCurseforgeDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Clave de API personal para buscar e instalar desde CurseForge.'**
+  String get settingsCurseforgeDesc;
+
+  /// No description provided for @settingsDiscord.
+  ///
+  /// In es, this message translates to:
+  /// **'Discord Rich Presence'**
+  String get settingsDiscord;
+
+  /// No description provided for @settingsDiscordDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Muestra en Discord a qué estás jugando.'**
+  String get settingsDiscordDesc;
+
+  /// No description provided for @serverPlayersText.
+  ///
+  /// In es, this message translates to:
+  /// **'{online} / {max}'**
+  String serverPlayersText(Object online, Object max);
+
+  /// No description provided for @homeSeeAllServers.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todos'**
+  String get homeSeeAllServers;
 }
 
 class _AppLocalizationsDelegate

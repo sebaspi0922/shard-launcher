@@ -7,8 +7,6 @@
   "navSkins": "Skins",
   "navSettings": "Ajustes",
   "comingSoonTitle": "Próximamente",
-  "comingSoonContent": "Buscador de mods, paquetes de recursos, shaders y modpacks de Modrinth y CurseForge.",
-  "comingSoonServers": "Tus servidores con su estado, jugadores y ping, listos para entrar con la instancia que elijas.",
   "comingSoonSkins": "Vista 3D de tu skin, subir una nueva y gestionar capas.",
   "windowMinimize": "Minimizar",
   "windowMaximize": "Maximizar",
@@ -135,7 +133,6 @@
   "homeSession": "Sesión",
   "homeChangeAccount": "Cambiar",
   "homeQuickServers": "Servidores rápidos",
-  "homeQuickServersSoon": "Pronto podrás entrar a tus servidores favoritos desde aquí.",
   "homeRunningNow": "En marcha",
   "homeNothingRunning": "Ninguna partida abierta",
   "play": "Jugar",
@@ -294,10 +291,6 @@
   "tabBackups": "Copias",
   "tabLogs": "Registros",
   "tabSettings": "Ajustes",
-  "tabSoonContent": "Mods, paquetes de recursos y shaders de esta instancia: activar, quitar, actualizar e identificar.",
-  "tabSoonWorlds": "Lista de mundos con sus detalles, datapacks y opciones para editarlos o borrarlos.",
-  "tabSoonScreenshots": "Galería de las capturas que hagas en el juego con F2.",
-  "tabSoonBackups": "Copias de seguridad manuales y automáticas, fijarlas y restaurarlas.",
   "createTitle": "Nueva instancia",
   "createName": "Nombre",
   "createNameHint": "Mi mundo de supervivencia",
@@ -422,5 +415,478 @@
     "placeholders": {
       "value": {}
     }
-  }
+  },
+  "openFolder": "Abrir carpeta",
+  "previous": "Anterior",
+  "next": "Siguiente",
+  "install": "Instalar",
+  "unknownValue": "Desconocido",
+  "closeGameFirst": "Cierra el juego de esta instancia primero",
+  "filterAll": "Todo",
+  "filterAny": "Cualquiera",
+  "filterVersion": "Versión",
+  "filterLoader": "Loader",
+  "sourceUnknown": "Desconocido",
+  "byAuthor": "de {author}",
+  "@byAuthor": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "errCurseforgeKey": "Falta la clave de API de CurseForge. Añádela en Ajustes › Integraciones.",
+  "errSecrets": "No se pudo usar el almacén de claves del sistema.",
+  "kindMods": "Mods",
+  "kindResourcepacks": "Paquetes de recursos",
+  "kindShaders": "Shaders",
+  "kindDatapacks": "Datapacks",
+  "kindModpacks": "Modpacks",
+  "kindMod": "Mod",
+  "kindResourcepack": "Paquete de recursos",
+  "kindShader": "Shader",
+  "kindDatapack": "Datapack",
+  "kindModpack": "Modpack",
+  "contentAdd": "Añadir",
+  "contentBrowse": "Explorar contenido",
+  "contentCheckUpdates": "Buscar actualizaciones",
+  "contentFilterHint": "Filtrar…",
+  "contentEnable": "Activar",
+  "contentDisable": "Desactivar",
+  "contentDisabled": "Desactivado",
+  "contentEmptyTitle": "Sin contenido todavía",
+  "contentEmptyBody": "Añade mods, paquetes de recursos o shaders desde Modrinth o CurseForge.",
+  "contentNoMatches": "Nada coincide con el filtro.",
+  "contentIdentify": "Identificar",
+  "contentUpdateAll": "Actualizar todo",
+  "contentUpdatesAvailable": "{count, plural, =1{1 actualización disponible} other{{count} actualizaciones disponibles}}",
+  "@contentUpdatesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentUnknownFiles": "{count, plural, =1{1 archivo de origen desconocido} other{{count} archivos de origen desconocido}}",
+  "@contentUnknownFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentUpdateTo": "Actualizar a {version}",
+  "@contentUpdateTo": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "contentUpdated": "{name} actualizado a {version}",
+  "@contentUpdated": {
+    "placeholders": {
+      "name": {},
+      "version": {}
+    }
+  },
+  "contentUpdatedAll": "{count, plural, =1{1 archivo actualizado} other{{count} archivos actualizados}}",
+  "@contentUpdatedAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentUpdatedSome": "{ok} actualizados, {failed} con error",
+  "@contentUpdatedSome": {
+    "placeholders": {
+      "ok": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "contentIdentified": "Reconocidos: {found}. Sin reconocer: {missing}.",
+  "@contentIdentified": {
+    "placeholders": {
+      "found": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "contentRemoveTitle": "¿Quitar «{name}»?",
+  "@contentRemoveTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "contentRemoveBody": "Se borra el archivo de la instancia.",
+  "contentRemoved": "«{name}» quitado",
+  "@contentRemoved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "modeSurvival": "Supervivencia",
+  "modeCreative": "Creativo",
+  "modeAdventure": "Aventura",
+  "modeSpectator": "Espectador",
+  "diffPeaceful": "Pacífica",
+  "diffEasy": "Fácil",
+  "diffNormal": "Normal",
+  "diffHard": "Difícil",
+  "worldsEmptyTitle": "Aún no hay mundos",
+  "worldsEmptyBody": "Los mundos que crees al jugar con esta instancia aparecerán aquí.",
+  "worldsNone": "Esta instancia no tiene mundos todavía.",
+  "worldUnreadable": "No se pudo leer level.dat",
+  "worldRename": "Cambiar nombre",
+  "worldName": "Nombre del mundo",
+  "worldLockedRunning": "El juego está abierto: ciérralo para editar el mundo.",
+  "worldGame": "Partida",
+  "worldMode": "Modo de juego",
+  "worldDifficulty": "Dificultad",
+  "worldHardcore": "Hardcore",
+  "worldHardcoreDesc": "Una sola vida: al morir, el mundo queda en modo espectador.",
+  "worldCheats": "Permitir trucos",
+  "worldCheatsDesc": "Habilita los comandos como /gamemode o /tp.",
+  "worldDelete": "Borrar el mundo",
+  "worldDeleteDesc": "Se borra para siempre, sin pasar por la papelera.",
+  "worldDeleteTitle": "¿Borrar «{name}»?",
+  "@worldDeleteTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "worldDeleteBody": "El mundo se borra para siempre y no se puede recuperar. Si quieres conservarlo, crea antes una copia en la pestaña Copias.",
+  "worldDeleteAction": "Borrar para siempre",
+  "worldDeleted": "Mundo «{name}» borrado",
+  "@worldDeleted": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "datapacksAdd": "Añadir datapacks",
+  "datapacksEmpty": "Este mundo no tiene datapacks.",
+  "datapackRemoveBody": "Se borra el datapack de este mundo.",
+  "screenshotsEmptyTitle": "Sin capturas",
+  "screenshotsEmptyBody": "Pulsa F2 mientras juegas y tus capturas aparecerán aquí.",
+  "screenshotsCount": "{count, plural, =1{1 captura} other{{count} capturas}}",
+  "@screenshotsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "screenshotOpen": "Abrir con el visor del sistema",
+  "screenshotDeleteTitle": "¿Borrar la captura?",
+  "screenshotDeleteBody": "Se borra «{file}» del disco.",
+  "@screenshotDeleteBody": {
+    "placeholders": {
+      "file": {}
+    }
+  },
+  "backupsTitle": "Copias de seguridad",
+  "backupsSummary": "{count, plural, =1{1 copia} other{{count} copias}} · {size} en total",
+  "@backupsSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {}
+    }
+  },
+  "backupsEmptyTitle": "Sin copias todavía",
+  "backupsEmptyBody": "Crea una copia antes de cambios grandes. Incluye mundos, mods y configuración (no los registros).",
+  "backupCreate": "Crear copia",
+  "backupCreateTitle": "Nueva copia de seguridad",
+  "backupCreateBody": "Se guarda todo el contenido de la instancia: mundos, mods, recursos y configuración.",
+  "backupLabelOptional": "Etiqueta (opcional)",
+  "backupLabelHint": "Antes de instalar Create",
+  "backupLabel": "Etiqueta",
+  "backupLabelTitle": "Cambiar etiqueta",
+  "backupPinOnCreate": "Fijar esta copia",
+  "backupPinnedNote": "Las copias fijadas nunca se borran solas.",
+  "backupCreating": "Creando la copia…",
+  "backupCreated": "Copia creada",
+  "backupAutomatic": "Copia automática",
+  "backupManual": "Copia manual",
+  "backupAutoBadge": "Automática",
+  "backupPinnedBadge": "Fijada",
+  "backupPin": "Fijar",
+  "backupUnpin": "Dejar de fijar",
+  "backupRestore": "Restaurar",
+  "backupDeleteTitle": "¿Eliminar la copia?",
+  "backupDeleteBody": "Se borra «{name}» del disco.",
+  "@backupDeleteBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "backupAutoTitle": "Copias automáticas",
+  "backupAutoDesc": "Mientras la app está abierta y el juego cerrado.",
+  "backupInterval": "Frecuencia",
+  "backupDaily": "A diario",
+  "backupWeekly": "Semanal",
+  "backupEveryHours": "Cada {hours} h",
+  "@backupEveryHours": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "backupEveryDays": "Cada {days} días",
+  "@backupEveryDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "backupKeep": "Copias automáticas que se conservan",
+  "backupKeepCount": "{count}",
+  "@backupKeepCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backupRestoreTitle": "Restaurar copia",
+  "backupRestoreFrom": "Copia «{name}» del {date}.",
+  "@backupRestoreFrom": {
+    "placeholders": {
+      "name": {},
+      "date": {}
+    }
+  },
+  "backupModeFull": "Todo",
+  "backupModeFullDesc": "Mundos, mods, recursos, shaders y configuración del juego.",
+  "backupModeWorlds": "Solo los mundos",
+  "backupModeWorldsDesc": "Sustituye la carpeta de mundos; los mods y la configuración se quedan como están.",
+  "backupWarnFull": "Todo lo que hay ahora en la instancia se sustituye por la copia. Los cambios posteriores a la copia se pierden.",
+  "backupWarnWorlds": "Los mundos actuales se sustituyen por los de la copia. El progreso posterior a la copia se pierde.",
+  "backupSafety": "Crear antes una copia del estado actual",
+  "backupSafetyLabel": "Antes de restaurar",
+  "backupRestoreFull": "Restaurar todo",
+  "backupRestoreWorlds": "Restaurar mundos",
+  "backupRestoring": "Restaurando…",
+  "backupRestored": "Copia «{name}» restaurada",
+  "@backupRestored": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "contentTitle": "Contenido",
+  "contentSubtitle": "Mods, paquetes de recursos, shaders, datapacks y modpacks.",
+  "contentSearchHint": "Buscar {kind}…",
+  "@contentSearchHint": {
+    "placeholders": {
+      "kind": {}
+    }
+  },
+  "contentResults": "{count, plural, =1{1 resultado} other{{count} resultados}}",
+  "@contentResults": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contentNoResultsTitle": "Sin resultados",
+  "contentNoResultsBody": "Prueba con otras palabras o quita algún filtro.",
+  "contentEnd": "No hay más resultados",
+  "contentInstalled": "Instalado",
+  "contentAlreadyInstalled": "Ya está instalado en esta instancia ({version}).",
+  "@contentAlreadyInstalled": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "contentTargetPrefix": "Añadiendo a ",
+  "contentTargetWorld": "mundo «{world}»",
+  "@contentTargetWorld": {
+    "placeholders": {
+      "world": {}
+    }
+  },
+  "contentBackToInstance": "Volver a la instancia",
+  "contentClearTarget": "Buscar sin instancia",
+  "sortRelevance": "Relevancia",
+  "sortDownloads": "Descargas",
+  "sortFollows": "Seguidores",
+  "sortNewest": "Más nuevos",
+  "sortUpdated": "Actualizados",
+  "installIn": "Instalar en",
+  "installInWorld": "Mundo",
+  "chooseInstance": "Elige una instancia",
+  "chooseInstanceFirst": "Elige una instancia para ver las versiones compatibles.",
+  "chooseWorld": "Elige un mundo",
+  "installLatest": "Instalar la última",
+  "versionsCompatible": "Versiones compatibles",
+  "versionsNoneCompatible": "No hay versiones para esta versión de Minecraft y este loader.",
+  "releaseStable": "Estable",
+  "releaseBeta": "Beta",
+  "releaseAlpha": "Alfa",
+  "installedIn": "{name} instalado en {instance}",
+  "@installedIn": {
+    "placeholders": {
+      "name": {},
+      "instance": {}
+    }
+  },
+  "installedWithDeps": "{name} instalado en {instance} con {count, plural, =1{1 dependencia} other{{count} dependencias}}",
+  "@installedWithDeps": {
+    "placeholders": {
+      "name": {},
+      "instance": {},
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "installPartial": "{name} instalado, pero se omitieron {count, plural, =1{1 dependencia} other{{count} dependencias}}",
+  "@installPartial": {
+    "placeholders": {
+      "name": {},
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cfKeyNeededTitle": "CurseForge necesita una clave de API",
+  "cfKeyNeededBody": "CurseForge solo permite buscar con una clave personal. Puedes pedirla gratis en console.curseforge.com y guardarla aquí; se queda en el llavero del sistema.",
+  "cfKeyAdd": "Añadir clave",
+  "cfKeyChange": "Cambiar clave",
+  "cfKeyTitle": "Clave de API de CurseForge",
+  "cfKeyLabel": "Clave de API",
+  "cfKeyHelper": "Se guarda en el llavero del sistema y no se vuelve a mostrar.",
+  "cfKeySaved": "Clave guardada",
+  "cfKeySet": "Configurada",
+  "cfKeyNotSet": "Sin configurar",
+  "cfKeyRemoveTitle": "¿Quitar la clave de CurseForge?",
+  "cfKeyRemoveBody": "Dejarás de poder buscar en CurseForge hasta que añadas otra.",
+  "modpackImport": "Importar modpack",
+  "modpackImportTitle": "Importar un modpack",
+  "modpackInstallTitle": "Instalar «{name}»",
+  "@modpackInstallTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "modpackBody": "Se crea una instancia nueva con el Minecraft, el loader y los mods del modpack.",
+  "modpackFromFile": "Archivo",
+  "modpackFromUrl": "URL",
+  "modpackChooseFile": "Elegir un .mrpack o .zip…",
+  "modpackFiles": "Modpacks",
+  "modpackName": "Nombre de la instancia",
+  "modpackNameHint": "El del modpack",
+  "modpackInstall": "Instalar modpack",
+  "modpackInstalling": "Descargando los archivos del modpack…",
+  "modpackInstallingHint": "Puede tardar unos minutos. Si algo falla, la instancia a medias se borra.",
+  "modpackDoneTitle": "Modpack instalado",
+  "modpackDoneBody": "Se descargaron {done} de {total} archivos.",
+  "@modpackDoneBody": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "modpackOpenInstance": "Abrir instancia",
+  "serversTitle": "Servidores",
+  "serversSubtitle": "Tus servidores con su estado, listos para entrar.",
+  "serversCount": "{count, plural, =1{1 servidor} other{{count} servidores}} · {online} en línea",
+  "@serversCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "online": {
+        "type": "int"
+      }
+    }
+  },
+  "serversRefresh": "Actualizar estado",
+  "serversImport": "Importar",
+  "serversImported": "{count, plural, =1{1 servidor importado} other{{count} servidores importados}} de {instance}",
+  "@serversImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "instance": {}
+    }
+  },
+  "serversImportNone": "{instance} no tiene servidores nuevos",
+  "@serversImportNone": {
+    "placeholders": {
+      "instance": {}
+    }
+  },
+  "serversEmptyTitle": "Aún no hay servidores",
+  "serversEmptyBody": "Añade uno a mano o impórtalos de la lista de servidores de una instancia.",
+  "serverAdd": "Añadir servidor",
+  "serverEdit": "Editar servidor",
+  "serverAddress": "Dirección",
+  "serverAddressInvalid": "Escribe una dirección válida (host o host:puerto).",
+  "serverName": "Nombre (opcional)",
+  "serverNameHint": "El de la dirección",
+  "serverInstance": "Instancia con la que entrar",
+  "serverInstanceNone": "Ninguna",
+  "serverAccount": "Cuenta",
+  "serverAccountActive": "La cuenta activa",
+  "serverJoin": "Entrar",
+  "serverJoinWith": "Entrar con {instance}",
+  "@serverJoinWith": {
+    "placeholders": {
+      "instance": {}
+    }
+  },
+  "serverAlreadyRunning": "{instance} ya está abierta",
+  "@serverAlreadyRunning": {
+    "placeholders": {
+      "instance": {}
+    }
+  },
+  "serverNoInstance": "Sin instancia asignada",
+  "serverOffline": "Sin conexión",
+  "serverUnreachable": "No responde",
+  "serverPinging": "Consultando…",
+  "serverPing": "{ms} ms",
+  "@serverPing": {
+    "placeholders": {
+      "ms": {
+        "type": "int"
+      }
+    }
+  },
+  "serverCopyAddress": "Copiar dirección",
+  "serverRemoveTitle": "¿Quitar «{name}»?",
+  "@serverRemoveTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "serverRemoveBody": "Se quita de la lista. Puedes volver a añadirlo cuando quieras.",
+  "homeQuickServersEmpty": "Añade tus servidores favoritos para entrar con un clic.",
+  "settingsIntegrations": "Integraciones",
+  "settingsCurseforge": "CurseForge",
+  "settingsCurseforgeDesc": "Clave de API personal para buscar e instalar desde CurseForge.",
+  "settingsDiscord": "Discord Rich Presence",
+  "settingsDiscordDesc": "Muestra en Discord a qué estás jugando.",
+  "serverPlayersText": "{online} / {max}",
+  "@serverPlayersText": {
+    "placeholders": {
+      "online": {},
+      "max": {}
+    }
+  },
+  "homeSeeAllServers": "Ver todos"
 }

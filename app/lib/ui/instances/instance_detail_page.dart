@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/app_info.dart';
 import '../../core/bridge.dart';
 import '../../core/format.dart';
+import '../../core/instance_data.dart';
 import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../console/console_view.dart';
@@ -17,7 +18,11 @@ import '../widgets/art.dart';
 import '../widgets/common.dart';
 import '../widgets/launch_feedback.dart';
 import '../widgets/play_button.dart';
+import 'backups_tab.dart';
+import 'content_tab.dart';
 import 'instance_settings_tab.dart';
+import 'screenshots_tab.dart';
+import 'worlds_tab.dart';
 
 enum InstanceTab { content, worlds, screenshots, backups, logs, settings }
 
@@ -37,6 +42,7 @@ class InstanceDetailPage extends ConsumerWidget {
     final l = AppLocalizations.of(context);
     final instances = ref.watch(instancesProvider);
     final i = ref.watch(instanceByIdProvider(id));
+    ref.watch(instanceDataRefresherProvider);
     if (i == null) {
       return instances.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -71,22 +77,10 @@ class InstanceDetailPage extends ConsumerWidget {
                   instance: i,
                 ),
               InstanceTab.logs => ConsoleView(instanceId: i.id),
-              InstanceTab.content => _Soon(
-                  icon: Symbols.extension_rounded,
-                  body: l.tabSoonContent,
-                ),
-              InstanceTab.worlds => _Soon(
-                  icon: Symbols.public_rounded,
-                  body: l.tabSoonWorlds,
-                ),
-              InstanceTab.screenshots => _Soon(
-                  icon: Symbols.photo_library_rounded,
-                  body: l.tabSoonScreenshots,
-                ),
-              InstanceTab.backups => _Soon(
-                  icon: Symbols.cloud_sync_rounded,
-                  body: l.tabSoonBackups,
-                ),
+              InstanceTab.content => ContentTab(instance: i),
+              InstanceTab.worlds => WorldsTab(instance: i),
+              InstanceTab.screenshots => ScreenshotsTab(instance: i),
+              InstanceTab.backups => BackupsTab(instance: i),
             },
           ),
         ],
@@ -375,18 +369,4 @@ class _TabItem extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Soon extends StatelessWidget {
-  const _Soon({required this.icon, required this.body});
-
-  final IconData icon;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) => EmptyState(
-        icon: icon,
-        title: AppLocalizations.of(context).comingSoonTitle,
-        body: body,
-      );
 }

@@ -8,9 +8,11 @@ import 'package:material_ui/material_ui.dart';
 import 'core/app_info.dart';
 import 'core/providers.dart';
 import 'l10n/app_localizations.dart';
+import 'ui/content/content_page.dart';
 import 'ui/home/home_page.dart';
 import 'ui/instances/instance_detail_page.dart';
 import 'ui/instances/instances_page.dart';
+import 'ui/servers/servers_page.dart';
 import 'ui/settings/settings_page.dart';
 import 'ui/shell/app_shell.dart';
 import 'ui/shell/coming_soon_page.dart';
@@ -61,35 +63,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/content',
-            pageBuilder: (context, s) => _fade(
+            pageBuilder: (_, s) => _fade(
               s,
-              Builder(
-                builder: (context) {
-                  final l = AppLocalizations.of(context);
-                  return ComingSoonPage(
-                    title: l.navContent,
-                    icon: Symbols.extension_rounded,
-                    body: l.comingSoonContent,
-                  );
-                },
+              ContentPage(
+                instanceId: s.uri.queryParameters['instance'],
+                kind: s.uri.queryParameters['kind'],
+                world: s.uri.queryParameters['world'],
               ),
             ),
           ),
           GoRoute(
             path: '/servers',
-            pageBuilder: (context, s) => _fade(
-              s,
-              Builder(
-                builder: (context) {
-                  final l = AppLocalizations.of(context);
-                  return ComingSoonPage(
-                    title: l.navServers,
-                    icon: Symbols.dns_rounded,
-                    body: l.comingSoonServers,
-                  );
-                },
-              ),
-            ),
+            pageBuilder: (_, s) => _fade(s, const ServersPage()),
           ),
           GoRoute(
             path: '/skins',

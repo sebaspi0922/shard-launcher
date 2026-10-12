@@ -194,10 +194,17 @@ class LogLineView {
   final String text;
   final bool stderr;
 
-  const LogLineView({required this.text, required this.stderr});
+  /// Número de orden dentro de la partida (detecta huecos y duplicados).
+  final BigInt seq;
+
+  const LogLineView({
+    required this.text,
+    required this.stderr,
+    required this.seq,
+  });
 
   @override
-  int get hashCode => text.hashCode ^ stderr.hashCode;
+  int get hashCode => text.hashCode ^ stderr.hashCode ^ seq.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -205,7 +212,8 @@ class LogLineView {
       other is LogLineView &&
           runtimeType == other.runtimeType &&
           text == other.text &&
-          stderr == other.stderr;
+          stderr == other.stderr &&
+          seq == other.seq;
 }
 
 class SettingsView {

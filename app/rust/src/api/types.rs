@@ -165,6 +165,8 @@ pub enum UiEvent {
 pub struct LogLineView {
     pub text: String,
     pub stderr: bool,
+    /// Número de orden dentro de la partida (detecta huecos y duplicados).
+    pub seq: u64,
 }
 
 impl UiEvent {
@@ -232,5 +234,6 @@ pub(crate) fn log_line(stream: LogStream, text: String) -> LogLineView {
     LogLineView {
         text,
         stderr: stream == LogStream::Stderr,
+        seq: 0,
     }
 }

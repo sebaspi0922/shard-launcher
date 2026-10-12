@@ -31,14 +31,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get comingSoonTitle => 'Coming soon';
 
   @override
-  String get comingSoonContent =>
-      'Search mods, resource packs, shaders and modpacks from Modrinth and CurseForge.';
-
-  @override
-  String get comingSoonServers =>
-      'Your servers with status, players and ping, ready to join with the instance you pick.';
-
-  @override
   String get comingSoonSkins =>
       '3D view of your skin, upload a new one and manage capes.';
 
@@ -330,10 +322,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeQuickServers => 'Quick servers';
 
   @override
-  String get homeQuickServersSoon =>
-      'Soon you’ll be able to join your favourite servers from here.';
-
-  @override
   String get homeRunningNow => 'Running now';
 
   @override
@@ -552,22 +540,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tabSettings => 'Settings';
-
-  @override
-  String get tabSoonContent =>
-      'This instance’s mods, resource packs and shaders: enable, remove, update and identify.';
-
-  @override
-  String get tabSoonWorlds =>
-      'World list with details, datapacks and options to edit or delete them.';
-
-  @override
-  String get tabSoonScreenshots =>
-      'Gallery of the screenshots you take in game with F2.';
-
-  @override
-  String get tabSoonBackups =>
-      'Manual and automatic backups, pin and restore them.';
 
   @override
   String get createTitle => 'New instance';
@@ -825,4 +797,853 @@ class AppLocalizationsEn extends AppLocalizations {
   String memoryGb(Object value) {
     return '$value GB';
   }
+
+  @override
+  String get openFolder => 'Open folder';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get install => 'Install';
+
+  @override
+  String get unknownValue => 'Unknown';
+
+  @override
+  String get closeGameFirst => 'Close this instance\'s game first';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get filterAny => 'Any';
+
+  @override
+  String get filterVersion => 'Version';
+
+  @override
+  String get filterLoader => 'Loader';
+
+  @override
+  String get sourceUnknown => 'Unknown';
+
+  @override
+  String byAuthor(Object author) {
+    return 'by $author';
+  }
+
+  @override
+  String get errCurseforgeKey =>
+      'The CurseForge API key is missing. Add it in Settings › Integrations.';
+
+  @override
+  String get errSecrets => 'The system keyring could not be used.';
+
+  @override
+  String get kindMods => 'Mods';
+
+  @override
+  String get kindResourcepacks => 'Resource packs';
+
+  @override
+  String get kindShaders => 'Shaders';
+
+  @override
+  String get kindDatapacks => 'Datapacks';
+
+  @override
+  String get kindModpacks => 'Modpacks';
+
+  @override
+  String get kindMod => 'Mod';
+
+  @override
+  String get kindResourcepack => 'Resource pack';
+
+  @override
+  String get kindShader => 'Shader';
+
+  @override
+  String get kindDatapack => 'Datapack';
+
+  @override
+  String get kindModpack => 'Modpack';
+
+  @override
+  String get contentAdd => 'Add';
+
+  @override
+  String get contentBrowse => 'Browse content';
+
+  @override
+  String get contentCheckUpdates => 'Check for updates';
+
+  @override
+  String get contentFilterHint => 'Filter…';
+
+  @override
+  String get contentEnable => 'Enable';
+
+  @override
+  String get contentDisable => 'Disable';
+
+  @override
+  String get contentDisabled => 'Disabled';
+
+  @override
+  String get contentEmptyTitle => 'No content yet';
+
+  @override
+  String get contentEmptyBody =>
+      'Add mods, resource packs or shaders from Modrinth or CurseForge.';
+
+  @override
+  String get contentNoMatches => 'Nothing matches the filter.';
+
+  @override
+  String get contentIdentify => 'Identify';
+
+  @override
+  String get contentUpdateAll => 'Update all';
+
+  @override
+  String contentUpdatesAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count updates available',
+      one: '1 update available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUnknownFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files of unknown origin',
+      one: '1 file of unknown origin',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUpdateTo(Object version) {
+    return 'Update to $version';
+  }
+
+  @override
+  String contentUpdated(Object name, Object version) {
+    return '$name updated to $version';
+  }
+
+  @override
+  String contentUpdatedAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files updated',
+      one: '1 file updated',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUpdatedSome(int ok, int failed) {
+    return '$ok updated, $failed failed';
+  }
+
+  @override
+  String contentIdentified(int found, int missing) {
+    return 'Identified: $found. Not recognized: $missing.';
+  }
+
+  @override
+  String contentRemoveTitle(Object name) {
+    return 'Remove “$name”?';
+  }
+
+  @override
+  String get contentRemoveBody => 'The file is deleted from the instance.';
+
+  @override
+  String contentRemoved(Object name) {
+    return '“$name” removed';
+  }
+
+  @override
+  String get modeSurvival => 'Survival';
+
+  @override
+  String get modeCreative => 'Creative';
+
+  @override
+  String get modeAdventure => 'Adventure';
+
+  @override
+  String get modeSpectator => 'Spectator';
+
+  @override
+  String get diffPeaceful => 'Peaceful';
+
+  @override
+  String get diffEasy => 'Easy';
+
+  @override
+  String get diffNormal => 'Normal';
+
+  @override
+  String get diffHard => 'Hard';
+
+  @override
+  String get worldsEmptyTitle => 'No worlds yet';
+
+  @override
+  String get worldsEmptyBody =>
+      'Worlds you create while playing this instance will show up here.';
+
+  @override
+  String get worldsNone => 'This instance has no worlds yet.';
+
+  @override
+  String get worldUnreadable => 'level.dat could not be read';
+
+  @override
+  String get worldRename => 'Rename';
+
+  @override
+  String get worldName => 'World name';
+
+  @override
+  String get worldLockedRunning =>
+      'The game is running: close it to edit the world.';
+
+  @override
+  String get worldGame => 'Game';
+
+  @override
+  String get worldMode => 'Game mode';
+
+  @override
+  String get worldDifficulty => 'Difficulty';
+
+  @override
+  String get worldHardcore => 'Hardcore';
+
+  @override
+  String get worldHardcoreDesc =>
+      'One life only: when you die, the world switches to spectator.';
+
+  @override
+  String get worldCheats => 'Allow cheats';
+
+  @override
+  String get worldCheatsDesc => 'Enables commands such as /gamemode or /tp.';
+
+  @override
+  String get worldDelete => 'Delete the world';
+
+  @override
+  String get worldDeleteDesc =>
+      'It is deleted forever, without going to the trash.';
+
+  @override
+  String worldDeleteTitle(Object name) {
+    return 'Delete “$name”?';
+  }
+
+  @override
+  String get worldDeleteBody =>
+      'The world is deleted forever and cannot be recovered. If you want to keep it, create a backup first in the Backups tab.';
+
+  @override
+  String get worldDeleteAction => 'Delete forever';
+
+  @override
+  String worldDeleted(Object name) {
+    return 'World “$name” deleted';
+  }
+
+  @override
+  String get datapacksAdd => 'Add datapacks';
+
+  @override
+  String get datapacksEmpty => 'This world has no datapacks.';
+
+  @override
+  String get datapackRemoveBody => 'The datapack is deleted from this world.';
+
+  @override
+  String get screenshotsEmptyTitle => 'No screenshots';
+
+  @override
+  String get screenshotsEmptyBody =>
+      'Press F2 while playing and your screenshots will show up here.';
+
+  @override
+  String screenshotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count screenshots',
+      one: '1 screenshot',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get screenshotOpen => 'Open with the system viewer';
+
+  @override
+  String get screenshotDeleteTitle => 'Delete the screenshot?';
+
+  @override
+  String screenshotDeleteBody(Object file) {
+    return '“$file” is deleted from disk.';
+  }
+
+  @override
+  String get backupsTitle => 'Backups';
+
+  @override
+  String backupsSummary(int count, Object size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count backups',
+      one: '1 backup',
+    );
+    return '$_temp0 · $size in total';
+  }
+
+  @override
+  String get backupsEmptyTitle => 'No backups yet';
+
+  @override
+  String get backupsEmptyBody =>
+      'Create a backup before big changes. It includes worlds, mods and settings (not logs).';
+
+  @override
+  String get backupCreate => 'Create backup';
+
+  @override
+  String get backupCreateTitle => 'New backup';
+
+  @override
+  String get backupCreateBody =>
+      'The whole instance is saved: worlds, mods, resources and settings.';
+
+  @override
+  String get backupLabelOptional => 'Label (optional)';
+
+  @override
+  String get backupLabelHint => 'Before installing Create';
+
+  @override
+  String get backupLabel => 'Label';
+
+  @override
+  String get backupLabelTitle => 'Change label';
+
+  @override
+  String get backupPinOnCreate => 'Pin this backup';
+
+  @override
+  String get backupPinnedNote =>
+      'Pinned backups are never deleted automatically.';
+
+  @override
+  String get backupCreating => 'Creating the backup…';
+
+  @override
+  String get backupCreated => 'Backup created';
+
+  @override
+  String get backupAutomatic => 'Automatic backup';
+
+  @override
+  String get backupManual => 'Manual backup';
+
+  @override
+  String get backupAutoBadge => 'Automatic';
+
+  @override
+  String get backupPinnedBadge => 'Pinned';
+
+  @override
+  String get backupPin => 'Pin';
+
+  @override
+  String get backupUnpin => 'Unpin';
+
+  @override
+  String get backupRestore => 'Restore';
+
+  @override
+  String get backupDeleteTitle => 'Delete the backup?';
+
+  @override
+  String backupDeleteBody(Object name) {
+    return '“$name” is deleted from disk.';
+  }
+
+  @override
+  String get backupAutoTitle => 'Automatic backups';
+
+  @override
+  String get backupAutoDesc => 'While the app is open and the game is closed.';
+
+  @override
+  String get backupInterval => 'Frequency';
+
+  @override
+  String get backupDaily => 'Daily';
+
+  @override
+  String get backupWeekly => 'Weekly';
+
+  @override
+  String backupEveryHours(int hours) {
+    return 'Every $hours h';
+  }
+
+  @override
+  String backupEveryDays(int days) {
+    return 'Every $days days';
+  }
+
+  @override
+  String get backupKeep => 'Automatic backups to keep';
+
+  @override
+  String backupKeepCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get backupRestoreTitle => 'Restore backup';
+
+  @override
+  String backupRestoreFrom(Object name, Object date) {
+    return 'Backup “$name” from $date.';
+  }
+
+  @override
+  String get backupModeFull => 'Everything';
+
+  @override
+  String get backupModeFullDesc =>
+      'Worlds, mods, resources, shaders and game settings.';
+
+  @override
+  String get backupModeWorlds => 'Worlds only';
+
+  @override
+  String get backupModeWorldsDesc =>
+      'Replaces the worlds folder; mods and settings stay as they are.';
+
+  @override
+  String get backupWarnFull =>
+      'Everything currently in the instance is replaced by the backup. Changes made after the backup are lost.';
+
+  @override
+  String get backupWarnWorlds =>
+      'The current worlds are replaced by the ones in the backup. Progress made after the backup is lost.';
+
+  @override
+  String get backupSafety => 'Back up the current state first';
+
+  @override
+  String get backupSafetyLabel => 'Before restoring';
+
+  @override
+  String get backupRestoreFull => 'Restore everything';
+
+  @override
+  String get backupRestoreWorlds => 'Restore worlds';
+
+  @override
+  String get backupRestoring => 'Restoring…';
+
+  @override
+  String backupRestored(Object name) {
+    return 'Backup “$name” restored';
+  }
+
+  @override
+  String get contentTitle => 'Content';
+
+  @override
+  String get contentSubtitle =>
+      'Mods, resource packs, shaders, datapacks and modpacks.';
+
+  @override
+  String contentSearchHint(Object kind) {
+    return 'Search $kind…';
+  }
+
+  @override
+  String contentResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count results',
+      one: '1 result',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get contentNoResultsTitle => 'No results';
+
+  @override
+  String get contentNoResultsBody => 'Try other words or remove a filter.';
+
+  @override
+  String get contentEnd => 'No more results';
+
+  @override
+  String get contentInstalled => 'Installed';
+
+  @override
+  String contentAlreadyInstalled(Object version) {
+    return 'Already installed in this instance ($version).';
+  }
+
+  @override
+  String get contentTargetPrefix => 'Adding to ';
+
+  @override
+  String contentTargetWorld(Object world) {
+    return 'world “$world”';
+  }
+
+  @override
+  String get contentBackToInstance => 'Back to the instance';
+
+  @override
+  String get contentClearTarget => 'Search without an instance';
+
+  @override
+  String get sortRelevance => 'Relevance';
+
+  @override
+  String get sortDownloads => 'Downloads';
+
+  @override
+  String get sortFollows => 'Followers';
+
+  @override
+  String get sortNewest => 'Newest';
+
+  @override
+  String get sortUpdated => 'Recently updated';
+
+  @override
+  String get installIn => 'Install in';
+
+  @override
+  String get installInWorld => 'World';
+
+  @override
+  String get chooseInstance => 'Choose an instance';
+
+  @override
+  String get chooseInstanceFirst =>
+      'Choose an instance to see compatible versions.';
+
+  @override
+  String get chooseWorld => 'Choose a world';
+
+  @override
+  String get installLatest => 'Install latest';
+
+  @override
+  String get versionsCompatible => 'Compatible versions';
+
+  @override
+  String get versionsNoneCompatible =>
+      'There are no versions for this Minecraft version and loader.';
+
+  @override
+  String get releaseStable => 'Release';
+
+  @override
+  String get releaseBeta => 'Beta';
+
+  @override
+  String get releaseAlpha => 'Alpha';
+
+  @override
+  String installedIn(Object name, Object instance) {
+    return '$name installed in $instance';
+  }
+
+  @override
+  String installedWithDeps(Object name, Object instance, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dependencies',
+      one: '1 dependency',
+    );
+    return '$name installed in $instance with $_temp0';
+  }
+
+  @override
+  String installPartial(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dependencies were',
+      one: '1 dependency was',
+    );
+    return '$name installed, but $_temp0 skipped';
+  }
+
+  @override
+  String get cfKeyNeededTitle => 'CurseForge needs an API key';
+
+  @override
+  String get cfKeyNeededBody =>
+      'CurseForge only allows searching with a personal key. You can request one for free at console.curseforge.com and save it here; it stays in the system keyring.';
+
+  @override
+  String get cfKeyAdd => 'Add key';
+
+  @override
+  String get cfKeyChange => 'Change key';
+
+  @override
+  String get cfKeyTitle => 'CurseForge API key';
+
+  @override
+  String get cfKeyLabel => 'API key';
+
+  @override
+  String get cfKeyHelper =>
+      'It is stored in the system keyring and never shown again.';
+
+  @override
+  String get cfKeySaved => 'Key saved';
+
+  @override
+  String get cfKeySet => 'Configured';
+
+  @override
+  String get cfKeyNotSet => 'Not configured';
+
+  @override
+  String get cfKeyRemoveTitle => 'Remove the CurseForge key?';
+
+  @override
+  String get cfKeyRemoveBody =>
+      'You will not be able to search CurseForge until you add another one.';
+
+  @override
+  String get modpackImport => 'Import modpack';
+
+  @override
+  String get modpackImportTitle => 'Import a modpack';
+
+  @override
+  String modpackInstallTitle(Object name) {
+    return 'Install “$name”';
+  }
+
+  @override
+  String get modpackBody =>
+      'A new instance is created with the modpack\'s Minecraft, loader and mods.';
+
+  @override
+  String get modpackFromFile => 'File';
+
+  @override
+  String get modpackFromUrl => 'URL';
+
+  @override
+  String get modpackChooseFile => 'Choose a .mrpack or .zip…';
+
+  @override
+  String get modpackFiles => 'Modpacks';
+
+  @override
+  String get modpackName => 'Instance name';
+
+  @override
+  String get modpackNameHint => 'The modpack\'s name';
+
+  @override
+  String get modpackInstall => 'Install modpack';
+
+  @override
+  String get modpackInstalling => 'Downloading the modpack files…';
+
+  @override
+  String get modpackInstallingHint =>
+      'It may take a few minutes. If something fails, the half-made instance is removed.';
+
+  @override
+  String get modpackDoneTitle => 'Modpack installed';
+
+  @override
+  String modpackDoneBody(int done, int total) {
+    return '$done of $total files were downloaded.';
+  }
+
+  @override
+  String get modpackOpenInstance => 'Open instance';
+
+  @override
+  String get serversTitle => 'Servers';
+
+  @override
+  String get serversSubtitle =>
+      'Your servers with their status, ready to join.';
+
+  @override
+  String serversCount(int count, int online) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servers',
+      one: '1 server',
+    );
+    return '$_temp0 · $online online';
+  }
+
+  @override
+  String get serversRefresh => 'Refresh status';
+
+  @override
+  String get serversImport => 'Import';
+
+  @override
+  String serversImported(int count, Object instance) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servers imported',
+      one: '1 server imported',
+    );
+    return '$_temp0 from $instance';
+  }
+
+  @override
+  String serversImportNone(Object instance) {
+    return '$instance has no new servers';
+  }
+
+  @override
+  String get serversEmptyTitle => 'No servers yet';
+
+  @override
+  String get serversEmptyBody =>
+      'Add one by hand or import them from an instance\'s server list.';
+
+  @override
+  String get serverAdd => 'Add server';
+
+  @override
+  String get serverEdit => 'Edit server';
+
+  @override
+  String get serverAddress => 'Address';
+
+  @override
+  String get serverAddressInvalid =>
+      'Enter a valid address (host or host:port).';
+
+  @override
+  String get serverName => 'Name (optional)';
+
+  @override
+  String get serverNameHint => 'Same as the address';
+
+  @override
+  String get serverInstance => 'Instance to join with';
+
+  @override
+  String get serverInstanceNone => 'None';
+
+  @override
+  String get serverAccount => 'Account';
+
+  @override
+  String get serverAccountActive => 'The active account';
+
+  @override
+  String get serverJoin => 'Join';
+
+  @override
+  String serverJoinWith(Object instance) {
+    return 'Join with $instance';
+  }
+
+  @override
+  String serverAlreadyRunning(Object instance) {
+    return '$instance is already running';
+  }
+
+  @override
+  String get serverNoInstance => 'No instance assigned';
+
+  @override
+  String get serverOffline => 'Offline';
+
+  @override
+  String get serverUnreachable => 'Not responding';
+
+  @override
+  String get serverPinging => 'Checking…';
+
+  @override
+  String serverPing(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get serverCopyAddress => 'Copy address';
+
+  @override
+  String serverRemoveTitle(Object name) {
+    return 'Remove “$name”?';
+  }
+
+  @override
+  String get serverRemoveBody =>
+      'It is removed from the list. You can add it again any time.';
+
+  @override
+  String get homeQuickServersEmpty =>
+      'Add your favorite servers to join with one click.';
+
+  @override
+  String get settingsIntegrations => 'Integrations';
+
+  @override
+  String get settingsCurseforge => 'CurseForge';
+
+  @override
+  String get settingsCurseforgeDesc =>
+      'Personal API key to search and install from CurseForge.';
+
+  @override
+  String get settingsDiscord => 'Discord Rich Presence';
+
+  @override
+  String get settingsDiscordDesc => 'Shows what you are playing on Discord.';
+
+  @override
+  String serverPlayersText(Object online, Object max) {
+    return '$online / $max';
+  }
+
+  @override
+  String get homeSeeAllServers => 'See all';
 }

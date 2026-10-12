@@ -9,10 +9,13 @@ import '../../core/bridge.dart';
 import '../../core/format.dart';
 import '../../core/launch.dart';
 import '../../core/providers.dart';
+import '../../core/servers_state.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_dialogs.dart';
 import '../accounts/account_panel.dart';
 import '../instances/create_instance_dialog.dart';
+import '../servers/server_dialog.dart';
+import '../servers/server_widgets.dart';
 import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/avatar.dart';
@@ -99,7 +102,7 @@ class HomePage extends ConsumerWidget {
                       SizedBox(height: Space.x4),
                       _RunningCard(),
                       SizedBox(height: Space.x4),
-                      _ServersSoonCard(),
+                      _QuickServersCard(),
                     ],
                   ),
                 ),
@@ -574,15 +577,19 @@ class _RunningRow extends ConsumerWidget {
   }
 }
 
-class _ServersSoonCard extends StatelessWidget {
-  const _ServersSoonCard();
+class _QuickServersCard extends ConsumerWidget {
+  const _QuickServersCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final c = context.colors;
+    final servers = (ref.watch(serversProvider).value ?? const <ServerView>[])
+        .take(3)
+        .toList();
+    final status = ref.watch(serverStatusProvider).value ?? const {};
     return Panel(
-      padding: const EdgeInsets.all(Space.x4),
+      padding: const EdgeInsets.fromLTRB(Space.x4, Space.x3, Space.x3, Space.x3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -596,23 +603,80 @@ class _ServersSoonCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Tag(l.comingSoonTitle),
-            ],
-          ),
-          const SizedBox(height: Space.x3),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Symbols.dns_rounded, size: 18, color: c.textMuted),
-              const SizedBox(width: Space.x2),
-              Expanded(
-                child: Text(
-                  l.homeQuickServersSoon,
-                  style: context.text.bodySmall,
+              TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 28),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
+                onPressed: () => context.go('/servers'),
+                child: Text(l.homeSeeAllServers),
               ),
             ],
           ),
+          const SizedBox(height: Space.x1),
+          if (servers.isEmpty) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Symbols.dns_rounded, size: 18, color: c.textMuted),
+                const SizedBox(width: Space.x2),
+                Expanded(
+                  child: Text(l.homeQuickServersEmpty, style: context.text.bodySmall),
+                ),
+              ],
+            ),
+            const SizedBox(height: Space.x3),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 34)),
+                onPressed: () => showServerDialog(context),
+                icon: const Icon(Symbols.add_rounded, size: 18),
+                label: Text(l.serverAdd),
+              ),
+            ),
+          ] else
+            for (final s in servers)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: Space.x1),
+                child: Row(
+                  children: [
+                    ServerFavicon(server: s, status: status[s.address], size: 36),
+                    const SizedBox(width: Space.x3),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.text.titleSmall,
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              PingBars(status: status[s.address]),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  status[s.address]?.online ?? false
+                                      ? '${serverPlayers(l, status[s.address])} · ${l.serverPing(status[s.address]!.latencyMs.toInt())}'
+                                      : serverPlayers(l, status[s.address]),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.text.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    JoinButton(server: s, compact: true),
+                  ],
+                ),
+              ),
         ],
       ),
     );

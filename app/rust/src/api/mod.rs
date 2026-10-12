@@ -1,5 +1,9 @@
 pub mod accounts;
 pub mod app;
+pub mod backups;
+pub mod content;
 pub mod instances;
+pub mod servers;
 pub mod settings;
 pub mod types;
+pub mod worlds;
