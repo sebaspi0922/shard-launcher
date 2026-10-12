@@ -11,8 +11,9 @@ import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `flush`
 
-/// Abre el núcleo (directorio de datos por defecto si `data_dir` es `None`)
-/// y cierra las partidas que terminaron con la app cerrada.
+/// Abre el núcleo (directorio de datos por defecto si `data_dir` es `None`),
+/// cierra las partidas que terminaron con la app cerrada, empieza a guardar el
+/// histórico de registros y lanza el planificador de backups.
 Future<String> start({String? dataDir}) =>
     RustLib.instance.api.crateApiAppStart(dataDir: dataDir);
 
@@ -22,3 +23,14 @@ String coreVersion() => RustLib.instance.api.crateApiAppCoreVersion();
 /// Reenvía los eventos del núcleo a Dart. Las líneas de log se agrupan.
 Stream<UiEvent> subscribeEvents() =>
     RustLib.instance.api.crateApiAppSubscribeEvents();
+
+/// Últimas líneas (hasta 5000) de una partida, de la más antigua a la más
+/// reciente, con su `seq`. Vacío si la partida no se conoce.
+List<LogLineView> getLogBacklog({required BigInt gameId}) =>
+    RustLib.instance.api.crateApiAppGetLogBacklog(gameId: gameId);
+
+/// Partida más reciente de la instancia de la que hay histórico.
+BigInt? latestGameForInstance({required String instanceId}) => RustLib
+    .instance
+    .api
+    .crateApiAppLatestGameForInstance(instanceId: instanceId);

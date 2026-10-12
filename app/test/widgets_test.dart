@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lcore_app/ui/accounts/account_dialogs.dart';
 import 'package:lcore_app/ui/instances/instances_page.dart';
 import 'package:lcore_app/ui/settings/settings_page.dart';
+import 'package:lcore_app/ui/widgets/common.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'support/fake_bridge.dart';
@@ -58,6 +59,96 @@ void main() {
     await tester.tap(find.byTooltip('Ajustes'));
     await settle(tester);
     expect(find.byType(SettingsPage), findsOneWidget);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('contenido: desactivar y actualizar todo', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(
+      tester,
+      location: '/instances/survival-amigos?tab=content',
+      bridge: bridge,
+    );
+    await tester.tap(find.byType(Switch).first);
+    await settle(tester);
+    expect(bridge.content['survival-amigos']!.first.enabled, isFalse);
+
+    await tester.tap(find.text('Actualizar todo'));
+    await settle(tester);
+    expect(bridge.updates, isEmpty);
+    expect(find.text('Actualizar todo'), findsNothing);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('copias: restaurar solo mundos con copia previa', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(
+      tester,
+      location: '/instances/survival-amigos?tab=backups',
+      bridge: bridge,
+    );
+    final before = bridge.backups.length;
+    await tester.tap(find.text('Restaurar').at(1));
+    await settle(tester);
+    await tester.tap(find.text('Solo los mundos'));
+    await settle(tester);
+    await tester.tap(find.text('Restaurar mundos'));
+    await settle(tester);
+    expect(bridge.restored, ['backup-3:worlds']);
+    expect(bridge.backups.length, before + 1);
+    expect(bridge.backups.first.label, 'Antes de restaurar');
+    debugDisableShadows = true;
+  });
+
+  testWidgets('servidores: entrar lanza con el servidor', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(tester, location: '/servers', bridge: bridge);
+    await tester.tap(find.text('Entrar').first);
+    await settle(tester);
+    expect(bridge.lastLaunch?.id, 'survival-amigos');
+    expect(bridge.lastLaunch?.server, 'mc.amigos.example');
+    debugDisableShadows = true;
+  });
+
+  testWidgets('contenido: instalar en la instancia de destino', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(
+      tester,
+      location: '/content?instance=survival-amigos&kind=mod',
+      bridge: bridge,
+    );
+    final card = find.ancestor(
+      of: find.textContaining('Entity Culling', findRichText: true),
+      matching: find.byType(InkWell),
+    );
+    await tester.tap(
+      find.descendant(of: card.first, matching: find.text('Instalar')),
+    );
+    await settle(tester);
+    expect(bridge.installed, ['survival-amigos:entityculling']);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('ajustes: guardar la clave de CurseForge', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(tester, location: '/settings', bridge: bridge);
+    await tester.scrollUntilVisible(
+      find.text('Añadir clave'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Añadir clave'));
+    await settle(tester);
+    await tester.enterText(
+      find.descendant(of: find.byType(AppDialog), matching: find.byType(TextField)),
+      'clave-secreta',
+    );
+    await tester.pump();
+    await tester.tap(find.text('Guardar'));
+    await settle(tester);
+    expect(bridge.curseforgeKey, isTrue);
+    expect(find.text('Configurada'), findsOneWidget);
+    expect(find.text('clave-secreta'), findsNothing);
     debugDisableShadows = true;
   });
 }

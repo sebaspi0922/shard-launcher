@@ -65,9 +65,16 @@ final _readyLine = RegExp(
 /// Tras este tiempo en «Iniciando» se da el juego por abierto.
 const _startingTimeout = Duration(seconds: 20);
 
+/// Etapas de progreso que emite la preparación de un lanzamiento (versión,
+/// librerías, assets y Java). Las de contenido, modpacks o backups no cuentan.
+const kLaunchStages = {'libraries', 'assets', 'java'};
+
 class LaunchController extends Notifier<Map<String, LaunchState>> {
-  /// Instancia cuyo lanzamiento está en curso (recibe el progreso).
-  String? _pending;
+  /// Instancias preparándose, por orden de lanzamiento.
+  final List<String> _pending = [];
+
+  /// Tarea de progreso → instancia que la reclamó.
+  final Map<BigInt, String> _taskOwner = {};
   final Map<BigInt, String> _games = {};
   final Map<String, Timer> _timers = {};
 
@@ -107,17 +114,23 @@ class LaunchController extends Notifier<Map<String, LaunchState>> {
     }
   }
 
-  Future<void> launch(String instanceId) async {
+  /// Lanza la instancia. `server` entra directo a ese servidor; `account`
+  /// fuerza una cuenta (si no, la activa).
+  Future<void> launch(
+    String instanceId, {
+    String? server,
+    String? account,
+  }) async {
     if (of(instanceId).busy || of(instanceId).phase == LaunchPhase.running) {
       return;
     }
-    _pending = instanceId;
+    _pending.add(instanceId);
     _set(instanceId, const LaunchState(phase: LaunchPhase.preparing));
-    final account = ref.read(activeAccountProvider)?.id;
+    final acc = account ?? ref.read(activeAccountProvider)?.id;
     try {
       final game = await ref
           .read(bridgeProvider)
-          .launchInstance(instanceId, account: account);
+          .launchInstance(instanceId, account: acc, server: server);
       if (!ref.mounted) return;
       _games[game.gameId] = instanceId;
       // GameStarted puede haber llegado antes; no retroceder de «En juego».
@@ -131,8 +144,31 @@ class LaunchController extends Notifier<Map<String, LaunchState>> {
         LaunchState(phase: LaunchPhase.error, failure: LaunchError(e)),
       );
     } finally {
-      if (_pending == instanceId) _pending = null;
+      _pending.remove(instanceId);
+      _taskOwner.removeWhere((_, owner) => owner == instanceId);
     }
+  }
+
+  /// Instancia a la que pertenece una tarea de progreso, si es de un
+  /// lanzamiento. Una tarea nueva de las etapas de lanzamiento la reclama la
+  /// primera instancia en preparación que no tenga ya otra tarea activa (cada
+  /// lanzamiento descarga por pasos); si todas tienen una, la más antigua.
+  String? _ownerOf(BigInt taskId, String stage) {
+    final known = _taskOwner[taskId];
+    if (known != null) return known;
+    if (!kLaunchStages.contains(stage)) return null;
+    final candidates = _pending.where((id) {
+      final p = of(id).phase;
+      return p == LaunchPhase.preparing || p == LaunchPhase.downloading;
+    }).toList();
+    if (candidates.isEmpty) return null;
+    final busy = _taskOwner.values.toSet();
+    final owner = candidates.firstWhere(
+      (id) => !busy.contains(id),
+      orElse: () => candidates.first,
+    );
+    _taskOwner[taskId] = owner;
+    return owner;
   }
 
   /// Vuelve a inactivo (p. ej. al cerrar el aviso de error).
@@ -158,8 +194,8 @@ class LaunchController extends Notifier<Map<String, LaunchState>> {
 
   void _onEvent(UiEvent e) {
     switch (e) {
-      case UiEvent_Progress(:final done, :final total, :final stage):
-        final id = _pending;
+      case UiEvent_Progress(:final taskId, :final done, :final total, :final stage):
+        final id = _ownerOf(taskId, stage);
         if (id == null) return;
         final s = of(id);
         if (s.phase == LaunchPhase.preparing ||
@@ -174,9 +210,9 @@ class LaunchController extends Notifier<Map<String, LaunchState>> {
             ),
           );
         }
-      case UiEvent_TaskFinished():
+      case UiEvent_TaskFinished(:final taskId):
         // Al terminar una descarga se vuelve a «Preparando» hasta la siguiente.
-        final id = _pending;
+        final id = _taskOwner.remove(taskId);
         if (id != null && of(id).phase == LaunchPhase.downloading) {
           _set(id, const LaunchState(phase: LaunchPhase.preparing));
         }

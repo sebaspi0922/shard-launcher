@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lcore_app/app.dart';
+import 'package:lcore_app/core/format.dart';
 import 'package:lcore_app/core/providers.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -38,6 +39,7 @@ Future<ProviderContainer> pumpApp(
   Size size = const Size(1280, 800),
 }) async {
   await loadAppFonts();
+  appClock = () => kTestNow;
   debugDisableShadows = false;
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;

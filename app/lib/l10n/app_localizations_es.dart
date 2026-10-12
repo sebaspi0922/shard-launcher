@@ -31,14 +31,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get comingSoonTitle => 'Próximamente';
 
   @override
-  String get comingSoonContent =>
-      'Buscador de mods, paquetes de recursos, shaders y modpacks de Modrinth y CurseForge.';
-
-  @override
-  String get comingSoonServers =>
-      'Tus servidores con su estado, jugadores y ping, listos para entrar con la instancia que elijas.';
-
-  @override
   String get comingSoonSkins =>
       'Vista 3D de tu skin, subir una nueva y gestionar capas.';
 
@@ -330,10 +322,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeQuickServers => 'Servidores rápidos';
 
   @override
-  String get homeQuickServersSoon =>
-      'Pronto podrás entrar a tus servidores favoritos desde aquí.';
-
-  @override
   String get homeRunningNow => 'En marcha';
 
   @override
@@ -552,22 +540,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tabSettings => 'Ajustes';
-
-  @override
-  String get tabSoonContent =>
-      'Mods, paquetes de recursos y shaders de esta instancia: activar, quitar, actualizar e identificar.';
-
-  @override
-  String get tabSoonWorlds =>
-      'Lista de mundos con sus detalles, datapacks y opciones para editarlos o borrarlos.';
-
-  @override
-  String get tabSoonScreenshots =>
-      'Galería de las capturas que hagas en el juego con F2.';
-
-  @override
-  String get tabSoonBackups =>
-      'Copias de seguridad manuales y automáticas, fijarlas y restaurarlas.';
 
   @override
   String get createTitle => 'Nueva instancia';
@@ -825,4 +797,854 @@ class AppLocalizationsEs extends AppLocalizations {
   String memoryGb(Object value) {
     return '$value GB';
   }
+
+  @override
+  String get openFolder => 'Abrir carpeta';
+
+  @override
+  String get previous => 'Anterior';
+
+  @override
+  String get next => 'Siguiente';
+
+  @override
+  String get install => 'Instalar';
+
+  @override
+  String get unknownValue => 'Desconocido';
+
+  @override
+  String get closeGameFirst => 'Cierra el juego de esta instancia primero';
+
+  @override
+  String get filterAll => 'Todo';
+
+  @override
+  String get filterAny => 'Cualquiera';
+
+  @override
+  String get filterVersion => 'Versión';
+
+  @override
+  String get filterLoader => 'Loader';
+
+  @override
+  String get sourceUnknown => 'Desconocido';
+
+  @override
+  String byAuthor(Object author) {
+    return 'de $author';
+  }
+
+  @override
+  String get errCurseforgeKey =>
+      'Falta la clave de API de CurseForge. Añádela en Ajustes › Integraciones.';
+
+  @override
+  String get errSecrets => 'No se pudo usar el almacén de claves del sistema.';
+
+  @override
+  String get kindMods => 'Mods';
+
+  @override
+  String get kindResourcepacks => 'Paquetes de recursos';
+
+  @override
+  String get kindShaders => 'Shaders';
+
+  @override
+  String get kindDatapacks => 'Datapacks';
+
+  @override
+  String get kindModpacks => 'Modpacks';
+
+  @override
+  String get kindMod => 'Mod';
+
+  @override
+  String get kindResourcepack => 'Paquete de recursos';
+
+  @override
+  String get kindShader => 'Shader';
+
+  @override
+  String get kindDatapack => 'Datapack';
+
+  @override
+  String get kindModpack => 'Modpack';
+
+  @override
+  String get contentAdd => 'Añadir';
+
+  @override
+  String get contentBrowse => 'Explorar contenido';
+
+  @override
+  String get contentCheckUpdates => 'Buscar actualizaciones';
+
+  @override
+  String get contentFilterHint => 'Filtrar…';
+
+  @override
+  String get contentEnable => 'Activar';
+
+  @override
+  String get contentDisable => 'Desactivar';
+
+  @override
+  String get contentDisabled => 'Desactivado';
+
+  @override
+  String get contentEmptyTitle => 'Sin contenido todavía';
+
+  @override
+  String get contentEmptyBody =>
+      'Añade mods, paquetes de recursos o shaders desde Modrinth o CurseForge.';
+
+  @override
+  String get contentNoMatches => 'Nada coincide con el filtro.';
+
+  @override
+  String get contentIdentify => 'Identificar';
+
+  @override
+  String get contentUpdateAll => 'Actualizar todo';
+
+  @override
+  String contentUpdatesAvailable(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count actualizaciones disponibles',
+      one: '1 actualización disponible',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUnknownFiles(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count archivos de origen desconocido',
+      one: '1 archivo de origen desconocido',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUpdateTo(Object version) {
+    return 'Actualizar a $version';
+  }
+
+  @override
+  String contentUpdated(Object name, Object version) {
+    return '$name actualizado a $version';
+  }
+
+  @override
+  String contentUpdatedAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count archivos actualizados',
+      one: '1 archivo actualizado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String contentUpdatedSome(int ok, int failed) {
+    return '$ok actualizados, $failed con error';
+  }
+
+  @override
+  String contentIdentified(int found, int missing) {
+    return 'Reconocidos: $found. Sin reconocer: $missing.';
+  }
+
+  @override
+  String contentRemoveTitle(Object name) {
+    return '¿Quitar «$name»?';
+  }
+
+  @override
+  String get contentRemoveBody => 'Se borra el archivo de la instancia.';
+
+  @override
+  String contentRemoved(Object name) {
+    return '«$name» quitado';
+  }
+
+  @override
+  String get modeSurvival => 'Supervivencia';
+
+  @override
+  String get modeCreative => 'Creativo';
+
+  @override
+  String get modeAdventure => 'Aventura';
+
+  @override
+  String get modeSpectator => 'Espectador';
+
+  @override
+  String get diffPeaceful => 'Pacífica';
+
+  @override
+  String get diffEasy => 'Fácil';
+
+  @override
+  String get diffNormal => 'Normal';
+
+  @override
+  String get diffHard => 'Difícil';
+
+  @override
+  String get worldsEmptyTitle => 'Aún no hay mundos';
+
+  @override
+  String get worldsEmptyBody =>
+      'Los mundos que crees al jugar con esta instancia aparecerán aquí.';
+
+  @override
+  String get worldsNone => 'Esta instancia no tiene mundos todavía.';
+
+  @override
+  String get worldUnreadable => 'No se pudo leer level.dat';
+
+  @override
+  String get worldRename => 'Cambiar nombre';
+
+  @override
+  String get worldName => 'Nombre del mundo';
+
+  @override
+  String get worldLockedRunning =>
+      'El juego está abierto: ciérralo para editar el mundo.';
+
+  @override
+  String get worldGame => 'Partida';
+
+  @override
+  String get worldMode => 'Modo de juego';
+
+  @override
+  String get worldDifficulty => 'Dificultad';
+
+  @override
+  String get worldHardcore => 'Hardcore';
+
+  @override
+  String get worldHardcoreDesc =>
+      'Una sola vida: al morir, el mundo queda en modo espectador.';
+
+  @override
+  String get worldCheats => 'Permitir trucos';
+
+  @override
+  String get worldCheatsDesc => 'Habilita los comandos como /gamemode o /tp.';
+
+  @override
+  String get worldDelete => 'Borrar el mundo';
+
+  @override
+  String get worldDeleteDesc =>
+      'Se borra para siempre, sin pasar por la papelera.';
+
+  @override
+  String worldDeleteTitle(Object name) {
+    return '¿Borrar «$name»?';
+  }
+
+  @override
+  String get worldDeleteBody =>
+      'El mundo se borra para siempre y no se puede recuperar. Si quieres conservarlo, crea antes una copia en la pestaña Copias.';
+
+  @override
+  String get worldDeleteAction => 'Borrar para siempre';
+
+  @override
+  String worldDeleted(Object name) {
+    return 'Mundo «$name» borrado';
+  }
+
+  @override
+  String get datapacksAdd => 'Añadir datapacks';
+
+  @override
+  String get datapacksEmpty => 'Este mundo no tiene datapacks.';
+
+  @override
+  String get datapackRemoveBody => 'Se borra el datapack de este mundo.';
+
+  @override
+  String get screenshotsEmptyTitle => 'Sin capturas';
+
+  @override
+  String get screenshotsEmptyBody =>
+      'Pulsa F2 mientras juegas y tus capturas aparecerán aquí.';
+
+  @override
+  String screenshotsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capturas',
+      one: '1 captura',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get screenshotOpen => 'Abrir con el visor del sistema';
+
+  @override
+  String get screenshotDeleteTitle => '¿Borrar la captura?';
+
+  @override
+  String screenshotDeleteBody(Object file) {
+    return 'Se borra «$file» del disco.';
+  }
+
+  @override
+  String get backupsTitle => 'Copias de seguridad';
+
+  @override
+  String backupsSummary(int count, Object size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count copias',
+      one: '1 copia',
+    );
+    return '$_temp0 · $size en total';
+  }
+
+  @override
+  String get backupsEmptyTitle => 'Sin copias todavía';
+
+  @override
+  String get backupsEmptyBody =>
+      'Crea una copia antes de cambios grandes. Incluye mundos, mods y configuración (no los registros).';
+
+  @override
+  String get backupCreate => 'Crear copia';
+
+  @override
+  String get backupCreateTitle => 'Nueva copia de seguridad';
+
+  @override
+  String get backupCreateBody =>
+      'Se guarda todo el contenido de la instancia: mundos, mods, recursos y configuración.';
+
+  @override
+  String get backupLabelOptional => 'Etiqueta (opcional)';
+
+  @override
+  String get backupLabelHint => 'Antes de instalar Create';
+
+  @override
+  String get backupLabel => 'Etiqueta';
+
+  @override
+  String get backupLabelTitle => 'Cambiar etiqueta';
+
+  @override
+  String get backupPinOnCreate => 'Fijar esta copia';
+
+  @override
+  String get backupPinnedNote => 'Las copias fijadas nunca se borran solas.';
+
+  @override
+  String get backupCreating => 'Creando la copia…';
+
+  @override
+  String get backupCreated => 'Copia creada';
+
+  @override
+  String get backupAutomatic => 'Copia automática';
+
+  @override
+  String get backupManual => 'Copia manual';
+
+  @override
+  String get backupAutoBadge => 'Automática';
+
+  @override
+  String get backupPinnedBadge => 'Fijada';
+
+  @override
+  String get backupPin => 'Fijar';
+
+  @override
+  String get backupUnpin => 'Dejar de fijar';
+
+  @override
+  String get backupRestore => 'Restaurar';
+
+  @override
+  String get backupDeleteTitle => '¿Eliminar la copia?';
+
+  @override
+  String backupDeleteBody(Object name) {
+    return 'Se borra «$name» del disco.';
+  }
+
+  @override
+  String get backupAutoTitle => 'Copias automáticas';
+
+  @override
+  String get backupAutoDesc =>
+      'Mientras la app está abierta y el juego cerrado.';
+
+  @override
+  String get backupInterval => 'Frecuencia';
+
+  @override
+  String get backupDaily => 'A diario';
+
+  @override
+  String get backupWeekly => 'Semanal';
+
+  @override
+  String backupEveryHours(int hours) {
+    return 'Cada $hours h';
+  }
+
+  @override
+  String backupEveryDays(int days) {
+    return 'Cada $days días';
+  }
+
+  @override
+  String get backupKeep => 'Copias automáticas que se conservan';
+
+  @override
+  String backupKeepCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get backupRestoreTitle => 'Restaurar copia';
+
+  @override
+  String backupRestoreFrom(Object name, Object date) {
+    return 'Copia «$name» del $date.';
+  }
+
+  @override
+  String get backupModeFull => 'Todo';
+
+  @override
+  String get backupModeFullDesc =>
+      'Mundos, mods, recursos, shaders y configuración del juego.';
+
+  @override
+  String get backupModeWorlds => 'Solo los mundos';
+
+  @override
+  String get backupModeWorldsDesc =>
+      'Sustituye la carpeta de mundos; los mods y la configuración se quedan como están.';
+
+  @override
+  String get backupWarnFull =>
+      'Todo lo que hay ahora en la instancia se sustituye por la copia. Los cambios posteriores a la copia se pierden.';
+
+  @override
+  String get backupWarnWorlds =>
+      'Los mundos actuales se sustituyen por los de la copia. El progreso posterior a la copia se pierde.';
+
+  @override
+  String get backupSafety => 'Crear antes una copia del estado actual';
+
+  @override
+  String get backupSafetyLabel => 'Antes de restaurar';
+
+  @override
+  String get backupRestoreFull => 'Restaurar todo';
+
+  @override
+  String get backupRestoreWorlds => 'Restaurar mundos';
+
+  @override
+  String get backupRestoring => 'Restaurando…';
+
+  @override
+  String backupRestored(Object name) {
+    return 'Copia «$name» restaurada';
+  }
+
+  @override
+  String get contentTitle => 'Contenido';
+
+  @override
+  String get contentSubtitle =>
+      'Mods, paquetes de recursos, shaders, datapacks y modpacks.';
+
+  @override
+  String contentSearchHint(Object kind) {
+    return 'Buscar $kind…';
+  }
+
+  @override
+  String contentResults(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count resultados',
+      one: '1 resultado',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get contentNoResultsTitle => 'Sin resultados';
+
+  @override
+  String get contentNoResultsBody =>
+      'Prueba con otras palabras o quita algún filtro.';
+
+  @override
+  String get contentEnd => 'No hay más resultados';
+
+  @override
+  String get contentInstalled => 'Instalado';
+
+  @override
+  String contentAlreadyInstalled(Object version) {
+    return 'Ya está instalado en esta instancia ($version).';
+  }
+
+  @override
+  String get contentTargetPrefix => 'Añadiendo a ';
+
+  @override
+  String contentTargetWorld(Object world) {
+    return 'mundo «$world»';
+  }
+
+  @override
+  String get contentBackToInstance => 'Volver a la instancia';
+
+  @override
+  String get contentClearTarget => 'Buscar sin instancia';
+
+  @override
+  String get sortRelevance => 'Relevancia';
+
+  @override
+  String get sortDownloads => 'Descargas';
+
+  @override
+  String get sortFollows => 'Seguidores';
+
+  @override
+  String get sortNewest => 'Más nuevos';
+
+  @override
+  String get sortUpdated => 'Actualizados';
+
+  @override
+  String get installIn => 'Instalar en';
+
+  @override
+  String get installInWorld => 'Mundo';
+
+  @override
+  String get chooseInstance => 'Elige una instancia';
+
+  @override
+  String get chooseInstanceFirst =>
+      'Elige una instancia para ver las versiones compatibles.';
+
+  @override
+  String get chooseWorld => 'Elige un mundo';
+
+  @override
+  String get installLatest => 'Instalar la última';
+
+  @override
+  String get versionsCompatible => 'Versiones compatibles';
+
+  @override
+  String get versionsNoneCompatible =>
+      'No hay versiones para esta versión de Minecraft y este loader.';
+
+  @override
+  String get releaseStable => 'Estable';
+
+  @override
+  String get releaseBeta => 'Beta';
+
+  @override
+  String get releaseAlpha => 'Alfa';
+
+  @override
+  String installedIn(Object name, Object instance) {
+    return '$name instalado en $instance';
+  }
+
+  @override
+  String installedWithDeps(Object name, Object instance, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dependencias',
+      one: '1 dependencia',
+    );
+    return '$name instalado en $instance con $_temp0';
+  }
+
+  @override
+  String installPartial(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dependencias',
+      one: '1 dependencia',
+    );
+    return '$name instalado, pero se omitieron $_temp0';
+  }
+
+  @override
+  String get cfKeyNeededTitle => 'CurseForge necesita una clave de API';
+
+  @override
+  String get cfKeyNeededBody =>
+      'CurseForge solo permite buscar con una clave personal. Puedes pedirla gratis en console.curseforge.com y guardarla aquí; se queda en el llavero del sistema.';
+
+  @override
+  String get cfKeyAdd => 'Añadir clave';
+
+  @override
+  String get cfKeyChange => 'Cambiar clave';
+
+  @override
+  String get cfKeyTitle => 'Clave de API de CurseForge';
+
+  @override
+  String get cfKeyLabel => 'Clave de API';
+
+  @override
+  String get cfKeyHelper =>
+      'Se guarda en el llavero del sistema y no se vuelve a mostrar.';
+
+  @override
+  String get cfKeySaved => 'Clave guardada';
+
+  @override
+  String get cfKeySet => 'Configurada';
+
+  @override
+  String get cfKeyNotSet => 'Sin configurar';
+
+  @override
+  String get cfKeyRemoveTitle => '¿Quitar la clave de CurseForge?';
+
+  @override
+  String get cfKeyRemoveBody =>
+      'Dejarás de poder buscar en CurseForge hasta que añadas otra.';
+
+  @override
+  String get modpackImport => 'Importar modpack';
+
+  @override
+  String get modpackImportTitle => 'Importar un modpack';
+
+  @override
+  String modpackInstallTitle(Object name) {
+    return 'Instalar «$name»';
+  }
+
+  @override
+  String get modpackBody =>
+      'Se crea una instancia nueva con el Minecraft, el loader y los mods del modpack.';
+
+  @override
+  String get modpackFromFile => 'Archivo';
+
+  @override
+  String get modpackFromUrl => 'URL';
+
+  @override
+  String get modpackChooseFile => 'Elegir un .mrpack o .zip…';
+
+  @override
+  String get modpackFiles => 'Modpacks';
+
+  @override
+  String get modpackName => 'Nombre de la instancia';
+
+  @override
+  String get modpackNameHint => 'El del modpack';
+
+  @override
+  String get modpackInstall => 'Instalar modpack';
+
+  @override
+  String get modpackInstalling => 'Descargando los archivos del modpack…';
+
+  @override
+  String get modpackInstallingHint =>
+      'Puede tardar unos minutos. Si algo falla, la instancia a medias se borra.';
+
+  @override
+  String get modpackDoneTitle => 'Modpack instalado';
+
+  @override
+  String modpackDoneBody(int done, int total) {
+    return 'Se descargaron $done de $total archivos.';
+  }
+
+  @override
+  String get modpackOpenInstance => 'Abrir instancia';
+
+  @override
+  String get serversTitle => 'Servidores';
+
+  @override
+  String get serversSubtitle =>
+      'Tus servidores con su estado, listos para entrar.';
+
+  @override
+  String serversCount(int count, int online) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores',
+      one: '1 servidor',
+    );
+    return '$_temp0 · $online en línea';
+  }
+
+  @override
+  String get serversRefresh => 'Actualizar estado';
+
+  @override
+  String get serversImport => 'Importar';
+
+  @override
+  String serversImported(int count, Object instance) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count servidores importados',
+      one: '1 servidor importado',
+    );
+    return '$_temp0 de $instance';
+  }
+
+  @override
+  String serversImportNone(Object instance) {
+    return '$instance no tiene servidores nuevos';
+  }
+
+  @override
+  String get serversEmptyTitle => 'Aún no hay servidores';
+
+  @override
+  String get serversEmptyBody =>
+      'Añade uno a mano o impórtalos de la lista de servidores de una instancia.';
+
+  @override
+  String get serverAdd => 'Añadir servidor';
+
+  @override
+  String get serverEdit => 'Editar servidor';
+
+  @override
+  String get serverAddress => 'Dirección';
+
+  @override
+  String get serverAddressInvalid =>
+      'Escribe una dirección válida (host o host:puerto).';
+
+  @override
+  String get serverName => 'Nombre (opcional)';
+
+  @override
+  String get serverNameHint => 'El de la dirección';
+
+  @override
+  String get serverInstance => 'Instancia con la que entrar';
+
+  @override
+  String get serverInstanceNone => 'Ninguna';
+
+  @override
+  String get serverAccount => 'Cuenta';
+
+  @override
+  String get serverAccountActive => 'La cuenta activa';
+
+  @override
+  String get serverJoin => 'Entrar';
+
+  @override
+  String serverJoinWith(Object instance) {
+    return 'Entrar con $instance';
+  }
+
+  @override
+  String serverAlreadyRunning(Object instance) {
+    return '$instance ya está abierta';
+  }
+
+  @override
+  String get serverNoInstance => 'Sin instancia asignada';
+
+  @override
+  String get serverOffline => 'Sin conexión';
+
+  @override
+  String get serverUnreachable => 'No responde';
+
+  @override
+  String get serverPinging => 'Consultando…';
+
+  @override
+  String serverPing(int ms) {
+    return '$ms ms';
+  }
+
+  @override
+  String get serverCopyAddress => 'Copiar dirección';
+
+  @override
+  String serverRemoveTitle(Object name) {
+    return '¿Quitar «$name»?';
+  }
+
+  @override
+  String get serverRemoveBody =>
+      'Se quita de la lista. Puedes volver a añadirlo cuando quieras.';
+
+  @override
+  String get homeQuickServersEmpty =>
+      'Añade tus servidores favoritos para entrar con un clic.';
+
+  @override
+  String get settingsIntegrations => 'Integraciones';
+
+  @override
+  String get settingsCurseforge => 'CurseForge';
+
+  @override
+  String get settingsCurseforgeDesc =>
+      'Clave de API personal para buscar e instalar desde CurseForge.';
+
+  @override
+  String get settingsDiscord => 'Discord Rich Presence';
+
+  @override
+  String get settingsDiscordDesc => 'Muestra en Discord a qué estás jugando.';
+
+  @override
+  String serverPlayersText(Object online, Object max) {
+    return '$online / $max';
+  }
+
+  @override
+  String get homeSeeAllServers => 'Ver todos';
 }

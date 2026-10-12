@@ -29,6 +29,8 @@ String errorText(AppLocalizations l, Object error) {
     'hash_mismatch' => l.errHashMismatch,
     'io' || 'invalid_path' => l.errIo,
     'invalid_input' => l.errInvalidInput,
+    'curseforge_key_missing' => l.errCurseforgeKey,
+    'secrets' => l.errSecrets,
     _ => l.errGeneric,
   };
 }
