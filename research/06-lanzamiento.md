@@ -174,7 +174,7 @@ Además, sin crash, comprueba Java instalada vs requerida, memoria y flags/mods 
 ## 10. Desconocidos / pendiente
 
 - Dónde se guarda `authlib-injector.jar` y la condición exacta de uso (offline vs cualquier cuenta con skin); contenido de `latest_launch.log` (no leído).
-- Origen de los subdirectorios `natives/<id>/{lwjgl,jna,netty}` (¿JVM props del JSON de Mojang 26.x?). No se pudo contrastar con el JSON de 26.2 (no persiste en disco).
+- ~~Origen de los subdirectorios `natives/<id>/{lwjgl,jna,netty}`~~: resuelto (2026-10-11). Vienen del propio JSON de 26.2 (`arguments.jvm`): `-Djava.library.path=${natives_directory}/java`, `-Djna.tmpdir=${natives_directory}/jna`, `-Dorg.lwjgl.system.SharedLibraryExtractPath=${natives_directory}/lwjgl`, `-Dio.netty.native.workdir=${natives_directory}/netty`. LWJGL extrae sus `.so` en tiempo de ejecución.
 - Ningún uso de `resolutionWidth/Height` en el lanzamiento (posible bug del original); `devMode` solo abre la consola.
 - Timeouts/proxy del `reqwest::Client` global, pool de hilos y política de errores HTTP más allá de `error_for_status`.
 - Comportamiento ante manifiesto inaccesible (sin caché: probablemente falla el lanzamiento, incluso con todo descargado).
