@@ -425,3 +425,109 @@ class SettingRow extends StatelessWidget {
     );
   }
 }
+
+/// Pide un texto en un diálogo. Devuelve `null` si se cancela.
+Future<String?> showTextPrompt(
+  BuildContext context, {
+  required String title,
+  required String label,
+  required String action,
+  String initial = '',
+  String? hint,
+  String? helper,
+  bool obscure = false,
+  bool allowEmpty = false,
+  IconData? icon,
+}) =>
+    showDialog<String>(
+      context: context,
+      builder: (_) => _TextPrompt(
+        title: title,
+        label: label,
+        action: action,
+        initial: initial,
+        hint: hint,
+        helper: helper,
+        obscure: obscure,
+        allowEmpty: allowEmpty,
+        icon: icon,
+      ),
+    );
+
+class _TextPrompt extends StatefulWidget {
+  const _TextPrompt({
+    required this.title,
+    required this.label,
+    required this.action,
+    required this.initial,
+    required this.hint,
+    required this.helper,
+    required this.obscure,
+    required this.allowEmpty,
+    required this.icon,
+  });
+
+  final String title;
+  final String label;
+  final String action;
+  final String initial;
+  final String? hint;
+  final String? helper;
+  final bool obscure;
+  final bool allowEmpty;
+  final IconData? icon;
+
+  @override
+  State<_TextPrompt> createState() => _TextPromptState();
+}
+
+class _TextPromptState extends State<_TextPrompt> {
+  late final _text = TextEditingController(text: widget.initial)
+    ..selection = TextSelection(baseOffset: 0, extentOffset: widget.initial.length);
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  bool get _valid => widget.allowEmpty || _text.text.trim().isNotEmpty;
+
+  void _submit() {
+    if (_valid) Navigator.pop(context, _text.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AppDialog(
+      title: widget.title,
+      icon: widget.icon,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l.cancel),
+        ),
+        FilledButton(
+          onPressed: _valid ? _submit : null,
+          child: Text(widget.action),
+        ),
+      ],
+      child: TextField(
+        controller: _text,
+        autofocus: true,
+        obscureText: widget.obscure,
+        enableSuggestions: !widget.obscure,
+        autocorrect: !widget.obscure,
+        onChanged: (_) => setState(() {}),
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          hintText: widget.hint,
+          helperText: widget.helper,
+          helperMaxLines: 3,
+        ),
+      ),
+    );
+  }
+}

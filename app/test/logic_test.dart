@@ -35,7 +35,7 @@ void main() {
       final b = LogBuffer();
       b.addAll([
         for (var i = 0; i < kLogCapacity + 10; i++)
-          LogLineView(text: 'l$i', stderr: false),
+          LogLineView(text: 'l$i', stderr: false, seq: BigInt.from(i)),
       ]);
       expect(b.length, kLogCapacity);
       expect(b.dropped, 10);
@@ -115,8 +115,12 @@ void main() {
       await f;
       expect(state().phase, LaunchPhase.starting);
 
-      bridge.emit(UiEvent.gameLog(gameId: BigInt.two, lines: const [
-        LogLineView(text: '[x] [Render thread/INFO]: Sound engine started', stderr: false),
+      bridge.emit(UiEvent.gameLog(gameId: BigInt.two, lines: [
+        LogLineView(
+          text: '[x] [Render thread/INFO]: Sound engine started',
+          stderr: false,
+          seq: BigInt.zero,
+        ),
       ]));
       await flush();
       expect(state().phase, LaunchPhase.running);
@@ -151,6 +155,109 @@ void main() {
       await flush();
       expect(state().phase, LaunchPhase.error);
       expect((state().failure as GameCrash).code, 1);
+    });
+  });
+
+  group('progreso del lanzamiento', () {
+    late FakeBridge bridge;
+    late ProviderContainer container;
+
+    setUp(() {
+      bridge = FakeBridge()..launchCompleter = Completer();
+      container = ProviderContainer(
+        retry: (_, _) => null,
+        overrides: [bridgeProvider.overrideWithValue(bridge)],
+      );
+      container.listen(launchProvider, (_, _) {});
+    });
+    tearDown(() => container.dispose());
+
+    LaunchState state(String id) => container.read(launchStateProvider(id));
+    Future<void> flush() => Future<void>.delayed(Duration.zero);
+    UiEvent progress(int task, String stage, int done) => UiEvent.progress(
+          taskId: BigInt.from(task),
+          stage: stage,
+          done: BigInt.from(done),
+          total: BigInt.from(100),
+          bytes: false,
+        );
+
+    test('otras tareas (contenido, backup) no cuentan como descarga', () async {
+      unawaited(container.read(launchProvider.notifier).launch('vanilla-puro'));
+      bridge.emit(progress(7, 'backup', 50));
+      bridge.emit(progress(8, 'content', 30));
+      await flush();
+      expect(state('vanilla-puro').phase, LaunchPhase.preparing);
+      bridge.emit(progress(9, 'assets', 40));
+      await flush();
+      expect(state('vanilla-puro').phase, LaunchPhase.downloading);
+      expect(state('vanilla-puro').done, 40);
+      // El fin de una tarea ajena no devuelve a «Preparando».
+      bridge.emit(UiEvent.taskFinished(taskId: BigInt.from(7), ok: true));
+      await flush();
+      expect(state('vanilla-puro').phase, LaunchPhase.downloading);
+      bridge.emit(UiEvent.taskFinished(taskId: BigInt.from(9), ok: true));
+      await flush();
+      expect(state('vanilla-puro').phase, LaunchPhase.preparing);
+    });
+
+    test('dos lanzamientos a la vez reparten sus tareas', () async {
+      unawaited(container.read(launchProvider.notifier).launch('vanilla-puro'));
+      unawaited(container.read(launchProvider.notifier).launch('quilt-pruebas'));
+      bridge.emit(progress(1, 'libraries', 10));
+      bridge.emit(progress(2, 'libraries', 70));
+      bridge.emit(progress(1, 'libraries', 20));
+      await flush();
+      expect(state('vanilla-puro').done, 20);
+      expect(state('quilt-pruebas').done, 70);
+    });
+
+    test('entrar a un servidor pasa la dirección y la cuenta', () async {
+      bridge.launchCompleter = null;
+      await container
+          .read(launchProvider.notifier)
+          .launch('vanilla-puro', server: 'mc.example.net', account: 'a2');
+      expect(bridge.lastLaunch?.server, 'mc.example.net');
+      expect(bridge.lastLaunch?.account, 'a2');
+    });
+  });
+
+  group('histórico de registros', () {
+    LogLineView line(int seq) =>
+        LogLineView(text: 'l$seq', stderr: false, seq: BigInt.from(seq));
+
+    test('se descartan duplicados y se detectan huecos', () {
+      final b = LogBuffer()..addAll([line(0), line(1), line(2)]);
+      b.addAll([line(2), line(3)]);
+      expect(b.lines.map((e) => e.text), ['l0', 'l1', 'l2', 'l3']);
+      expect(b.hasGap([line(4)]), isFalse);
+      expect(b.hasGap([line(6)]), isTrue);
+    });
+
+    test('la consola abierta tarde recibe el histórico', () async {
+      final bridge = FakeBridge();
+      final game = BigInt.from(5);
+      bridge.latestGames['survival-amigos'] = game;
+      bridge.backlogs[game] = [for (var i = 0; i < 3; i++) line(i)];
+      final container = ProviderContainer(
+        overrides: [bridgeProvider.overrideWithValue(bridge)],
+      );
+      addTearDown(container.dispose);
+      final buffer = container.read(logBufferProvider('survival-amigos'));
+      expect(buffer.length, 3);
+      expect(buffer.gameId, game);
+
+      // Llegan líneas en vivo, algunas repetidas con el histórico.
+      bridge.emit(UiEvent.gameLog(gameId: game, lines: [line(2), line(3)]));
+      await Future<void>.delayed(Duration.zero);
+      expect(buffer.length, 4);
+
+      // Un hueco (se perdieron eventos) se rellena desde el histórico.
+      bridge.backlogs[game] = [for (var i = 0; i < 8; i++) line(i)];
+      bridge.emit(UiEvent.gameLog(gameId: game, lines: [line(7)]));
+      await Future<void>.delayed(Duration.zero);
+      expect(buffer.length, 8);
+      expect(buffer.lines.last.text, 'l7');
     });
   });
 }

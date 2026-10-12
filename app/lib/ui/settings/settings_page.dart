@@ -9,7 +9,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/app_info.dart';
 import '../../core/bridge.dart';
 import '../../core/format.dart';
+import '../../core/errors.dart';
 import '../../core/providers.dart';
+import '../../core/servers_state.dart';
 import '../../l10n/app_localizations.dart';
 import '../instances/instance_settings_tab.dart' show splitArgs;
 import '../theme/app_theme.dart';
@@ -17,6 +19,7 @@ import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/common.dart';
 import '../widgets/memory_slider.dart';
+import 'curseforge_key_dialog.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -230,6 +233,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
               const SizedBox(height: Space.x5),
               _Group(
+                title: l.settingsIntegrations,
+                icon: Symbols.hub_rounded,
+                children: [
+                  const _CurseforgeKeyRow(),
+                  const Divider(),
+                  SettingRow(
+                    title: l.settingsDiscord,
+                    description: l.settingsDiscordDesc,
+                    control: Switch(
+                      value: s.discordRpc,
+                      onChanged: (v) => _change(s.copyWith(discordRpc: v)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Space.x5),
+              _Group(
                 title: l.settingsAbout,
                 icon: Symbols.info_rounded,
                 children: [
@@ -322,6 +342,55 @@ class _Group extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CurseforgeKeyRow extends ConsumerWidget {
+  const _CurseforgeKeyRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppLocalizations.of(context);
+    final c = context.colors;
+    final has = ref.watch(curseforgeKeyProvider).value ?? false;
+    return SettingRow(
+      title: l.settingsCurseforge,
+      description: l.settingsCurseforgeDesc,
+      control: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Tag(
+            has ? l.cfKeySet : l.cfKeyNotSet,
+            dot: has ? c.success : c.textMuted,
+          ),
+          const SizedBox(width: Space.x3),
+          if (has)
+            TextButton(
+              onPressed: () async {
+                final ok = await confirm(
+                  context,
+                  title: l.cfKeyRemoveTitle,
+                  body: l.cfKeyRemoveBody,
+                  action: l.remove,
+                  danger: true,
+                );
+                if (!ok) return;
+                try {
+                  await ref.read(curseforgeKeyProvider.notifier).clear();
+                } catch (e) {
+                  if (context.mounted) showToast(context, errorText(l, e), error: true);
+                }
+              },
+              child: Text(l.remove),
+            ),
+          OutlinedButton.icon(
+            onPressed: () => showCurseforgeKeyDialog(context, ref),
+            icon: const Icon(Symbols.key_rounded, size: 18),
+            label: Text(has ? l.cfKeyChange : l.cfKeyAdd),
+          ),
+        ],
+      ),
     );
   }
 }

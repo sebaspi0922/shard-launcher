@@ -4,6 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../l10n/app_localizations.dart';
 
+/// Reloj de la UI. Los tests lo fijan para que las fechas sean estables.
+DateTime Function() appClock = DateTime.now;
+
 String formatPlaytime(AppLocalizations l, BigInt seconds) {
   final total = seconds.toInt();
   final h = total ~/ 3600;
@@ -18,7 +21,7 @@ String formatPlaytime(AppLocalizations l, BigInt seconds) {
 String formatRelative(AppLocalizations l, int? unixSeconds, {DateTime? now}) {
   if (unixSeconds == null) return l.lastPlayedNever;
   final at = DateTime.fromMillisecondsSinceEpoch(unixSeconds * 1000);
-  final diff = (now ?? DateTime.now()).difference(at);
+  final diff = (now ?? appClock()).difference(at);
   if (diff.inMinutes < 1) return l.relJustNow;
   if (diff.inHours < 1) return l.relMinutes(diff.inMinutes);
   if (diff.inDays < 1) return l.relHours(diff.inHours);
@@ -51,3 +54,27 @@ const kCreatableLoaders = ['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'];
 /// Texto corto de versión: «1.21.1 · Fabric».
 String versionLine(AppLocalizations l, String mc, String loader) =>
     '$mc · ${loaderName(l, loader)}';
+
+/// «842 MB», «1,2 GB», «48 KB».
+String formatBytes(AppLocalizations l, BigInt bytes) {
+  final b = bytes.toDouble();
+  final f = NumberFormat('0.#', l.localeName);
+  if (b < 1024) return '${bytes.toInt()} B';
+  if (b < 1024 * 1024) return '${(b / 1024).round()} KB';
+  if (b < 1024 * 1024 * 1024) return '${f.format(b / (1024 * 1024))} MB';
+  return '${f.format(b / (1024 * 1024 * 1024))} GB';
+}
+
+/// Número compacto: «98,4 M», «12 k».
+String formatCompact(AppLocalizations l, BigInt n) =>
+    NumberFormat.compact(locale: l.localeName).format(n.toInt());
+
+/// Fecha y hora absolutas: «11 oct 2026, 18:02».
+String formatDateTime(AppLocalizations l, int unixSeconds) {
+  final at = DateTime.fromMillisecondsSinceEpoch(unixSeconds * 1000);
+  return DateFormat.yMMMd(l.localeName).add_Hm().format(at);
+}
+
+/// Fecha corta: «11 oct 2026».
+String formatDate(AppLocalizations l, DateTime at) =>
+    DateFormat.yMMMd(l.localeName).format(at);
