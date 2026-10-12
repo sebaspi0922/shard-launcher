@@ -16,3 +16,7 @@ build/
 .env
 *.log
 /dist/
+# Configuración local de agentes (Claude, Codex)
+.claude/
+AGENTS.md
+CLAUDE.md
