@@ -43,7 +43,8 @@ class LocalImage extends StatelessWidget {
 }
 
 /// Icono de un proyecto de Modrinth/CurseForge. Se descarga una vez al disco;
-/// mientras tanto (o si no hay), un icono generado con sus iniciales.
+/// mientras tanto (o si no hay), `fallback` o, por defecto, un icono generado
+/// con sus iniciales.
 class ProjectIcon extends ConsumerWidget {
   const ProjectIcon({
     super.key,
@@ -51,6 +52,7 @@ class ProjectIcon extends ConsumerWidget {
     required this.seed,
     required this.title,
     this.size = 56,
+    this.fallback,
   });
 
   final String? url;
@@ -58,9 +60,13 @@ class ProjectIcon extends ConsumerWidget {
   final String title;
   final double size;
 
+  /// Lo que se ve sin icono (por defecto, las iniciales de `title`).
+  final Widget? fallback;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final fallback = InstanceIcon(id: seed, name: title, size: size);
+    final fallback =
+        this.fallback ?? InstanceIcon(id: seed, name: title, size: size);
     final u = url;
     if (u == null || u.isEmpty) return fallback;
     final path = ref.watch(cachedImageProvider(u)).value;

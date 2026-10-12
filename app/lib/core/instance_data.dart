@@ -61,6 +61,7 @@ class InstanceContentController
     final v = await _bridge.updateContent(instanceId, contentKey(kind, file));
     await refresh();
     ref.invalidate(contentUpdatesProvider(instanceId));
+    ref.invalidate(contentIconsProvider(instanceId));
     return v;
   }
 
@@ -79,6 +80,7 @@ class InstanceContentController
     }
     await refresh();
     ref.invalidate(contentUpdatesProvider(instanceId));
+    ref.invalidate(contentIconsProvider(instanceId));
     return (ok, errors);
   }
 
@@ -86,6 +88,7 @@ class InstanceContentController
     final r = await _bridge.identifyContent(instanceId);
     await refresh();
     ref.invalidate(contentUpdatesProvider(instanceId));
+    ref.invalidate(contentIconsProvider(instanceId));
     return r;
   }
 }
@@ -110,6 +113,19 @@ final instanceContentProvider = AsyncNotifierProvider.autoDispose
     .family<InstanceContentController, List<InstalledContentView>, String>(
   InstanceContentController.new,
 );
+
+/// URL del icono de cada archivo instalado, por `contentKey`. Se pide aparte
+/// de la lista (consulta Modrinth/CurseForge): mientras llega, o si no hay red,
+/// la interfaz usa el icono de su tipo.
+final contentIconsProvider = FutureProvider.autoDispose
+    .family<Map<String, String>, String>((ref, id) async {
+  try {
+    final icons = await ref.watch(bridgeProvider).contentIcons(id);
+    return {for (final i in icons) contentKey(i.kind, i.file): i.iconUrl};
+  } catch (_) {
+    return const {};
+  }
+});
 
 /// Actualizaciones disponibles (consulta Modrinth/CurseForge).
 final contentUpdatesProvider = FutureProvider.autoDispose

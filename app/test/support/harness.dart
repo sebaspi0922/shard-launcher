@@ -79,6 +79,35 @@ Future<void> settle(WidgetTester tester) async {
     await tester.pump(const Duration(milliseconds: 100));
   }
   await tester.pump(const Duration(milliseconds: 400));
+  await _loadFixtureIcons(tester);
+}
+
+/// Leer y decodificar un archivo necesita tiempo real, que `testWidgets` no da
+/// por sí solo: si hay iconos de ejemplo en pantalla, se cede el turno al bucle
+/// de eventos real hasta que se vean (y salgan en los goldens) en lugar de las
+/// iniciales.
+Future<void> _loadFixtureIcons(WidgetTester tester) async {
+  bool pending() => tester.widgetList<Image>(find.byType(Image)).any((w) {
+        final p = w.image;
+        final inner = p is ResizeImage ? p.imageProvider : p;
+        return inner is FileImage &&
+            inner.file.path.contains('fixtures/icons/') &&
+            !_decoded(w);
+      });
+  for (var i = 0; i < 20 && pending(); i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
+    await tester.pump(const Duration(milliseconds: 20));
+  }
+}
+
+/// ¿Ya tiene el `Image` su primer fotograma?
+bool _decoded(Image w) {
+  var done = false;
+  final stream = w.image.resolve(ImageConfiguration.empty);
+  final listener = ImageStreamListener((_, _) => done = true, onError: (_, _) => done = true);
+  stream.addListener(listener);
+  stream.removeListener(listener);
+  return done;
 }
 
 /// Contexto bajo el navegador, para abrir diálogos en tests.

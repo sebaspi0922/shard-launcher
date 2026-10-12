@@ -1,12 +1,30 @@
 // Puente falso con datos fijos para tests y goldens.
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:shard/core/bridge.dart';
 
 /// «Ahora» fijo de los tests (el reloj de la UI se ajusta a él en `pumpApp`).
 final kTestNow = DateTime(2026, 10, 11, 18, 30);
+
+/// Iconos de ejemplo: PNG descargados una vez de la CDN de Modrinth, en
+/// `test/fixtures/icons/<slug>.png`. El puente falso los sirve en lugar de la
+/// red (en `flutter test` las peticiones HTTP están bloqueadas).
+const kFixtureIconBase = 'https://cdn.modrinth.com/data/test/';
+
+String _iconUrl(String slug) => '$kFixtureIconBase$slug.png';
+
+/// Slug del icono de cada proyecto de ejemplo cuando no coincide con su id.
+const _iconSlugs = {'complementary': 'complementary-reimagined'};
+
+/// Archivo del icono de ejemplo para `url` o `null` si no hay (→ iniciales).
+String? fixtureIconPath(String url) {
+  if (!url.startsWith(kFixtureIconBase)) return null;
+  final f = File('test/fixtures/icons/${url.substring(kFixtureIconBase.length)}');
+  return f.existsSync() ? f.absolute.path : null;
+}
 
 int _ago(Duration d) =>
     kTestNow.subtract(d).millisecondsSinceEpoch ~/ 1000;
@@ -486,7 +504,22 @@ class FakeBridge implements LauncherBridge {
   Future<void> clearCurseforgeKey() async => curseforgeKey = false;
 
   @override
-  Future<String?> cachedImage(String url) async => null;
+  Future<String?> cachedImage(String url) async => fixtureIconPath(url);
+
+  /// Simula que los iconos no se pueden resolver (sin red).
+  bool contentIconsFail = false;
+
+  @override
+  Future<List<ContentIconView>> contentIcons(String instanceId) async {
+    if (contentIconsFail) throw StateError('sin red');
+    return _contentIcons(instanceId);
+  }
+
+  List<ContentIconView> _contentIcons(String instanceId) => [
+        for (final c in content[instanceId] ?? const <InstalledContentView>[])
+          if (_fixtureIconSlug(c.file) case final slug?)
+            ContentIconView(kind: c.kind, file: c.file, iconUrl: _iconUrl(slug)),
+      ];
 
   // --- Mundos y capturas ---------------------------------------------------
 
@@ -935,6 +968,24 @@ class FakeBridge implements LauncherBridge {
 
 // --- Datos de ejemplo --------------------------------------------------------
 
+/// Proyecto de ejemplo de un archivo (los desconocidos no tienen icono).
+String? _fixtureIconSlug(String file) {
+  final f = file.toLowerCase();
+  for (final slug in const [
+    'fabric-api',
+    'sodium',
+    'iris',
+    'lithium',
+    'journeymap',
+    'appleskin',
+  ]) {
+    if (f.startsWith(slug)) return slug;
+  }
+  if (f.startsWith('freshanimations')) return 'fresh-animations';
+  if (f.startsWith('complementaryreimagined')) return 'complementary-reimagined';
+  return null;
+}
+
 InstalledContentView _c(
   String kind,
   String file, {
@@ -1007,6 +1058,7 @@ ProjectView _p(
       title: title,
       description: description,
       author: author,
+      iconUrl: _iconUrl(_iconSlugs[id] ?? id),
       downloads: BigInt.from(downloads),
       follows: BigInt.from(downloads ~/ 90),
       categories: categories,

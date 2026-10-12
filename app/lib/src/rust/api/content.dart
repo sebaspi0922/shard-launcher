@@ -10,7 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `fnv64`, `invalid`, `parse_kind`, `parse_loader`, `parse_source`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`
 
 /// Busca proyectos. `loader` solo filtra mods y modpacks.
 Future<SearchPageView> searchContent({
@@ -71,6 +71,11 @@ Future<InstallOutcomeView> installContent({
   version: version,
   world: world,
 );
+
+/// Iconos de lo instalado (consulta Modrinth/CurseForge; con caché). Los
+/// archivos que ninguna fuente reconoce no aparecen.
+Future<List<ContentIconView>> contentIcons({required String instanceId}) =>
+    RustLib.instance.api.crateApiContentContentIcons(instanceId: instanceId);
 
 Future<List<InstalledContentView>> listContent({required String instanceId}) =>
     RustLib.instance.api.crateApiContentListContent(instanceId: instanceId);
@@ -137,6 +142,31 @@ Future<void> clearCurseforgeKey() =>
 /// ruta. Solo HTTPS y como mucho 2 MB. `None` si no se pudo.
 Future<String?> cachedImage({required String url}) =>
     RustLib.instance.api.crateApiContentCachedImage(url: url);
+
+/// Icono de un archivo instalado (solo los que se pudieron resolver).
+class ContentIconView {
+  final String kind;
+  final String file;
+  final String iconUrl;
+
+  const ContentIconView({
+    required this.kind,
+    required this.file,
+    required this.iconUrl,
+  });
+
+  @override
+  int get hashCode => kind.hashCode ^ file.hashCode ^ iconUrl.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ContentIconView &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          file == other.file &&
+          iconUrl == other.iconUrl;
+}
 
 class ContentUpdateView {
   final String kind;
