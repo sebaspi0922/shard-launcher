@@ -13,6 +13,8 @@ use crate::net::{Http, check_status};
 use crate::{Error, Result};
 
 const ATTEMPTS: u32 = 3;
+/// Cada cuántos bytes se informa del progreso en las descargas grandes.
+const PROGRESS_STEP: u64 = 128 * 1024;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DownloadTask {
@@ -159,6 +161,105 @@ fn part_path(dest: &Path) -> PathBuf {
     let mut name = dest.file_name().unwrap_or_default().to_os_string();
     name.push(format!(".{:08x}.part", fastrand::u32(..)));
     dest.with_file_name(name)
+}
+
+/// Archivo con SHA-256 conocido (Java de Adoptium, actualizaciones).
+#[derive(Debug, Clone, Copy)]
+pub struct Sha256File<'a> {
+    pub url: &'a str,
+    /// En hexadecimal.
+    pub sha256: &'a str,
+    pub size: Option<u64>,
+}
+
+/// Descarga un archivo grande con progreso en bytes y comprobación de
+/// SHA-256 (y tamaño, si se conoce) antes de moverlo a `dest`. Reintenta
+/// errores de red, 5xx y hashes que no coinciden.
+pub async fn download_sha256(
+    http: &Http,
+    file: &Sha256File<'_>,
+    dest: &Path,
+    progress: impl Fn(u64, u64),
+) -> Result<()> {
+    let mut last_err = None;
+    for attempt in 1..=ATTEMPTS {
+        match try_download_sha256(http, file, dest, &progress).await {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                let retry = matches!(e, Error::Network(_) | Error::HashMismatch { .. })
+                    || matches!(e, Error::HttpStatus { status, .. } if status >= 500);
+                tracing::debug!(url = %file.url, attempt, error = %e, "descarga fallida");
+                last_err = Some(e);
+                if !retry {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(300 * u64::from(attempt)))
+                    .await;
+            }
+        }
+    }
+    Err(last_err.expect("al menos un intento"))
+}
+
+async fn try_download_sha256(
+    http: &Http,
+    file: &Sha256File<'_>,
+    dest: &Path,
+    progress: &impl Fn(u64, u64),
+) -> Result<()> {
+    let part = part_path(dest);
+
+    let resp = http.send(|c| c.get(file.url)).await?;
+    let mut resp = check_status(resp)?;
+    let total = file.size.or(resp.content_length()).unwrap_or(0);
+
+    let mut out = tokio::fs::File::create(&part)
+        .await
+        .map_err(|e| Error::io(&part, e))?;
+    let mut hasher = sha2::Sha256::new();
+    let mut written = 0u64;
+    let mut reported = 0u64;
+    let result = async {
+        while let Some(chunk) = resp.chunk().await? {
+            hasher.update(&chunk);
+            written += chunk.len() as u64;
+            out.write_all(&chunk)
+                .await
+                .map_err(|e| Error::io(&part, e))?;
+            if written - reported >= PROGRESS_STEP {
+                reported = written;
+                progress(written, total.max(written));
+            }
+        }
+        out.flush().await.map_err(|e| Error::io(&part, e))?;
+        drop(out);
+        progress(written, total.max(written));
+        let actual = hex::encode(hasher.finalize());
+        if !actual.eq_ignore_ascii_case(file.sha256.trim()) {
+            return Err(Error::HashMismatch {
+                url: file.url.to_owned(),
+                expected: file.sha256.to_owned(),
+                actual,
+            });
+        }
+        if let Some(size) = file.size
+            && written != size
+        {
+            return Err(Error::HashMismatch {
+                url: file.url.to_owned(),
+                expected: format!("{size} bytes"),
+                actual: format!("{written} bytes"),
+            });
+        }
+        tokio::fs::rename(&part, dest)
+            .await
+            .map_err(|e| Error::io(dest, e))
+    }
+    .await;
+    if result.is_err() {
+        let _ = tokio::fs::remove_file(&part).await;
+    }
+    result
 }
 
 /// Descarga lo que falte de `tasks` con `concurrency` descargas a la vez.

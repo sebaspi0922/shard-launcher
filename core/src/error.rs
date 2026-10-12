@@ -68,6 +68,9 @@ pub enum Error {
     )]
     CurseForgeKeyMissing,
 
+    #[error("actualización rechazada: {0}")]
+    UpdateRejected(String),
+
     #[error("{0}")]
     InvalidInput(String),
 }
@@ -91,6 +94,7 @@ impl Error {
             Error::InstanceNotFound(_) => "instance_not_found",
             Error::AccountNotFound(_) => "account_not_found",
             Error::CurseForgeKeyMissing => "curseforge_key_missing",
+            Error::UpdateRejected(_) => "update_rejected",
             Error::InvalidInput(_) => "invalid_input",
         }
     }

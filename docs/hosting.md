@@ -21,8 +21,8 @@ Cloudflare Registrar vende a coste y no admite `.gg` (en Porkbun, 51,80 al año)
 
 | Servicio | Producto | Coste |
 |---|---|---|
-| Web y `latest.json` del actualizador | Worker con assets estáticos (repo `shard-web`) | 0 |
-| Descargas (`dl.`) | R2 con dominio propio; egreso gratis, 10 GB | 0 |
+| Web | Worker con assets estáticos (repo `shard-web`) | 0 |
+| Descargas y `latest.json` del actualizador (`dl.`) | R2 con dominio propio; egreso gratis, 10 GB | 0 |
 | API (`api.`): amigos, presencia, instancias compartidas, informes de cierre | Worker + D1 + R2 + un Durable Object por sala | 0 (plan gratuito) o 5 USD/mes |
 | LAN por internet | Prototipo: túnel TCP sobre WebSocket en un Durable Object. Alternativa: relay estilo e4mc en un VPS (~6 EUR/mes) | 0 a 6 EUR/mes |
 
@@ -31,14 +31,14 @@ Cloudflare Registrar vende a coste y no admite `.gg` (en Porkbun, 51,80 al año)
   - Spectrum: TCP arbitrario solo en Enterprise.
   - TURN de Cloudflare: no hace TCP.
   - Tunnel + `cloudflared`: obliga a instalarlo en cada extremo.
-- **Actualizaciones:** `latest.json` con versión, URL y firma minisign por plataforma. El launcher verifica la firma con la clave pública incorporada.
+- **Actualizaciones (D8):** `latest.json` en R2 con versión, URL, SHA-256 y firma minisign por paquete. El launcher verifica la firma con la clave pública incorporada. Árbol del bucket: `latest.json`, `linux/<versión>/…` y los nombres fijos de la web en `linux/`.
 
 ## Pasos
 
 1. Elegir el dominio y comprarlo en Cloudflare (necesita la cuenta y el pago del usuario).
-2. Publicar la web (repo `shard-web`, Astro) con `wrangler` y un `latest.json` de prueba.
-3. Bucket R2 en `dl.` y clave minisign; subir AppImage, Flatpak y paquete de Arch.
-4. Actualizador en la app con verificación de firma.
+2. Publicar la web (repo `shard-web`, Astro) con `wrangler`.
+3. Bucket R2 `shard-dl` en `dl.`; publicar con `tools/release.sh build` y `tools/release.sh upload <versión>`. Clave minisign: hecha.
+4. Actualizador en la app con verificación de firma: hecho (D8).
 5. API con identidad por `hasJoined`; luego amigos y presencia.
 6. Prototipo de LAN sobre Durable Objects; medir con 3–4 jugadores.
 7. Registrar la decisión en `docs/decisiones.md` antes de empezar H5.

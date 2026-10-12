@@ -108,6 +108,15 @@ enum Command {
         #[arg(long, value_name = "ID")]
         fix: Option<String>,
     },
+    /// Busca una versión nueva de la app en el manifiesto de releases.
+    Update {
+        /// Versión con la que comparar (por defecto, la del núcleo).
+        #[arg(long)]
+        current: Option<String>,
+        /// Con un AppImage (variable `APPIMAGE`), la descarga, verifica e instala.
+        #[arg(long)]
+        install: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -590,6 +599,7 @@ enum SettingKey {
     DefaultMemoryMb,
     MaxConcurrentDownloads,
     DiscordRpc,
+    CheckUpdates,
 }
 
 #[derive(Subcommand)]
@@ -799,6 +809,35 @@ async fn run(cli: Cli) -> Result<()> {
         }
         Command::Instance(cmd) => instance(&core, &out, cmd).await?,
         Command::Launch(args) => launch(&core, &out, args).await?,
+        Command::Update { current, install } => {
+            let current = current.unwrap_or_else(|| env!("CARGO_PKG_VERSION").to_owned());
+            let package = lcore::update::Package::detect();
+            let info = core.check_update(&current, &package).await?;
+            if install && let Some(i) = &info {
+                let progress = spawn_progress(&core, out.json);
+                let result = core.install_update(i).await;
+                progress.abort();
+                let path = result?;
+                out.value(
+                    &serde_json::json!({ "installed": i.version, "path": path }),
+                    || {
+                        eprintln!();
+                        println!("Instalada la {} en {}.", i.version, path.display());
+                    },
+                );
+                return Ok(());
+            }
+            out.value(&info, || match &info {
+                None => println!("Shard {current} es la última versión."),
+                Some(i) => {
+                    println!("Hay una versión nueva: {} (tienes {current}).", i.version);
+                    if let Some(notes) = &i.notes {
+                        println!("{notes}");
+                    }
+                    println!("Descarga: {}", i.download_url());
+                }
+            });
+        }
         Command::Content(cmd) => content(&core, &out, cmd).await?,
         Command::Modpack(ModpackCmd::Install { source, name }) => {
             let progress = spawn_progress(&core, out.json);
@@ -2064,6 +2103,7 @@ fn print_settings(s: &Settings) {
     println!("default-memory-mb:        {}", s.default_memory_mb);
     println!("max-concurrent-downloads: {}", s.max_concurrent_downloads);
     println!("discord-rpc:              {}", s.discord_rpc);
+    println!("check-updates:            {}", s.check_updates);
 }
 
 type Apply = Box<dyn FnOnce(&mut Settings) + Send>;
@@ -2117,6 +2157,10 @@ fn parse_setting(key: SettingKey, value: &str) -> Result<Apply> {
         SettingKey::DiscordRpc => {
             let b = parse_bool(&v).ok_or_else(|| bad("discord-rpc"))?;
             Box::new(move |s| s.discord_rpc = b)
+        }
+        SettingKey::CheckUpdates => {
+            let b = parse_bool(&v).ok_or_else(|| bad("check-updates"))?;
+            Box::new(move |s| s.check_updates = b)
         }
     })
 }

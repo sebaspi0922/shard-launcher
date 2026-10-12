@@ -2304,4 +2304,69 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get firstRunFeatureDoctorBody =>
       'Si el juego se cierra, te dice por qué y lo arregla.';
+
+  @override
+  String updateAvailableTitle(Object version) {
+    return 'Shard $version disponible';
+  }
+
+  @override
+  String updateAvailableBody(Object current) {
+    return 'Tienes la $current.';
+  }
+
+  @override
+  String get updateInstall => 'Actualizar';
+
+  @override
+  String get updateDownload => 'Descargar';
+
+  @override
+  String get updateNotes => 'Novedades';
+
+  @override
+  String get updateInstalling => 'Descargando y verificando…';
+
+  @override
+  String get updateReady => 'Lista. Reinicia Shard para usar la nueva versión.';
+
+  @override
+  String get updateRestart => 'Reiniciar';
+
+  @override
+  String get updateFailed => 'No se pudo actualizar';
+
+  @override
+  String get updateManualHint =>
+      'Este paquete se actualiza a mano: descarga el nuevo e instálalo.';
+
+  @override
+  String get settingsUpdates => 'Actualizaciones';
+
+  @override
+  String settingsUpdatesCurrent(Object version) {
+    return 'Versión $version.';
+  }
+
+  @override
+  String settingsUpdatesUpToDate(Object version) {
+    return 'Tienes la última versión ($version).';
+  }
+
+  @override
+  String get settingsUpdatesChecking => 'Buscando…';
+
+  @override
+  String get settingsUpdatesCheck => 'Buscar';
+
+  @override
+  String get settingsUpdatesAuto => 'Buscar actualizaciones automáticamente';
+
+  @override
+  String get settingsUpdatesAutoDesc =>
+      'Al abrir Shard y cada 6 horas. No se instala nada sin tu permiso.';
+
+  @override
+  String get errUpdateRejected =>
+      'La actualización no tiene una firma válida y no se instaló.';
 }

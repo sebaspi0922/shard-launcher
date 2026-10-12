@@ -25,6 +25,7 @@ pub mod secrets;
 pub mod servers;
 pub mod sessions;
 pub mod settings;
+pub mod update;
 pub mod world;
 
 pub use error::{Error, Result};

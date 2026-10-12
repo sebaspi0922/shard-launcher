@@ -287,11 +287,36 @@ class FakeBridge implements LauncherBridge {
         defaultJvmArgs: const ['-XX:+UseG1GC'],
         maxConcurrentDownloads: 8,
         discordRpc: false,
+        checkUpdates: true,
         msaClientIdSet: true,
       );
 
   @override
   Future<SettingsView> saveSettings(SettingsView value) async => value;
+
+  // --- Actualizaciones -----------------------------------------------------
+
+  @override
+  String updatePackage = 'appimage';
+
+  /// Lo que devuelve `checkUpdate`.
+  UpdateView? update;
+
+  /// Ruta que devuelve `installUpdate`; `null` = falla.
+  String? installedPath = '/tmp/Shard.AppImage';
+
+  /// Si no es `null`, `checkUpdate` falla con él.
+  Object? checkError;
+
+  @override
+  Future<UpdateView?> checkUpdate(String current) async {
+    if (checkError != null) throw checkError!;
+    return update;
+  }
+
+  @override
+  Future<String> installUpdate() async =>
+      installedPath ?? (throw const BridgeError(kind: 'update_rejected', message: 'firma'));
 
   // --- Registros -----------------------------------------------------------
 
