@@ -20,6 +20,11 @@ use crate::meta::version::ArgEntry;
 use crate::{Error, Result};
 
 pub const LAUNCHER_NAME: &str = "shard";
+/// Primer argumento con el que el ejecutable actual hace de relé del log en
+/// las partidas desacopladas; quien lo reciba debe llamar a [`run_log_relay`].
+pub const LOG_RELAY_ARG: &str = "__mask-log";
+/// El token llega al relé por el entorno, no por la línea de comandos.
+const LOG_RELAY_SECRET_ENV: &str = "SHARD_LOG_SECRET";
 const MIN_HEAP_MB: u32 = 512;
 const KEPT_LOGS: usize = 10;
 
@@ -32,7 +37,8 @@ pub struct LaunchOptions {
     /// Comprobar hashes de todo lo instalado.
     pub verify_files: bool,
     /// Quien lanza no se queda escuchando (CLI con `--detach`): la salida del
-    /// juego va directa a `logs/latest.log` en vez de pasar por el núcleo.
+    /// juego va a `logs/latest.log` a través de un relé que oculta el token
+    /// (el ejecutable actual relanzado con [`LOG_RELAY_ARG`]).
     pub detached: bool,
 }
 
@@ -379,37 +385,34 @@ impl Core {
         tracing::info!(java = %cmd.java.display(), args = ?cmd.masked_args(), "lanzando");
 
         let logs_dir = self.instance_dir(&instance.id)?.join("logs");
-        let log_file = open_new_log(&logs_dir).await?;
+        let mut log_file = open_new_log(&logs_dir).await?;
 
         let mut command = Command::new(&cmd.java);
         command
             .args(&cmd.args)
             .current_dir(&cmd.cwd)
             .stdin(Stdio::null());
-        let mut log_file = log_file;
-        match (opts.detached, log_file.take()) {
-            (true, Some(file)) => {
-                let file = file.into_std().await;
-                let err = file.try_clone().map_err(|e| Error::io(&logs_dir, e))?;
-                command.stdout(Stdio::from(file)).stderr(Stdio::from(err));
-            }
-            (detached, file) => {
-                log_file = file;
-                let out = if detached {
-                    Stdio::null()
-                } else {
-                    Stdio::piped()
-                };
-                let err = if detached {
-                    Stdio::null()
-                } else {
-                    Stdio::piped()
-                };
-                command.stdout(out).stderr(err);
-            }
+        if opts.detached {
+            // El relé reabre `latest.log` en modo añadir.
+            drop(log_file.take());
+            let (out, err) = match spawn_log_relay(&logs_dir.join("latest.log"), &cmd.secret) {
+                Ok(writer) => {
+                    let err = writer.try_clone().map_err(|e| Error::io(&logs_dir, e))?;
+                    (Stdio::from(writer), Stdio::from(err))
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "no se pudo abrir el relé del log; la salida del juego se descarta");
+                    (Stdio::null(), Stdio::null())
+                }
+            };
+            command.stdout(out).stderr(err);
+        } else {
+            command.stdout(Stdio::piped()).stderr(Stdio::piped());
         }
         detach(&mut command);
         let mut child = command.spawn().map_err(|e| Error::io(&cmd.java, e))?;
+        // Suelta las copias del extremo de escritura: el relé termina con el juego.
+        drop(command);
 
         let game_id = next_task_id();
         let info = GameInfo {
@@ -521,6 +524,73 @@ where
             }
         }
     });
+}
+
+/// Arranca el relé de log (desacoplado) y devuelve el extremo de escritura de
+/// su entrada.
+fn spawn_log_relay(log: &Path, secret: &str) -> std::io::Result<std::io::PipeWriter> {
+    let (reader, writer) = std::io::pipe()?;
+    let mut relay = Command::new(std::env::current_exe()?);
+    relay
+        .arg(LOG_RELAY_ARG)
+        .arg(log)
+        .env(LOG_RELAY_SECRET_ENV, secret)
+        .stdin(Stdio::from(reader))
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    detach(&mut relay);
+    relay.spawn()?;
+    Ok(writer)
+}
+
+/// Relé de las partidas desacopladas: copia stdin al final de `log` línea a
+/// línea, con el token sustituido por `***`, hasta que el juego cierra su salida.
+pub fn run_log_relay(log: &Path) -> std::io::Result<()> {
+    let secret = std::env::var(LOG_RELAY_SECRET_ENV).unwrap_or_default();
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log)?;
+    relay_masked(
+        std::io::stdin().lock(),
+        std::io::LineWriter::new(file),
+        &secret,
+    )
+}
+
+fn relay_masked(
+    mut input: impl std::io::BufRead,
+    mut out: impl std::io::Write,
+    secret: &str,
+) -> std::io::Result<()> {
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        if input.read_until(b'\n', &mut line)? == 0 {
+            break;
+        }
+        out.write_all(&mask_bytes(&line, secret.as_bytes()))?;
+    }
+    out.flush()
+}
+
+/// Como `mask`, sobre bytes (la salida del juego puede no ser UTF-8).
+fn mask_bytes(line: &[u8], secret: &[u8]) -> Vec<u8> {
+    if secret.len() <= 1 {
+        return line.to_vec();
+    }
+    let mut out = Vec::with_capacity(line.len());
+    let mut i = 0;
+    while i < line.len() {
+        if line[i..].starts_with(secret) {
+            out.extend_from_slice(b"***");
+            i += secret.len();
+        } else {
+            out.push(line[i]);
+            i += 1;
+        }
+    }
+    out
 }
 
 /// El juego no muere si se cierra el launcher o se pulsa Ctrl+C en la CLI.
@@ -729,5 +799,20 @@ mod tests {
             loader: LoaderKind::Vanilla,
             loader_version: None,
         };
+    }
+
+    #[test]
+    fn rele_oculta_el_token_en_cada_linea() {
+        let input: &[u8] =
+            b"arranca --accessToken tok123 ok\n\xff binario tok123tok123\nsin salto tok123";
+        let mut out = Vec::new();
+        relay_masked(input, &mut out, "tok123").unwrap();
+        assert_eq!(
+            out,
+            b"arranca --accessToken *** ok\n\xff binario ******\nsin salto ***".to_vec()
+        );
+        let mut same = Vec::new();
+        relay_masked(&b"x\n"[..], &mut same, "").unwrap();
+        assert_eq!(same, b"x\n");
     }
 }
