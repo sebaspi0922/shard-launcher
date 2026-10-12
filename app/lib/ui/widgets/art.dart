@@ -226,12 +226,13 @@ class BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
-        painter: _CubePainter(context.colors.accent),
+        painter: BrandMarkPainter(context.colors.accent),
       );
 }
 
-class _CubePainter extends CustomPainter {
-  _CubePainter(this.accent);
+/// Pinta la marca (también se usa para el icono de la bandeja).
+class BrandMarkPainter extends CustomPainter {
+  const BrandMarkPainter(this.accent);
 
   final Color accent;
 
@@ -273,7 +274,7 @@ class _CubePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CubePainter old) => old.accent != accent;
+  bool shouldRepaint(BrandMarkPainter old) => old.accent != accent;
 }
 
 /// Fondo de la app: base casi negra con halos suaves del acento.

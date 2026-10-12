@@ -18,8 +18,14 @@ abstract class WindowControls {
   Future<void> toggleMaximize();
   Future<void> startDragging();
 
-  /// Pasa a segundo plano. Sin bandeja por ahora: minimiza.
+  /// Pasa a segundo plano sin bandeja: minimiza.
   Future<void> toBackground();
+
+  /// Oculta la ventana (queda el icono de la bandeja).
+  Future<void> hide();
+
+  /// Muestra y enfoca la ventana (desde la bandeja).
+  Future<void> show();
 
   /// Cierra la app de verdad.
   Future<void> quit();
@@ -45,7 +51,14 @@ class NoopWindowControls implements WindowControls {
   @override
   Future<void> toBackground() async {}
   @override
+  Future<void> hide() async => hidden = true;
+  @override
+  Future<void> show() async => hidden = false;
+  @override
   Future<void> quit() async {}
+
+  /// Para tests: la ventana está oculta.
+  bool hidden = false;
   @override
   Future<void> requestClose() async => _onClose?.call();
 }
@@ -78,9 +91,17 @@ class DesktopWindowControls with WindowListener implements WindowControls {
   @override
   Future<void> startDragging() => windowManager.startDragging();
 
-  // TODO(bandeja): con tray_manager, ocultar y dejar el icono en la bandeja.
   @override
   Future<void> toBackground() => windowManager.minimize();
+
+  @override
+  Future<void> hide() => windowManager.hide();
+
+  @override
+  Future<void> show() async {
+    await windowManager.show();
+    await windowManager.focus();
+  }
 
   @override
   Future<void> quit() async {

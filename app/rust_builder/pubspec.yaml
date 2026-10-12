@@ -1,4 +1,4 @@
-name: lcore_bridge
+name: shard_bridge
 description: "Utility to build Rust code"
 version: 0.0.1
 publish_to: none

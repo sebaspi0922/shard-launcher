@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "dev.lcore" "\0"
-            VALUE "FileDescription", "lcore_app" "\0"
+            VALUE "CompanyName", "dev.shard" "\0"
+            VALUE "FileDescription", "Shard" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "lcore_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 dev.lcore. All rights reserved." "\0"
-            VALUE "OriginalFilename", "lcore_app.exe" "\0"
-            VALUE "ProductName", "lcore_app" "\0"
+            VALUE "InternalName", "shard" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 dev.shard. All rights reserved." "\0"
+            VALUE "OriginalFilename", "shard.exe" "\0"
+            VALUE "ProductName", "Shard" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

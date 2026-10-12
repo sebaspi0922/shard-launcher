@@ -7,7 +7,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/errors.dart';
 import '../../core/launch.dart';
+import '../../core/providers.dart';
 import '../../l10n/app_localizations.dart';
+import '../doctor/doctor_dialog.dart';
 import '../theme/app_theme.dart';
 import '../theme/tokens.dart';
 
@@ -30,6 +32,7 @@ class LaunchFailureNote extends ConsumerWidget {
     }
     final l = AppLocalizations.of(context);
     final c = context.colors;
+    final instance = ref.watch(instanceByIdProvider(instanceId));
 
     final (title, detail, crashed) = switch (failure) {
       LaunchError(:final error) => (
@@ -91,17 +94,34 @@ class LaunchFailureNote extends ConsumerWidget {
                     ),
                   ),
                 ],
-                if (crashed && showLogsLink) ...[
+                if (crashed) ...[
                   const SizedBox(height: Space.x2),
-                  TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: c.text,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(0, 30),
-                    ),
-                    onPressed: () => context.go('/instances/$instanceId?tab=logs'),
-                    icon: const Icon(Symbols.terminal_rounded, size: 16),
-                    label: Text(l.launchSeeLogs),
+                  Wrap(
+                    spacing: Space.x1,
+                    children: [
+                      if (instance != null)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: c.text,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(0, 30),
+                          ),
+                          onPressed: () => showDoctor(context, instance),
+                          icon: const Icon(Symbols.stethoscope_rounded, size: 16),
+                          label: Text(l.doctorDiagnose),
+                        ),
+                      if (showLogsLink)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: c.text,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: const Size(0, 30),
+                          ),
+                          onPressed: () => context.go('/instances/$instanceId?tab=logs'),
+                          icon: const Icon(Symbols.terminal_rounded, size: 16),
+                          label: Text(l.launchSeeLogs),
+                        ),
+                    ],
                   ),
                 ],
               ],

@@ -6,8 +6,6 @@
   "navServers": "Servidores",
   "navSkins": "Skins",
   "navSettings": "Ajustes",
-  "comingSoonTitle": "Próximamente",
-  "comingSoonSkins": "Vista 3D de tu skin, subir una nueva y gestionar capas.",
   "windowMinimize": "Minimizar",
   "windowMaximize": "Maximizar",
   "windowRestore": "Restaurar",
@@ -888,5 +886,378 @@
       "max": {}
     }
   },
-  "homeSeeAllServers": "Ver todos"
+  "homeSeeAllServers": "Ver todos",
+  "settingsAppearance": "Apariencia",
+  "appearanceBackground": "Fondo",
+  "appearanceBackgroundDesc": "Detrás de toda la app. La imagen se copia a la carpeta de datos.",
+  "appearanceAurora": "Aurora",
+  "appearanceLandscape": "Paisaje",
+  "appearanceImage": "Imagen propia",
+  "appearancePickImage": "Elegir imagen…",
+  "appearanceChangeImage": "Cambiar imagen",
+  "appearanceImages": "Imágenes",
+  "appearanceAccent": "Color de acento",
+  "appearanceAccentDesc": "Botones, selección y detalles.",
+  "appearanceAccentAuto": "Auto",
+  "appearanceAccentAutoDesc": "Automático: se toma del fondo elegido.",
+  "appearanceBlur": "Desenfoque",
+  "appearanceBlurDesc": "Del paisaje o de tu imagen.",
+  "appearanceDim": "Oscurecido",
+  "appearanceDimDesc": "Para que el texto se lea bien sobre el fondo.",
+  "appearancePerformance": "Modo rendimiento",
+  "appearancePerformanceDesc": "Sin desenfoque ni efectos de fondo. Útil en equipos modestos.",
+  "settingsAutostart": "Abrir al iniciar sesión",
+  "settingsAutostartDesc": "{app} arranca con el sistema, oculto en la bandeja.",
+  "@settingsAutostartDesc": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "settingsJava": "Java",
+  "javaDetected": "Javas detectadas",
+  "javaDetectedDesc": "Para cada versión se usa la adecuada; si falta, se instala sola al jugar.",
+  "javaRescan": "Volver a buscar",
+  "javaNone": "No se encontró ninguna Java. Se instalará la necesaria al jugar.",
+  "javaInstall": "Instalar Java",
+  "javaInstallDesc": "Descarga un JRE de Eclipse Adoptium a la carpeta de datos.",
+  "javaInstalling": "Instalando Java {major}…",
+  "@javaInstalling": {
+    "placeholders": {
+      "major": {
+        "type": "int"
+      }
+    }
+  },
+  "javaInstallingProgress": "Instalando Java {major}: {done} de {total}",
+  "@javaInstallingProgress": {
+    "placeholders": {
+      "major": {
+        "type": "int"
+      },
+      "done": {},
+      "total": {}
+    }
+  },
+  "javaInstalled": "Java {major} instalada ({version})",
+  "@javaInstalled": {
+    "placeholders": {
+      "major": {
+        "type": "int"
+      },
+      "version": {}
+    }
+  },
+  "javaManaged": "Gestionada",
+  "javaOverride": "Elegida a mano",
+  "javaSystem": "Del sistema",
+  "instanceChangeVersion": "Cambiar versión",
+  "changeVersionTitle": "Cambiar versión de «{name}»",
+  "@changeVersionTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "changeVersionCurrent": "Ahora: {version}",
+  "@changeVersionCurrent": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "changeVersionApply": "Cambiar versión",
+  "changeVersionWarning": "Bajar de versión puede romper los mundos, y los mods tienen que ser de la nueva versión.",
+  "changeVersionBackup": "Copia antes",
+  "changeVersionBackupLabel": "Antes de cambiar desde {version}",
+  "@changeVersionBackupLabel": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "changeVersionDone": "Versión cambiada a {version}",
+  "@changeVersionDone": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "trashTitle": "Papelera",
+  "trashHint": "Las instancias eliminadas se guardan aquí {days} días, con sus copias de seguridad.",
+  "@trashHint": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashEmptyStateTitle": "La papelera está vacía",
+  "trashEmptyStateBody": "Lo que elimines se queda aquí {days} días por si cambias de idea.",
+  "@trashEmptyStateBody": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRestore": "Recuperar",
+  "trashRestored": "«{name}» se recuperó",
+  "@trashRestored": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "trashPurge": "Borrar para siempre",
+  "trashPurgeTitle": "¿Borrar «{name}» para siempre?",
+  "@trashPurgeTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "trashEmptyTitle": "{count, plural, =1{¿Borrar 1 instancia para siempre?} other{¿Borrar {count} instancias para siempre?}}",
+  "@trashEmptyTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashPurgeBody": "Se borran sus mundos, mods y copias de seguridad. No se puede deshacer.",
+  "trashEmptyAll": "Vaciar papelera",
+  "trashDeletedAgo": "eliminada {when}",
+  "@trashDeletedAgo": {
+    "placeholders": {
+      "when": {}
+    }
+  },
+  "trashDaysLeft": "{days, plural, =0{se borra hoy} =1{queda 1 día} other{quedan {days} días}}",
+  "@trashDaysLeft": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "doctorDiagnose": "Diagnosticar",
+  "doctorTitle": "Doctor · {name}",
+  "@doctorTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "doctorAnalyzing": "Revisando el crash report, los registros y los mods…",
+  "doctorHealthyTitle": "No vemos ningún problema",
+  "doctorHealthyBody": "La última partida no dejó errores conocidos. Si el juego sigue fallando, revisa los registros.",
+  "doctorCritical": "{count, plural, =1{1 grave} other{{count} graves}}",
+  "@doctorCritical": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "doctorWarnings": "{count, plural, =1{1 aviso} other{{count} avisos}}",
+  "@doctorWarnings": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "doctorInfo": "{count, plural, =1{1 nota} other{{count} notas}}",
+  "@doctorInfo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "doctorCrashExcerpt": "Resumen del cierre",
+  "doctorOpenReport": "Abrir crash report",
+  "doctorConfidence": "Confianza {value} %",
+  "@doctorConfidence": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "doctorCulprit": "Culpable",
+  "doctorApplyFix": "Aplicar arreglo",
+  "doctorFixApplied": "Arreglo aplicado",
+  "doctorRerun": "Volver a analizar",
+  "crashBannerTitle": "El juego se cerró inesperadamente",
+  "trayOpen": "Abrir {app}",
+  "@trayOpen": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "trayPlay": "Jugar «{name}»",
+  "@trayPlay": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "trayQuit": "Salir",
+  "firstRunSkip": "Saltar asistente",
+  "firstRunStepWelcome": "Bienvenida",
+  "firstRunStepImport": "Importar",
+  "firstRunStepAccount": "Cuenta",
+  "firstRunStepDone": "Listo",
+  "firstRunRailHint": "Puedes cambiar todo esto luego en Ajustes.",
+  "firstRunWelcomeTitle": "Te damos la bienvenida a {app}",
+  "@firstRunWelcomeTitle": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "firstRunWelcomeBody": "Un launcher de Minecraft ligero para tus instancias, mods y servidores. En un par de pasos traemos lo que ya tienes y añadimos tu cuenta.",
+  "firstRunLanguageSystem": "El del sistema",
+  "firstRunStart": "Empezar",
+  "firstRunImportTitle": "Trae lo que ya tienes",
+  "firstRunImportBody": "Primero ves qué se importaría; nada se copia hasta que lo confirmes. Los originales no se tocan.",
+  "firstRunImportNoneTitle": "No encontramos otros launchers",
+  "firstRunImportNoneBody": "Puedes crear instancias desde cero o importar más tarde.",
+  "firstRunRoxy": "Roxy Launcher",
+  "firstRunMinecraft": "Launcher oficial (.minecraft)",
+  "firstRunRoxySummary": "{count, plural, =0{Nada nuevo que importar} =1{1 instancia · {size}} other{{count} instancias · {size}}} · reutiliza {shared} de librerías y assets",
+  "@firstRunRoxySummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {},
+      "shared": {}
+    }
+  },
+  "firstRunMinecraftSummary": "Se crea «{name}» ({version}) con {size}:",
+  "@firstRunMinecraftSummary": {
+    "placeholders": {
+      "name": {},
+      "version": {},
+      "size": {}
+    }
+  },
+  "firstRunBackups": "{count, plural, =1{1 copia} other{{count} copias}}",
+  "@firstRunBackups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstRunSkipped": "se omite: {reason}",
+  "@firstRunSkipped": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "firstRunImportAction": "Importar",
+  "firstRunImporting": "Importando…",
+  "firstRunImportingFiles": "{done} de {total} archivos",
+  "@firstRunImportingFiles": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "firstRunImported": "{count, plural, =0{No se importó ninguna instancia} =1{1 instancia importada} other{{count} instancias importadas}}",
+  "@firstRunImported": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "firstRunSourceDone": "Hecho",
+  "firstRunNotNow": "Ahora no",
+  "firstRunAccountTitle": "Añade tu cuenta",
+  "firstRunAccountBody": "Con una cuenta de Microsoft juegas en servidores y usas tu skin. Una offline vale para jugar solo.",
+  "firstRunMicrosoftDesc": "Inicia sesión con un código en el navegador.",
+  "firstRunOfflineDesc": "Solo un nombre. Sin skins ni servidores con verificación.",
+  "firstRunAccountsAdded": "Cuentas añadidas",
+  "firstRunDoneTitle": "Todo listo",
+  "firstRunDoneBody": "Ya puedes jugar. Esto es lo que hemos preparado:",
+  "firstRunNoInstances": "ninguna todavía",
+  "firstRunAccount": "Cuenta",
+  "firstRunAppearanceHint": "fondo y acento en Ajustes",
+  "firstRunFinish": "Ir a {app}",
+  "@firstRunFinish": {
+    "placeholders": {
+      "app": {}
+    }
+  },
+  "sectionSaves": "Mundos",
+  "sectionMods": "Mods",
+  "sectionConfig": "Configuración",
+  "sectionResourcepacks": "Packs de recursos",
+  "sectionShaderpacks": "Shaders",
+  "sectionScreenshots": "Capturas",
+  "sectionOptions": "Opciones",
+  "sectionServers": "Servidores",
+  "skinsTitle": "Skins",
+  "skinsSubtitle": "Tu skin y tus capas, tal y como te ven los demás",
+  "skinsNoAccountTitle": "Sin cuenta",
+  "skinsNoAccountBody": "Añade una cuenta de Microsoft para ver y cambiar tu skin.",
+  "skinsAddAccount": "Añadir cuenta",
+  "skinsOfflineTitle": "Las skins son de las cuentas de Microsoft",
+  "skinsOfflineBody": "«{name}» es una cuenta offline: el juego le pone una skin por defecto y no se puede cambiar desde aquí. Añade una cuenta de Microsoft para elegir tu skin y tus capas.",
+  "@skinsOfflineBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "skinsPngFiles": "Imágenes PNG",
+  "skinsInvalidPng": "La skin debe ser un PNG de 64×64 o 64×32 píxeles.",
+  "skinsApplied": "Skin actualizada",
+  "skinsResetTitle": "¿Restablecer la skin?",
+  "skinsResetBody": "Tu cuenta volverá a la skin por defecto. La actual no se guarda: si la quieres, ten a mano el PNG.",
+  "skinsReset": "Restablecer",
+  "skinsResetDone": "Skin restablecida",
+  "skinsTextureMissing": "No se pudo cargar la textura",
+  "skinsPreview": "Vista previa",
+  "skinsSlim": "Delgada",
+  "skinsClassic": "Clásica",
+  "skinsSlimDesc": "Brazos de 3 píxeles",
+  "skinsClassicDesc": "Brazos de 4 píxeles",
+  "skinsDragHint": "Arrastra para girar · doble clic para centrar",
+  "skinsFront": "Frente",
+  "skinsBack": "Espalda",
+  "skinsChange": "Cambiar skin",
+  "skinsFromFile": "Archivo PNG",
+  "skinsFromUrl": "URL",
+  "skinsPickPng": "Elegir un PNG…",
+  "skinsPngHint": "64×64 o 64×32 píxeles. Se ve aquí antes de aplicarla.",
+  "skinsUrl": "URL de la imagen",
+  "skinsUrlHint": "Un enlace directo a un PNG público.",
+  "skinsModel": "Modelo",
+  "skinsApply": "Aplicar skin",
+  "skinsCapes": "Capas",
+  "skinsCapesCount": "{count, plural, =0{ninguna} =1{1 capa} other{{count} capas}}",
+  "@skinsCapesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "skinsNoCapes": "Esta cuenta no tiene capas.",
+  "skinsNoCape": "Sin capa",
+  "skinsCape": "Capa",
+  "crashBannerCode": "código {code}",
+  "@crashBannerCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "firstRunHighlights": "Lo que vas a encontrar",
+  "firstRunFeatureInstances": "Instancias separadas",
+  "firstRunFeatureInstancesBody": "Cada una con su versión, loader, mundos y copias.",
+  "firstRunFeatureContent": "Mods y modpacks",
+  "firstRunFeatureContentBody": "Busca e instala desde Modrinth y CurseForge.",
+  "firstRunFeatureDoctor": "Doctor",
+  "firstRunFeatureDoctorBody": "Si el juego se cierra, te dice por qué y lo arregla."
 }

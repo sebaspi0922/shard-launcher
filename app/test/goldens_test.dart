@@ -5,21 +5,27 @@ import 'dart:async';
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lcore_app/app.dart';
-import 'package:lcore_app/core/bridge.dart';
-import 'package:lcore_app/core/launch.dart';
-import 'package:lcore_app/core/providers.dart';
-import 'package:lcore_app/ui/accounts/account_dialogs.dart';
-import 'package:lcore_app/ui/accounts/account_panel.dart';
-import 'package:lcore_app/ui/instances/create_instance_dialog.dart';
-import 'package:lcore_app/core/content_search.dart';
-import 'package:lcore_app/core/tasks.dart';
-import 'package:lcore_app/ui/content/modpack_dialog.dart';
-import 'package:lcore_app/ui/content/project_sheet.dart';
-import 'package:lcore_app/ui/instances/backups_tab.dart';
-import 'package:lcore_app/ui/instances/instances_page.dart';
-import 'package:lcore_app/ui/servers/server_dialog.dart';
+import 'package:shard/app.dart';
+import 'package:shard/core/bridge.dart';
+import 'package:shard/core/launch.dart';
+import 'package:shard/core/providers.dart';
+import 'package:shard/ui/accounts/account_dialogs.dart';
+import 'package:shard/ui/accounts/account_panel.dart';
+import 'package:shard/ui/instances/create_instance_dialog.dart';
+import 'package:shard/core/content_search.dart';
+import 'package:shard/core/tasks.dart';
+import 'package:shard/ui/content/modpack_dialog.dart';
+import 'package:shard/ui/content/project_sheet.dart';
+import 'package:shard/ui/instances/backups_tab.dart';
+import 'package:shard/ui/instances/instances_page.dart';
+import 'package:shard/ui/servers/server_dialog.dart';
 import 'package:material_ui/material_ui.dart' show showDialog;
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:shard/core/crash_notice.dart';
+import 'package:shard/ui/doctor/doctor_dialog.dart';
+import 'package:shard/ui/first_run/first_run_page.dart';
+import 'package:shard/ui/instances/change_version_dialog.dart';
+import 'package:shard/ui/instances/trash_dialog.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
@@ -245,7 +251,7 @@ void main() {
 
   testWidgets('ajustes: integraciones', (tester) async {
     await pumpApp(tester, location: '/settings', bridge: FakeBridge()..curseforgeKey = true);
-    await tester.drag(find.text('Juego'), const Offset(0, -420));
+    await tester.drag(find.text('General'), const Offset(0, -2400));
     await settle(tester);
     await expectGolden('settings_integrations_es');
   });
@@ -278,6 +284,133 @@ void main() {
     await tester.tap(find.text('Fabric'));
     await settle(tester);
     await expectGolden('create_instance_es');
+  });
+
+  round3();
+}
+
+
+void round3() {
+  testWidgets('skins', (tester) async {
+    await pumpApp(tester, location: '/skins');
+    await expectGolden('skins_es');
+  });
+
+  testWidgets('skins: cuenta offline (en)', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/skins',
+      bridge: FakeBridge(
+        language: 'en',
+        accounts: const [
+          AccountView(id: 'o1', name: 'Pruebas_01', microsoft: false, active: true),
+        ],
+      ),
+    );
+    await expectGolden('skins_offline_en');
+  });
+
+  testWidgets('doctor', (tester) async {
+    final c = await pumpApp(tester, location: '/instances/survival-amigos?tab=content');
+    showDoctor(pageContext(tester), c.read(instanceByIdProvider('survival-amigos'))!);
+    await settle(tester);
+    await expectGolden('doctor_es');
+  });
+
+  testWidgets('aviso de cierre inesperado', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(crashNoticeProvider.notifier).debugShow(
+          CrashNotice(gameId: BigInt.two, instanceId: 'create-aeronautica', code: 1),
+        );
+    await settle(tester);
+    await expectGolden('crash_banner_es');
+  });
+
+  testWidgets('menú de la instancia', (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=worlds');
+    await tester.tap(find.byTooltip('Más opciones'));
+    await settle(tester);
+    await expectGolden('instance_menu_es');
+  });
+
+  testWidgets('cambiar versión', (tester) async {
+    final c = await pumpApp(tester, location: '/instances/survival-amigos?tab=settings');
+    showChangeVersion(pageContext(tester), c.read(instanceByIdProvider('survival-amigos'))!);
+    await settle(tester);
+    await tester.tap(find.text('NeoForge'));
+    await settle(tester);
+    await expectGolden('change_version_es');
+  });
+
+  testWidgets('papelera (en)', (tester) async {
+    await pumpApp(tester, location: '/instances', bridge: FakeBridge(language: 'en'));
+    showTrash(pageContext(tester));
+    await settle(tester);
+    await expectGolden('trash_en');
+  });
+
+  testWidgets('ajustes: apariencia', (tester) async {
+    await pumpApp(tester, location: '/settings');
+    await tester.drag(find.text('General'), const Offset(0, -300));
+    await settle(tester);
+    await expectGolden('settings_appearance_es');
+  });
+
+  testWidgets('ajustes: java', (tester) async {
+    await pumpApp(tester, location: '/settings');
+    await tester.drag(find.text('General'), const Offset(0, -900));
+    await settle(tester);
+    await expectGolden('settings_java_es');
+  });
+
+  testWidgets('fondo de paisaje', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/',
+      bridge: FakeBridge()
+        ..uiPrefs = '{"first_run_done":true,"background":"landscape","accent":"auto","blur":10,"dim":0.5}',
+    );
+    await expectGolden('home_landscape_es');
+  });
+
+  testWidgets('primer arranque: bienvenida', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      bridge: FakeBridge(instances: [], accounts: [], language: null),
+    );
+    await expectGolden('first_run_welcome_es');
+  });
+
+  testWidgets('primer arranque: importar', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      bridge: FakeBridge(instances: [], accounts: []),
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.import)],
+    );
+    await tester.tap(find.byIcon(Symbols.deployed_code_rounded).first);
+    await settle(tester);
+    await expectGolden('first_run_import_es');
+  });
+
+  testWidgets('primer arranque: cuenta (en)', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      bridge: FakeBridge(instances: [], language: 'en'),
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.account)],
+    );
+    await expectGolden('first_run_account_en');
+  });
+
+  testWidgets('primer arranque: listo', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.done)],
+    );
+    await expectGolden('first_run_done_es');
   });
 }
 

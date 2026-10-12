@@ -135,8 +135,42 @@ class InstancesController extends AsyncNotifier<List<InstanceView>> {
   Future<void> delete(String id) async {
     await _bridge.deleteInstance(id);
     await refresh();
+    ref.invalidate(trashProvider);
+  }
+
+  Future<InstanceView> changeVersion({
+    required String id,
+    required String mc,
+    required String loader,
+    String? loaderVersion,
+  }) async {
+    final i = await _bridge.changeInstanceVersion(
+      id: id,
+      mc: mc,
+      loader: loader,
+      loaderVersion: loaderVersion,
+    );
+    await refresh();
+    return i;
+  }
+
+  Future<InstanceView> restore(String trashId) async {
+    final i = await _bridge.restoreInstance(trashId);
+    await refresh();
+    ref.invalidate(trashProvider);
+    return i;
+  }
+
+  Future<void> purge(String trashId) async {
+    await _bridge.purgeInstance(trashId);
+    ref.invalidate(trashProvider);
   }
 }
+
+/// Instancias en la papelera.
+final trashProvider = FutureProvider.autoDispose<List<TrashedView>>(
+  (ref) => ref.watch(bridgeProvider).listTrash(),
+);
 
 final instancesProvider =
     AsyncNotifierProvider<InstancesController, List<InstanceView>>(

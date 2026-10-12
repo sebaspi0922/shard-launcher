@@ -162,3 +162,91 @@ pub async fn running_games() -> Result<Vec<GameView>, BridgeError> {
     })
     .await
 }
+
+/// Cambia la versión de Minecraft y el loader. Sin `loader_version` se usará
+/// la última compatible al lanzar.
+pub async fn change_instance_version(
+    id: String,
+    mc: String,
+    loader: String,
+    loader_version: Option<String>,
+) -> Result<InstanceView, BridgeError> {
+    let core = core()?;
+    on_rt(async move {
+        let kind = LoaderKind::parse(&loader).ok_or_else(|| BridgeError {
+            kind: "invalid_input".into(),
+            message: format!("loader desconocido: {loader}"),
+        })?;
+        if mc.trim().is_empty() {
+            return Err(BridgeError {
+                kind: "invalid_input".into(),
+                message: "falta la versión de Minecraft".into(),
+            });
+        }
+        let i = core
+            .update_instance(&id, |i| {
+                i.game = GameVersion {
+                    mc,
+                    loader: kind,
+                    loader_version: if kind == LoaderKind::Vanilla {
+                        None
+                    } else {
+                        loader_version
+                    },
+                };
+            })
+            .await?;
+        Ok(view(&core, &i))
+    })
+    .await
+}
+
+/// Instancia en la papelera.
+#[derive(Debug, Clone)]
+pub struct TrashedView {
+    pub trash_id: String,
+    pub id: String,
+    pub name: String,
+    pub mc: String,
+    pub loader: String,
+    pub playtime_seconds: u64,
+    /// Segundos Unix.
+    pub deleted_at: i64,
+}
+
+pub async fn list_trash() -> Result<Vec<TrashedView>, BridgeError> {
+    let core = core()?;
+    on_rt(async move {
+        Ok(core
+            .list_trash()
+            .await?
+            .into_iter()
+            .map(|t| TrashedView {
+                trash_id: t.trash_id,
+                id: t.instance.id,
+                name: t.instance.name,
+                mc: t.instance.game.mc,
+                loader: t.instance.game.loader.as_str().into(),
+                playtime_seconds: t.instance.playtime_seconds,
+                deleted_at: t.deleted_at,
+            })
+            .collect())
+    })
+    .await
+}
+
+/// Recupera una instancia de la papelera (con otro id si el original está ocupado).
+pub async fn restore_instance(trash_id: String) -> Result<InstanceView, BridgeError> {
+    let core = core()?;
+    on_rt(async move {
+        let i = core.restore_instance(&trash_id).await?;
+        Ok(view(&core, &i))
+    })
+    .await
+}
+
+/// Borra definitivamente una instancia de la papelera.
+pub async fn purge_instance(trash_id: String) -> Result<(), BridgeError> {
+    let core = core()?;
+    on_rt(async move { Ok(core.purge_instance(&trash_id).await?) }).await
+}

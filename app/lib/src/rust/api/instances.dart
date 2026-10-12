@@ -10,6 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `view`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 Future<List<InstanceView>> listInstances() =>
     RustLib.instance.api.crateApiInstancesListInstances();
@@ -74,3 +75,74 @@ Future<GameView> launchInstance({
 
 Future<List<GameView>> runningGames() =>
     RustLib.instance.api.crateApiInstancesRunningGames();
+
+/// Cambia la versión de Minecraft y el loader. Sin `loader_version` se usará
+/// la última compatible al lanzar.
+Future<InstanceView> changeInstanceVersion({
+  required String id,
+  required String mc,
+  required String loader,
+  String? loaderVersion,
+}) => RustLib.instance.api.crateApiInstancesChangeInstanceVersion(
+  id: id,
+  mc: mc,
+  loader: loader,
+  loaderVersion: loaderVersion,
+);
+
+Future<List<TrashedView>> listTrash() =>
+    RustLib.instance.api.crateApiInstancesListTrash();
+
+/// Recupera una instancia de la papelera (con otro id si el original está ocupado).
+Future<InstanceView> restoreInstance({required String trashId}) =>
+    RustLib.instance.api.crateApiInstancesRestoreInstance(trashId: trashId);
+
+/// Borra definitivamente una instancia de la papelera.
+Future<void> purgeInstance({required String trashId}) =>
+    RustLib.instance.api.crateApiInstancesPurgeInstance(trashId: trashId);
+
+/// Instancia en la papelera.
+class TrashedView {
+  final String trashId;
+  final String id;
+  final String name;
+  final String mc;
+  final String loader;
+  final BigInt playtimeSeconds;
+
+  /// Segundos Unix.
+  final PlatformInt64 deletedAt;
+
+  const TrashedView({
+    required this.trashId,
+    required this.id,
+    required this.name,
+    required this.mc,
+    required this.loader,
+    required this.playtimeSeconds,
+    required this.deletedAt,
+  });
+
+  @override
+  int get hashCode =>
+      trashId.hashCode ^
+      id.hashCode ^
+      name.hashCode ^
+      mc.hashCode ^
+      loader.hashCode ^
+      playtimeSeconds.hashCode ^
+      deletedAt.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TrashedView &&
+          runtimeType == other.runtimeType &&
+          trashId == other.trashId &&
+          id == other.id &&
+          name == other.name &&
+          mc == other.mc &&
+          loader == other.loader &&
+          playtimeSeconds == other.playtimeSeconds &&
+          deletedAt == other.deletedAt;
+}
