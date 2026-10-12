@@ -1,0 +1,39 @@
+# Flatpak de Shard a partir de la compilación release ya preparada.
+# No se construye a mano: `tools/package.sh flatpak`.
+app-id: dev.shard.Shard
+runtime: org.gnome.Platform
+runtime-version: '49'
+sdk: org.gnome.Sdk
+command: shard
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Sonido y mandos del juego, además de la GPU.
+  - --socket=pulseaudio
+  - --device=all
+  # Datos compartidos con la versión nativa (ver paths::host_data_dir).
+  - --filesystem=xdg-data/shard:create
+  # Solo lectura para importar desde otros launchers.
+  - --filesystem=xdg-data/.roxy:ro
+  - --filesystem=~/.minecraft:ro
+  - --filesystem=xdg-data/PrismLauncher:ro
+  # Abrir al iniciar sesión.
+  - --filesystem=xdg-config/autostart:create
+  # Sesiones en el llavero, bandeja del sistema y notificaciones.
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-*
+  - --talk-name=org.freedesktop.Notifications
+modules:
+  - name: shard
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: stage
+    build-commands:
+      - mkdir -p /app/lib /app/bin
+      - cp -a usr/lib/shard /app/lib/
+      - ln -s ../lib/shard/shard /app/bin/shard
+      - cp -a usr/share /app/

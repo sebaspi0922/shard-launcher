@@ -79,8 +79,8 @@ impl Default for RoxyImportOptions {
 
 /// `~/.local/share/.roxy` (o el equivalente del SO).
 pub fn default_source_root() -> PathBuf {
-    directories::BaseDirs::new()
-        .map(|d| d.data_dir().join(".roxy"))
+    crate::paths::host_data_dir()
+        .map(|d| d.join(".roxy"))
         .unwrap_or_else(|| PathBuf::from(".roxy"))
 }
 
