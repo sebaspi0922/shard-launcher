@@ -7,16 +7,20 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/app_info.dart';
 import '../../core/bridge.dart';
+import '../../core/crash_notice.dart';
 import '../../core/launch.dart';
 import '../../core/logs.dart';
 import '../../core/providers.dart';
 import '../../core/window.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_panel.dart';
+import '../doctor/crash_banner.dart';
 import '../theme/tokens.dart';
 import '../widgets/art.dart';
 import '../widgets/avatar.dart';
+import 'backdrop.dart';
 import 'title_bar.dart';
+import 'tray_controller.dart';
 
 class NavDestination {
   const NavDestination(this.path, this.icon, this.label);
@@ -64,7 +68,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         case 'quit':
           await window.quit();
         case 'tray':
-          await window.toBackground();
+          await ref.read(trayControllerProvider.notifier).toBackground();
         default:
           if (!mounted) return;
           final choice = await showDialog<_CloseChoice>(
@@ -80,7 +84,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           if (choice.quit) {
             await window.quit();
           } else {
-            await window.toBackground();
+            await ref.read(trayControllerProvider.notifier).toBackground();
           }
       }
     } finally {
@@ -93,12 +97,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Mantener vivos desde el arranque los consumidores de eventos.
     ref.watch(logHubProvider);
     ref.watch(launchProvider);
+    ref.watch(crashNoticeProvider);
+    ref.watch(trayControllerProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const Backdrop(),
+          const AppBackdrop(),
           Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -113,6 +119,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                 ),
               ),
             ],
+          ),
+          const Positioned(
+            right: Space.x6,
+            bottom: Space.x6,
+            child: CrashBanner(),
           ),
         ],
       ),

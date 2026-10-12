@@ -1,3 +1,3 @@
-# lcore_app
+# shard
 
 A new Flutter project.

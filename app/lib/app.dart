@@ -2,20 +2,20 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'core/app_info.dart';
 import 'core/providers.dart';
 import 'l10n/app_localizations.dart';
 import 'ui/content/content_page.dart';
+import 'ui/first_run/first_run_page.dart';
 import 'ui/home/home_page.dart';
 import 'ui/instances/instance_detail_page.dart';
 import 'ui/instances/instances_page.dart';
 import 'ui/servers/servers_page.dart';
 import 'ui/settings/settings_page.dart';
+import 'ui/skins/skins_page.dart';
 import 'ui/shell/app_shell.dart';
-import 'ui/shell/coming_soon_page.dart';
 import 'ui/shell/ui_scale.dart';
 import 'ui/theme/accent.dart';
 import 'ui/theme/app_theme.dart';
@@ -37,6 +37,10 @@ final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
     initialLocation: ref.read(initialLocationProvider),
     routes: [
+      GoRoute(
+        path: '/welcome',
+        pageBuilder: (_, s) => _fade(s, const FirstRunPage()),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             AppShell(location: state.uri.path, child: child),
@@ -78,19 +82,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/skins',
-            pageBuilder: (context, s) => _fade(
-              s,
-              Builder(
-                builder: (context) {
-                  final l = AppLocalizations.of(context);
-                  return ComingSoonPage(
-                    title: l.navSkins,
-                    icon: Symbols.checkroom_rounded,
-                    body: l.comingSoonSkins,
-                  );
-                },
-              ),
-            ),
+            pageBuilder: (_, s) => _fade(s, const SkinsPage()),
           ),
           GoRoute(
             path: '/settings',

@@ -15,6 +15,7 @@ import '../widgets/art.dart';
 import '../widgets/common.dart';
 import '../widgets/play_button.dart';
 import 'create_instance_dialog.dart';
+import 'trash_dialog.dart';
 
 class InstancesViewMode extends Notifier<bool> {
   @override
@@ -116,6 +117,12 @@ class _InstancesPageState extends ConsumerState<InstancesPage> {
                 selected: {grid},
                 onSelectionChanged: (s) =>
                     ref.read(instancesGridProvider.notifier).set(s.first),
+              ),
+              const SizedBox(width: Space.x3),
+              IconButton.outlined(
+                tooltip: l.trashTitle,
+                onPressed: () => showTrash(context),
+                icon: const Icon(Symbols.delete_rounded, size: 20),
               ),
               const SizedBox(width: Space.x3),
               FilledButton.icon(

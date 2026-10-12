@@ -10,7 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
-  lcore_bridge
+  shard_bridge
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

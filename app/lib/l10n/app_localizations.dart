@@ -134,18 +134,6 @@ abstract class AppLocalizations {
   /// **'Ajustes'**
   String get navSettings;
 
-  /// No description provided for @comingSoonTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Próximamente'**
-  String get comingSoonTitle;
-
-  /// No description provided for @comingSoonSkins.
-  ///
-  /// In es, this message translates to:
-  /// **'Vista 3D de tu skin, subir una nueva y gestionar capas.'**
-  String get comingSoonSkins;
-
   /// No description provided for @windowMinimize.
   ///
   /// In es, this message translates to:
@@ -2773,6 +2761,990 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver todos'**
   String get homeSeeAllServers;
+
+  /// No description provided for @settingsAppearance.
+  ///
+  /// In es, this message translates to:
+  /// **'Apariencia'**
+  String get settingsAppearance;
+
+  /// No description provided for @appearanceBackground.
+  ///
+  /// In es, this message translates to:
+  /// **'Fondo'**
+  String get appearanceBackground;
+
+  /// No description provided for @appearanceBackgroundDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Detrás de toda la app. La imagen se copia a la carpeta de datos.'**
+  String get appearanceBackgroundDesc;
+
+  /// No description provided for @appearanceAurora.
+  ///
+  /// In es, this message translates to:
+  /// **'Aurora'**
+  String get appearanceAurora;
+
+  /// No description provided for @appearanceLandscape.
+  ///
+  /// In es, this message translates to:
+  /// **'Paisaje'**
+  String get appearanceLandscape;
+
+  /// No description provided for @appearanceImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Imagen propia'**
+  String get appearanceImage;
+
+  /// No description provided for @appearancePickImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir imagen…'**
+  String get appearancePickImage;
+
+  /// No description provided for @appearanceChangeImage.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar imagen'**
+  String get appearanceChangeImage;
+
+  /// No description provided for @appearanceImages.
+  ///
+  /// In es, this message translates to:
+  /// **'Imágenes'**
+  String get appearanceImages;
+
+  /// No description provided for @appearanceAccent.
+  ///
+  /// In es, this message translates to:
+  /// **'Color de acento'**
+  String get appearanceAccent;
+
+  /// No description provided for @appearanceAccentDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Botones, selección y detalles.'**
+  String get appearanceAccentDesc;
+
+  /// No description provided for @appearanceAccentAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Auto'**
+  String get appearanceAccentAuto;
+
+  /// No description provided for @appearanceAccentAutoDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Automático: se toma del fondo elegido.'**
+  String get appearanceAccentAutoDesc;
+
+  /// No description provided for @appearanceBlur.
+  ///
+  /// In es, this message translates to:
+  /// **'Desenfoque'**
+  String get appearanceBlur;
+
+  /// No description provided for @appearanceBlurDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Del paisaje o de tu imagen.'**
+  String get appearanceBlurDesc;
+
+  /// No description provided for @appearanceDim.
+  ///
+  /// In es, this message translates to:
+  /// **'Oscurecido'**
+  String get appearanceDim;
+
+  /// No description provided for @appearanceDimDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Para que el texto se lea bien sobre el fondo.'**
+  String get appearanceDimDesc;
+
+  /// No description provided for @appearancePerformance.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo rendimiento'**
+  String get appearancePerformance;
+
+  /// No description provided for @appearancePerformanceDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin desenfoque ni efectos de fondo. Útil en equipos modestos.'**
+  String get appearancePerformanceDesc;
+
+  /// No description provided for @settingsAutostart.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir al iniciar sesión'**
+  String get settingsAutostart;
+
+  /// No description provided for @settingsAutostartDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'{app} arranca con el sistema, oculto en la bandeja.'**
+  String settingsAutostartDesc(Object app);
+
+  /// No description provided for @settingsJava.
+  ///
+  /// In es, this message translates to:
+  /// **'Java'**
+  String get settingsJava;
+
+  /// No description provided for @javaDetected.
+  ///
+  /// In es, this message translates to:
+  /// **'Javas detectadas'**
+  String get javaDetected;
+
+  /// No description provided for @javaDetectedDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Para cada versión se usa la adecuada; si falta, se instala sola al jugar.'**
+  String get javaDetectedDesc;
+
+  /// No description provided for @javaRescan.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a buscar'**
+  String get javaRescan;
+
+  /// No description provided for @javaNone.
+  ///
+  /// In es, this message translates to:
+  /// **'No se encontró ninguna Java. Se instalará la necesaria al jugar.'**
+  String get javaNone;
+
+  /// No description provided for @javaInstall.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalar Java'**
+  String get javaInstall;
+
+  /// No description provided for @javaInstallDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Descarga un JRE de Eclipse Adoptium a la carpeta de datos.'**
+  String get javaInstallDesc;
+
+  /// No description provided for @javaInstalling.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalando Java {major}…'**
+  String javaInstalling(int major);
+
+  /// No description provided for @javaInstallingProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'Instalando Java {major}: {done} de {total}'**
+  String javaInstallingProgress(int major, Object done, Object total);
+
+  /// No description provided for @javaInstalled.
+  ///
+  /// In es, this message translates to:
+  /// **'Java {major} instalada ({version})'**
+  String javaInstalled(int major, Object version);
+
+  /// No description provided for @javaManaged.
+  ///
+  /// In es, this message translates to:
+  /// **'Gestionada'**
+  String get javaManaged;
+
+  /// No description provided for @javaOverride.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegida a mano'**
+  String get javaOverride;
+
+  /// No description provided for @javaSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Del sistema'**
+  String get javaSystem;
+
+  /// No description provided for @instanceChangeVersion.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar versión'**
+  String get instanceChangeVersion;
+
+  /// No description provided for @changeVersionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar versión de «{name}»'**
+  String changeVersionTitle(Object name);
+
+  /// No description provided for @changeVersionCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora: {version}'**
+  String changeVersionCurrent(Object version);
+
+  /// No description provided for @changeVersionApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar versión'**
+  String get changeVersionApply;
+
+  /// No description provided for @changeVersionWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'Bajar de versión puede romper los mundos, y los mods tienen que ser de la nueva versión.'**
+  String get changeVersionWarning;
+
+  /// No description provided for @changeVersionBackup.
+  ///
+  /// In es, this message translates to:
+  /// **'Copia antes'**
+  String get changeVersionBackup;
+
+  /// No description provided for @changeVersionBackupLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes de cambiar desde {version}'**
+  String changeVersionBackupLabel(Object version);
+
+  /// No description provided for @changeVersionDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión cambiada a {version}'**
+  String changeVersionDone(Object version);
+
+  /// No description provided for @trashTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Papelera'**
+  String get trashTitle;
+
+  /// No description provided for @trashHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Las instancias eliminadas se guardan aquí {days} días, con sus copias de seguridad.'**
+  String trashHint(int days);
+
+  /// No description provided for @trashEmptyStateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'La papelera está vacía'**
+  String get trashEmptyStateTitle;
+
+  /// No description provided for @trashEmptyStateBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que elimines se queda aquí {days} días por si cambias de idea.'**
+  String trashEmptyStateBody(int days);
+
+  /// No description provided for @trashRestore.
+  ///
+  /// In es, this message translates to:
+  /// **'Recuperar'**
+  String get trashRestore;
+
+  /// No description provided for @trashRestored.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» se recuperó'**
+  String trashRestored(Object name);
+
+  /// No description provided for @trashPurge.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar para siempre'**
+  String get trashPurge;
+
+  /// No description provided for @trashPurgeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar «{name}» para siempre?'**
+  String trashPurgeTitle(Object name);
+
+  /// No description provided for @trashEmptyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{¿Borrar 1 instancia para siempre?} other{¿Borrar {count} instancias para siempre?}}'**
+  String trashEmptyTitle(int count);
+
+  /// No description provided for @trashPurgeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borran sus mundos, mods y copias de seguridad. No se puede deshacer.'**
+  String get trashPurgeBody;
+
+  /// No description provided for @trashEmptyAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Vaciar papelera'**
+  String get trashEmptyAll;
+
+  /// No description provided for @trashDeletedAgo.
+  ///
+  /// In es, this message translates to:
+  /// **'eliminada {when}'**
+  String trashDeletedAgo(Object when);
+
+  /// No description provided for @trashDaysLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'{days, plural, =0{se borra hoy} =1{queda 1 día} other{quedan {days} días}}'**
+  String trashDaysLeft(int days);
+
+  /// No description provided for @doctorDiagnose.
+  ///
+  /// In es, this message translates to:
+  /// **'Diagnosticar'**
+  String get doctorDiagnose;
+
+  /// No description provided for @doctorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Doctor · {name}'**
+  String doctorTitle(Object name);
+
+  /// No description provided for @doctorAnalyzing.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisando el crash report, los registros y los mods…'**
+  String get doctorAnalyzing;
+
+  /// No description provided for @doctorHealthyTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No vemos ningún problema'**
+  String get doctorHealthyTitle;
+
+  /// No description provided for @doctorHealthyBody.
+  ///
+  /// In es, this message translates to:
+  /// **'La última partida no dejó errores conocidos. Si el juego sigue fallando, revisa los registros.'**
+  String get doctorHealthyBody;
+
+  /// No description provided for @doctorCritical.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 grave} other{{count} graves}}'**
+  String doctorCritical(int count);
+
+  /// No description provided for @doctorWarnings.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 aviso} other{{count} avisos}}'**
+  String doctorWarnings(int count);
+
+  /// No description provided for @doctorInfo.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 nota} other{{count} notas}}'**
+  String doctorInfo(int count);
+
+  /// No description provided for @doctorCrashExcerpt.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen del cierre'**
+  String get doctorCrashExcerpt;
+
+  /// No description provided for @doctorOpenReport.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir crash report'**
+  String get doctorOpenReport;
+
+  /// No description provided for @doctorConfidence.
+  ///
+  /// In es, this message translates to:
+  /// **'Confianza {value} %'**
+  String doctorConfidence(int value);
+
+  /// No description provided for @doctorCulprit.
+  ///
+  /// In es, this message translates to:
+  /// **'Culpable'**
+  String get doctorCulprit;
+
+  /// No description provided for @doctorApplyFix.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar arreglo'**
+  String get doctorApplyFix;
+
+  /// No description provided for @doctorFixApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Arreglo aplicado'**
+  String get doctorFixApplied;
+
+  /// No description provided for @doctorRerun.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver a analizar'**
+  String get doctorRerun;
+
+  /// No description provided for @crashBannerTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El juego se cerró inesperadamente'**
+  String get crashBannerTitle;
+
+  /// No description provided for @trayOpen.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir {app}'**
+  String trayOpen(Object app);
+
+  /// No description provided for @trayPlay.
+  ///
+  /// In es, this message translates to:
+  /// **'Jugar «{name}»'**
+  String trayPlay(Object name);
+
+  /// No description provided for @trayQuit.
+  ///
+  /// In es, this message translates to:
+  /// **'Salir'**
+  String get trayQuit;
+
+  /// No description provided for @firstRunSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Saltar asistente'**
+  String get firstRunSkip;
+
+  /// No description provided for @firstRunStepWelcome.
+  ///
+  /// In es, this message translates to:
+  /// **'Bienvenida'**
+  String get firstRunStepWelcome;
+
+  /// No description provided for @firstRunStepImport.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar'**
+  String get firstRunStepImport;
+
+  /// No description provided for @firstRunStepAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get firstRunStepAccount;
+
+  /// No description provided for @firstRunStepDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Listo'**
+  String get firstRunStepDone;
+
+  /// No description provided for @firstRunRailHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes cambiar todo esto luego en Ajustes.'**
+  String get firstRunRailHint;
+
+  /// No description provided for @firstRunWelcomeTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Te damos la bienvenida a {app}'**
+  String firstRunWelcomeTitle(Object app);
+
+  /// No description provided for @firstRunWelcomeBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Un launcher de Minecraft ligero para tus instancias, mods y servidores. En un par de pasos traemos lo que ya tienes y añadimos tu cuenta.'**
+  String get firstRunWelcomeBody;
+
+  /// No description provided for @firstRunLanguageSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'El del sistema'**
+  String get firstRunLanguageSystem;
+
+  /// No description provided for @firstRunStart.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get firstRunStart;
+
+  /// No description provided for @firstRunImportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Trae lo que ya tienes'**
+  String get firstRunImportTitle;
+
+  /// No description provided for @firstRunImportBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Primero ves qué se importaría; nada se copia hasta que lo confirmes. Los originales no se tocan.'**
+  String get firstRunImportBody;
+
+  /// No description provided for @firstRunImportNoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos otros launchers'**
+  String get firstRunImportNoneTitle;
+
+  /// No description provided for @firstRunImportNoneBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes crear instancias desde cero o importar más tarde.'**
+  String get firstRunImportNoneBody;
+
+  /// No description provided for @firstRunRoxy.
+  ///
+  /// In es, this message translates to:
+  /// **'Roxy Launcher'**
+  String get firstRunRoxy;
+
+  /// No description provided for @firstRunMinecraft.
+  ///
+  /// In es, this message translates to:
+  /// **'Launcher oficial (.minecraft)'**
+  String get firstRunMinecraft;
+
+  /// No description provided for @firstRunRoxySummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{Nada nuevo que importar} =1{1 instancia · {size}} other{{count} instancias · {size}}} · reutiliza {shared} de librerías y assets'**
+  String firstRunRoxySummary(int count, Object size, Object shared);
+
+  /// No description provided for @firstRunMinecraftSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'Se crea «{name}» ({version}) con {size}:'**
+  String firstRunMinecraftSummary(Object name, Object version, Object size);
+
+  /// No description provided for @firstRunBackups.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =1{1 copia} other{{count} copias}}'**
+  String firstRunBackups(int count);
+
+  /// No description provided for @firstRunSkipped.
+  ///
+  /// In es, this message translates to:
+  /// **'se omite: {reason}'**
+  String firstRunSkipped(Object reason);
+
+  /// No description provided for @firstRunImportAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Importar'**
+  String get firstRunImportAction;
+
+  /// No description provided for @firstRunImporting.
+  ///
+  /// In es, this message translates to:
+  /// **'Importando…'**
+  String get firstRunImporting;
+
+  /// No description provided for @firstRunImportingFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de {total} archivos'**
+  String firstRunImportingFiles(int done, int total);
+
+  /// No description provided for @firstRunImported.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{No se importó ninguna instancia} =1{1 instancia importada} other{{count} instancias importadas}}'**
+  String firstRunImported(int count);
+
+  /// No description provided for @firstRunSourceDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho'**
+  String get firstRunSourceDone;
+
+  /// No description provided for @firstRunNotNow.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora no'**
+  String get firstRunNotNow;
+
+  /// No description provided for @firstRunAccountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade tu cuenta'**
+  String get firstRunAccountTitle;
+
+  /// No description provided for @firstRunAccountBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Con una cuenta de Microsoft juegas en servidores y usas tu skin. Una offline vale para jugar solo.'**
+  String get firstRunAccountBody;
+
+  /// No description provided for @firstRunMicrosoftDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Inicia sesión con un código en el navegador.'**
+  String get firstRunMicrosoftDesc;
+
+  /// No description provided for @firstRunOfflineDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Solo un nombre. Sin skins ni servidores con verificación.'**
+  String get firstRunOfflineDesc;
+
+  /// No description provided for @firstRunAccountsAdded.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuentas añadidas'**
+  String get firstRunAccountsAdded;
+
+  /// No description provided for @firstRunDoneTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Todo listo'**
+  String get firstRunDoneTitle;
+
+  /// No description provided for @firstRunDoneBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya puedes jugar. Esto es lo que hemos preparado:'**
+  String get firstRunDoneBody;
+
+  /// No description provided for @firstRunNoInstances.
+  ///
+  /// In es, this message translates to:
+  /// **'ninguna todavía'**
+  String get firstRunNoInstances;
+
+  /// No description provided for @firstRunAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuenta'**
+  String get firstRunAccount;
+
+  /// No description provided for @firstRunAppearanceHint.
+  ///
+  /// In es, this message translates to:
+  /// **'fondo y acento en Ajustes'**
+  String get firstRunAppearanceHint;
+
+  /// No description provided for @firstRunFinish.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a {app}'**
+  String firstRunFinish(Object app);
+
+  /// No description provided for @sectionSaves.
+  ///
+  /// In es, this message translates to:
+  /// **'Mundos'**
+  String get sectionSaves;
+
+  /// No description provided for @sectionMods.
+  ///
+  /// In es, this message translates to:
+  /// **'Mods'**
+  String get sectionMods;
+
+  /// No description provided for @sectionConfig.
+  ///
+  /// In es, this message translates to:
+  /// **'Configuración'**
+  String get sectionConfig;
+
+  /// No description provided for @sectionResourcepacks.
+  ///
+  /// In es, this message translates to:
+  /// **'Packs de recursos'**
+  String get sectionResourcepacks;
+
+  /// No description provided for @sectionShaderpacks.
+  ///
+  /// In es, this message translates to:
+  /// **'Shaders'**
+  String get sectionShaderpacks;
+
+  /// No description provided for @sectionScreenshots.
+  ///
+  /// In es, this message translates to:
+  /// **'Capturas'**
+  String get sectionScreenshots;
+
+  /// No description provided for @sectionOptions.
+  ///
+  /// In es, this message translates to:
+  /// **'Opciones'**
+  String get sectionOptions;
+
+  /// No description provided for @sectionServers.
+  ///
+  /// In es, this message translates to:
+  /// **'Servidores'**
+  String get sectionServers;
+
+  /// No description provided for @skinsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Skins'**
+  String get skinsTitle;
+
+  /// No description provided for @skinsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu skin y tus capas, tal y como te ven los demás'**
+  String get skinsSubtitle;
+
+  /// No description provided for @skinsNoAccountTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin cuenta'**
+  String get skinsNoAccountTitle;
+
+  /// No description provided for @skinsNoAccountBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Añade una cuenta de Microsoft para ver y cambiar tu skin.'**
+  String get skinsNoAccountBody;
+
+  /// No description provided for @skinsAddAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Añadir cuenta'**
+  String get skinsAddAccount;
+
+  /// No description provided for @skinsOfflineTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Las skins son de las cuentas de Microsoft'**
+  String get skinsOfflineTitle;
+
+  /// No description provided for @skinsOfflineBody.
+  ///
+  /// In es, this message translates to:
+  /// **'«{name}» es una cuenta offline: el juego le pone una skin por defecto y no se puede cambiar desde aquí. Añade una cuenta de Microsoft para elegir tu skin y tus capas.'**
+  String skinsOfflineBody(Object name);
+
+  /// No description provided for @skinsPngFiles.
+  ///
+  /// In es, this message translates to:
+  /// **'Imágenes PNG'**
+  String get skinsPngFiles;
+
+  /// No description provided for @skinsInvalidPng.
+  ///
+  /// In es, this message translates to:
+  /// **'La skin debe ser un PNG de 64×64 o 64×32 píxeles.'**
+  String get skinsInvalidPng;
+
+  /// No description provided for @skinsApplied.
+  ///
+  /// In es, this message translates to:
+  /// **'Skin actualizada'**
+  String get skinsApplied;
+
+  /// No description provided for @skinsResetTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Restablecer la skin?'**
+  String get skinsResetTitle;
+
+  /// No description provided for @skinsResetBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta volverá a la skin por defecto. La actual no se guarda: si la quieres, ten a mano el PNG.'**
+  String get skinsResetBody;
+
+  /// No description provided for @skinsReset.
+  ///
+  /// In es, this message translates to:
+  /// **'Restablecer'**
+  String get skinsReset;
+
+  /// No description provided for @skinsResetDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Skin restablecida'**
+  String get skinsResetDone;
+
+  /// No description provided for @skinsTextureMissing.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo cargar la textura'**
+  String get skinsTextureMissing;
+
+  /// No description provided for @skinsPreview.
+  ///
+  /// In es, this message translates to:
+  /// **'Vista previa'**
+  String get skinsPreview;
+
+  /// No description provided for @skinsSlim.
+  ///
+  /// In es, this message translates to:
+  /// **'Delgada'**
+  String get skinsSlim;
+
+  /// No description provided for @skinsClassic.
+  ///
+  /// In es, this message translates to:
+  /// **'Clásica'**
+  String get skinsClassic;
+
+  /// No description provided for @skinsSlimDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Brazos de 3 píxeles'**
+  String get skinsSlimDesc;
+
+  /// No description provided for @skinsClassicDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Brazos de 4 píxeles'**
+  String get skinsClassicDesc;
+
+  /// No description provided for @skinsDragHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Arrastra para girar · doble clic para centrar'**
+  String get skinsDragHint;
+
+  /// No description provided for @skinsFront.
+  ///
+  /// In es, this message translates to:
+  /// **'Frente'**
+  String get skinsFront;
+
+  /// No description provided for @skinsBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Espalda'**
+  String get skinsBack;
+
+  /// No description provided for @skinsChange.
+  ///
+  /// In es, this message translates to:
+  /// **'Cambiar skin'**
+  String get skinsChange;
+
+  /// No description provided for @skinsFromFile.
+  ///
+  /// In es, this message translates to:
+  /// **'Archivo PNG'**
+  String get skinsFromFile;
+
+  /// No description provided for @skinsFromUrl.
+  ///
+  /// In es, this message translates to:
+  /// **'URL'**
+  String get skinsFromUrl;
+
+  /// No description provided for @skinsPickPng.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir un PNG…'**
+  String get skinsPickPng;
+
+  /// No description provided for @skinsPngHint.
+  ///
+  /// In es, this message translates to:
+  /// **'64×64 o 64×32 píxeles. Se ve aquí antes de aplicarla.'**
+  String get skinsPngHint;
+
+  /// No description provided for @skinsUrl.
+  ///
+  /// In es, this message translates to:
+  /// **'URL de la imagen'**
+  String get skinsUrl;
+
+  /// No description provided for @skinsUrlHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Un enlace directo a un PNG público.'**
+  String get skinsUrlHint;
+
+  /// No description provided for @skinsModel.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelo'**
+  String get skinsModel;
+
+  /// No description provided for @skinsApply.
+  ///
+  /// In es, this message translates to:
+  /// **'Aplicar skin'**
+  String get skinsApply;
+
+  /// No description provided for @skinsCapes.
+  ///
+  /// In es, this message translates to:
+  /// **'Capas'**
+  String get skinsCapes;
+
+  /// No description provided for @skinsCapesCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, =0{ninguna} =1{1 capa} other{{count} capas}}'**
+  String skinsCapesCount(int count);
+
+  /// No description provided for @skinsNoCapes.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta cuenta no tiene capas.'**
+  String get skinsNoCapes;
+
+  /// No description provided for @skinsNoCape.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin capa'**
+  String get skinsNoCape;
+
+  /// No description provided for @skinsCape.
+  ///
+  /// In es, this message translates to:
+  /// **'Capa'**
+  String get skinsCape;
+
+  /// No description provided for @crashBannerCode.
+  ///
+  /// In es, this message translates to:
+  /// **'código {code}'**
+  String crashBannerCode(int code);
+
+  /// No description provided for @firstRunHighlights.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que vas a encontrar'**
+  String get firstRunHighlights;
+
+  /// No description provided for @firstRunFeatureInstances.
+  ///
+  /// In es, this message translates to:
+  /// **'Instancias separadas'**
+  String get firstRunFeatureInstances;
+
+  /// No description provided for @firstRunFeatureInstancesBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Cada una con su versión, loader, mundos y copias.'**
+  String get firstRunFeatureInstancesBody;
+
+  /// No description provided for @firstRunFeatureContent.
+  ///
+  /// In es, this message translates to:
+  /// **'Mods y modpacks'**
+  String get firstRunFeatureContent;
+
+  /// No description provided for @firstRunFeatureContentBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Busca e instala desde Modrinth y CurseForge.'**
+  String get firstRunFeatureContentBody;
+
+  /// No description provided for @firstRunFeatureDoctor.
+  ///
+  /// In es, this message translates to:
+  /// **'Doctor'**
+  String get firstRunFeatureDoctor;
+
+  /// No description provided for @firstRunFeatureDoctorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Si el juego se cierra, te dice por qué y lo arregla.'**
+  String get firstRunFeatureDoctorBody;
 }
 
 class _AppLocalizationsDelegate

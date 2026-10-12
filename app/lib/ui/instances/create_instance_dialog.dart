@@ -160,7 +160,7 @@ class _CreateInstanceDialogState extends ConsumerState<CreateInstanceDialog> {
               children: [
                 Expanded(
                   flex: 5,
-                  child: _VersionPicker(
+                  child: VersionPicker(
                     versions: versions,
                     search: _search,
                     snapshots: _snapshots,
@@ -186,7 +186,7 @@ class _CreateInstanceDialogState extends ConsumerState<CreateInstanceDialog> {
                       Text(l.createLoader, style: context.text.titleSmall),
                       const SizedBox(height: Space.x2),
                       for (final loader in kCreatableLoaders)
-                        _LoaderOption(
+                        LoaderOption(
                           loader: loader,
                           selected: loader == _loader,
                           onTap: () => setState(() {
@@ -197,7 +197,7 @@ class _CreateInstanceDialogState extends ConsumerState<CreateInstanceDialog> {
                         ),
                       const Spacer(),
                       if (_loader != 'vanilla' && _mc != null)
-                        _LoaderVersionField(
+                        LoaderVersionField(
                           loader: _loader,
                           mc: _mc!,
                           value: _loaderVersion,
@@ -223,8 +223,9 @@ class _CreateInstanceDialogState extends ConsumerState<CreateInstanceDialog> {
   }
 }
 
-class _VersionPicker extends StatelessWidget {
-  const _VersionPicker({
+class VersionPicker extends StatelessWidget {
+  const VersionPicker({
+    super.key,
     required this.versions,
     required this.search,
     required this.snapshots,
@@ -349,8 +350,9 @@ class _VersionPicker extends StatelessWidget {
   }
 }
 
-class _LoaderOption extends StatelessWidget {
-  const _LoaderOption({
+class LoaderOption extends StatelessWidget {
+  const LoaderOption({
+    super.key,
     required this.loader,
     required this.selected,
     required this.onTap,
@@ -413,8 +415,9 @@ class _LoaderOption extends StatelessWidget {
   }
 }
 
-class _LoaderVersionField extends ConsumerWidget {
-  const _LoaderVersionField({
+class LoaderVersionField extends ConsumerWidget {
+  const LoaderVersionField({
+    super.key,
     required this.loader,
     required this.mc,
     required this.value,
