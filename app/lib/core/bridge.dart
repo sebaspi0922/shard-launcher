@@ -28,6 +28,7 @@ import '../src/rust/api/content.dart'
         SearchPageView,
         ContentVersionView,
         InstalledContentView,
+        ContentIconView,
         ContentUpdateView,
         InstallOutcomeView,
         IdentifyView,
@@ -51,6 +52,7 @@ export '../src/rust/api/content.dart'
         SearchPageView,
         ContentVersionView,
         InstalledContentView,
+        ContentIconView,
         ContentUpdateView,
         InstalledItemView,
         SkippedItemView,
@@ -164,6 +166,10 @@ abstract class LauncherBridge {
     String? world,
   });
   Future<List<InstalledContentView>> listContent(String instanceId);
+
+  /// Iconos de lo instalado (Modrinth/CurseForge, por proyecto o SHA-1, con
+  /// caché). Solo trae los que se pudieron resolver; puede tardar (red).
+  Future<List<ContentIconView>> contentIcons(String instanceId);
   Future<InstalledContentView> setContentEnabled(
     String instanceId,
     String file,
@@ -483,6 +489,10 @@ class RustBridge implements LauncherBridge {
   @override
   Future<List<InstalledContentView>> listContent(String instanceId) =>
       content.listContent(instanceId: instanceId);
+
+  @override
+  Future<List<ContentIconView>> contentIcons(String instanceId) =>
+      content.contentIcons(instanceId: instanceId);
 
   @override
   Future<InstalledContentView> setContentEnabled(

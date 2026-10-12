@@ -163,6 +163,7 @@ class _ContentTabState extends ConsumerState<ContentTab> {
     final c = context.colors;
     final async = ref.watch(instanceContentProvider(_id));
     final updatesAsync = ref.watch(contentUpdatesProvider(_id));
+    final icons = ref.watch(contentIconsProvider(_id)).value ?? const {};
     final updates = {
       for (final u in updatesAsync.value ?? const <ContentUpdateView>[])
         contentKey(u.kind, u.file): u,
@@ -211,7 +212,10 @@ class _ContentTabState extends ConsumerState<ContentTab> {
               tooltip: l.contentCheckUpdates,
               onPressed: updatesAsync.isLoading
                   ? null
-                  : () => ref.invalidate(contentUpdatesProvider(_id)),
+                  : () {
+                      ref.invalidate(contentUpdatesProvider(_id));
+                      ref.invalidate(contentIconsProvider(_id));
+                    },
               icon: updatesAsync.isLoading
                   ? const SizedBox.square(
                       dimension: 16,
@@ -299,6 +303,7 @@ class _ContentTabState extends ConsumerState<ContentTab> {
                       final u = updates[key];
                       return _ContentRow(
                         item: item,
+                        iconUrl: icons[key],
                         update: u,
                         updating: _updating.contains(key) || _updatingAll,
                         onToggle: (v) => _run(
@@ -370,6 +375,7 @@ class _Banner extends StatelessWidget {
 class _ContentRow extends StatelessWidget {
   const _ContentRow({
     required this.item,
+    required this.iconUrl,
     required this.update,
     required this.updating,
     required this.onToggle,
@@ -378,6 +384,9 @@ class _ContentRow extends StatelessWidget {
   });
 
   final InstalledContentView item;
+
+  /// Icono del proyecto (si Modrinth/CurseForge lo reconocen).
+  final String? iconUrl;
   final ContentUpdateView? update;
   final bool updating;
   final ValueChanged<bool> onToggle;
@@ -400,6 +409,17 @@ class _ContentRow extends StatelessWidget {
       'curseforge' => ('CurseForge', const Color(0xFFF59E0B)),
       _ => (l.sourceUnknown, c.textMuted),
     };
+    // Icono de su tipo: lo que se ve mientras llega el del proyecto o si no hay.
+    final kindIcon = Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: kc.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kc.withValues(alpha: 0.25)),
+      ),
+      child: Icon(contentKindIcon(item.kind), size: 20, color: kc),
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Space.x4, vertical: 10),
       child: Row(
@@ -407,15 +427,12 @@ class _ContentRow extends StatelessWidget {
           AnimatedOpacity(
             duration: Motion.fast,
             opacity: item.enabled ? 1 : 0.45,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: kc.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: kc.withValues(alpha: 0.25)),
-              ),
-              child: Icon(contentKindIcon(item.kind), size: 20, color: kc),
+            child: ProjectIcon(
+              url: iconUrl,
+              seed: item.file,
+              title: name,
+              size: 40,
+              fallback: kindIcon,
             ),
           ),
           const SizedBox(width: Space.x4),

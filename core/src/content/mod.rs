@@ -3,6 +3,7 @@
 //! Diseño en `docs/arquitectura.md` y `research/06-lanzamiento.md` §9.
 
 pub mod curseforge;
+mod icons;
 mod install;
 mod manage;
 pub mod modpack;
@@ -16,6 +17,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
+pub use icons::ContentIcon;
 pub use install::{
     IdentifiedContent, IdentifyReport, InstallOutcome, InstalledItem, SkippedItem, UpdateAvailable,
     UpdatedContent,
@@ -396,6 +398,11 @@ impl Core {
 
     pub async fn list_content(&self, instance: &str) -> Result<Vec<InstalledContent>> {
         self.content().list(instance).await
+    }
+
+    /// Iconos (mejor esfuerzo) de lo instalado: ver `Content::icons`.
+    pub async fn content_icons(&self, instance: &str) -> Result<Vec<ContentIcon>> {
+        self.content().icons(instance).await
     }
 
     pub async fn set_content_enabled(

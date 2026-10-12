@@ -857,6 +857,98 @@ async fn identifica_archivos_desconocidos_por_sha1() {
     assert!(list.iter().find(|c| c.file == "raro.jar").unwrap().tracked);
 }
 
+#[tokio::test]
+async fn iconos_de_lo_instalado_por_proyecto_y_por_sha1_con_cache() {
+    let env = env().await;
+    let inst = instance(&env, "1.21.1", LoaderKind::Fabric).await;
+    let game = game_dir(&env, &inst);
+    std::fs::create_dir_all(game.join("mods")).unwrap();
+    // Uno registrado (se resuelve por proyecto), uno suelto que Modrinth conoce
+    // (por SHA-1) y uno que no conoce nadie.
+    std::fs::write(game.join("mods/registrado.jar"), b"registrado").unwrap();
+    std::fs::write(game.join("mods/suelto.jar"), b"suelto").unwrap();
+    std::fs::write(game.join("mods/casero.jar"), b"casero").unwrap();
+    update_index(&env.content.index_path(&inst.id).unwrap(), |idx| {
+        idx.upsert(ContentFile {
+            kind: "mod".into(),
+            file: "registrado.jar".into(),
+            enabled: true,
+            source: "modrinth".into(),
+            project_id: Some("PA".into()),
+            project_name: Some("A".into()),
+            version_id: None,
+            version_number: None,
+            sha1: Some(sha1_hex(b"registrado")),
+            url: None,
+            category: None,
+        });
+        Ok(())
+    })
+    .await
+    .unwrap();
+
+    let h = sha1_hex(b"suelto");
+    let v = Ver::new("vb", "PB", "b.jar", b"suelto");
+    Mock::given(method("POST"))
+        .and(path("/v2/version_files"))
+        .respond_with(
+            ResponseTemplate::new(200).set_body_json(json!({ h.clone(): v.json(&env.server) })),
+        )
+        // La segunda llamada sale de la caché de SHA-1.
+        .expect(1)
+        .mount(&env.server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/v2/projects"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!([
+            {"id": "PA", "slug": "a", "title": "A", "description": "", "project_type": "mod",
+             "downloads": 1, "followers": 1, "categories": [],
+             "icon_url": "https://cdn.modrinth.com/data/PA/icon.png"},
+            {"id": "PB", "slug": "b", "title": "B", "description": "", "project_type": "mod",
+             "downloads": 1, "followers": 1, "categories": [],
+             "icon_url": "https://cdn.modrinth.com/data/PB/icon.png"},
+        ])))
+        .mount(&env.server)
+        .await;
+
+    for _ in 0..2 {
+        let icons = env.content.icons(&inst.id).await.unwrap();
+        let got: Vec<(&str, &str)> = icons
+            .iter()
+            .map(|i| (i.file.as_str(), i.icon_url.as_str()))
+            .collect();
+        assert_eq!(
+            got,
+            [
+                (
+                    "registrado.jar",
+                    "https://cdn.modrinth.com/data/PA/icon.png"
+                ),
+                ("suelto.jar", "https://cdn.modrinth.com/data/PB/icon.png"),
+            ]
+        );
+    }
+    let cache = env.dir.path().join("cache/content-icons.json");
+    assert!(cache.exists());
+}
+
+#[tokio::test]
+async fn iconos_sin_red_no_fallan_ni_se_cachean_como_desconocidos() {
+    let env = env().await;
+    let inst = instance(&env, "1.21.1", LoaderKind::Fabric).await;
+    let game = game_dir(&env, &inst);
+    std::fs::create_dir_all(game.join("mods")).unwrap();
+    std::fs::write(game.join("mods/suelto.jar"), b"suelto").unwrap();
+    Mock::given(method("POST"))
+        .and(path("/v2/version_files"))
+        .respond_with(ResponseTemplate::new(500))
+        .mount(&env.server)
+        .await;
+    assert!(env.content.icons(&inst.id).await.unwrap().is_empty());
+    // Un fallo no deja huella: la próxima vez se vuelve a preguntar.
+    assert!(!env.dir.path().join("cache/content-icons.json").exists());
+}
+
 // ---- content.json ----
 
 #[test]

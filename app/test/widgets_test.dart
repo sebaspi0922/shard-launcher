@@ -2,6 +2,7 @@
 // navegación por el raíl.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:shard/ui/accounts/account_dialogs.dart';
 import 'package:shard/ui/home/home_page.dart';
 import 'package:shard/ui/instances/instances_page.dart';
@@ -121,6 +122,43 @@ void main() {
     await settle(tester);
     expect(bridge.updates, isEmpty);
     expect(find.text('Actualizar todo'), findsNothing);
+    debugDisableShadows = true;
+  });
+
+  /// Imágenes de iconos de ejemplo en pantalla.
+  Finder fixtureIcons() => find.byWidgetPredicate((w) {
+        if (w is! Image) return false;
+        final p = w.image;
+        final inner = p is ResizeImage ? p.imageProvider : p;
+        return inner is FileImage && inner.file.path.contains('fixtures/icons/');
+      });
+
+  /// Iconos de tipo (el puzzle de los mods) en las filas de la lista.
+  Finder kindIcons() => find.descendant(
+        of: find.byType(ListView),
+        matching: find.byIcon(Symbols.extension_rounded),
+      );
+
+  testWidgets('contenido: cada archivo conocido muestra el icono de su proyecto',
+      (tester) async {
+    await pumpApp(tester, location: '/instances/survival-amigos?tab=content');
+    // Fabric API, Sodium, Iris, Lithium y JourneyMap (las filas visibles).
+    expect(fixtureIcons(), findsAtLeastNWidgets(5));
+    expect(kindIcons(), findsNothing);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('contenido: sin red los iconos no estorban y queda el del tipo',
+      (tester) async {
+    final bridge = FakeBridge()..contentIconsFail = true;
+    await pumpApp(
+      tester,
+      location: '/instances/survival-amigos?tab=content',
+      bridge: bridge,
+    );
+    expect(find.text('Sodium'), findsOneWidget);
+    expect(fixtureIcons(), findsNothing);
+    expect(kindIcons(), findsAtLeastNWidgets(5));
     debugDisableShadows = true;
   });
 

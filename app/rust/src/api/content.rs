@@ -4,7 +4,8 @@
 use std::path::PathBuf;
 
 use lcore::content::{
-    ContentKind, ContentQuery, ContentVersion, InstalledContent, ProjectHit, SortOrder, Source,
+    ContentIcon, ContentKind, ContentQuery, ContentVersion, InstalledContent, ProjectHit,
+    SortOrder, Source,
 };
 use lcore::instance::LoaderKind;
 
@@ -132,6 +133,24 @@ impl From<InstalledContent> for InstalledContentView {
             is_dir: c.is_dir,
             tracked: c.tracked,
             world: c.world,
+        }
+    }
+}
+
+/// Icono de un archivo instalado (solo los que se pudieron resolver).
+#[derive(Debug, Clone)]
+pub struct ContentIconView {
+    pub kind: String,
+    pub file: String,
+    pub icon_url: String,
+}
+
+impl From<ContentIcon> for ContentIconView {
+    fn from(i: ContentIcon) -> Self {
+        Self {
+            kind: i.kind.as_str().into(),
+            file: i.file,
+            icon_url: i.icon_url,
         }
     }
 }
@@ -314,6 +333,21 @@ pub async fn install_content(
                 .collect(),
             warnings: out.warnings,
         })
+    })
+    .await
+}
+
+/// Iconos de lo instalado (consulta Modrinth/CurseForge; con caché). Los
+/// archivos que ninguna fuente reconoce no aparecen.
+pub async fn content_icons(instance_id: String) -> Result<Vec<ContentIconView>, BridgeError> {
+    let core = core()?;
+    on_rt(async move {
+        Ok(core
+            .content_icons(&instance_id)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect())
     })
     .await
 }

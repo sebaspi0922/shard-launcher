@@ -86,6 +86,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CapeView dco_decode_cape_view(dynamic raw);
 
   @protected
+  ContentIconView dco_decode_content_icon_view(dynamic raw);
+
+  @protected
   ContentUpdateView dco_decode_content_update_view(dynamic raw);
 
   @protected
@@ -144,6 +147,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CapeView> dco_decode_list_cape_view(dynamic raw);
+
+  @protected
+  List<ContentIconView> dco_decode_list_content_icon_view(dynamic raw);
 
   @protected
   List<ContentUpdateView> dco_decode_list_content_update_view(dynamic raw);
@@ -373,6 +379,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CapeView sse_decode_cape_view(SseDeserializer deserializer);
 
   @protected
+  ContentIconView sse_decode_content_icon_view(SseDeserializer deserializer);
+
+  @protected
   ContentUpdateView sse_decode_content_update_view(
     SseDeserializer deserializer,
   );
@@ -443,6 +452,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<CapeView> sse_decode_list_cape_view(SseDeserializer deserializer);
+
+  @protected
+  List<ContentIconView> sse_decode_list_content_icon_view(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ContentUpdateView> sse_decode_list_content_update_view(
@@ -712,6 +726,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_cape_view(CapeView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_content_icon_view(
+    ContentIconView self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_content_update_view(
     ContentUpdateView self,
     SseSerializer serializer,
@@ -800,6 +820,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_cape_view(List<CapeView> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_content_icon_view(
+    List<ContentIconView> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_content_update_view(
