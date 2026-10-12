@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1285833715;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2038342107;
 
 // Section: executor
 
@@ -343,6 +343,42 @@ fn wire__crate__api__content__check_content_updates_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::content::check_content_updates(api_instance_id).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__update__check_update_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "check_update",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_current = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::types::BridgeError>(
+                    (move || async move {
+                        let output_ok = crate::api::update::check_update(api_current).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1411,6 +1447,41 @@ fn wire__crate__api__content__install_modpack_impl(
                     (move || async move {
                         let output_ok =
                             crate::api::content::install_modpack(api_source, api_name).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__update__install_update_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "install_update",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::types::BridgeError>(
+                    (move || async move {
+                        let output_ok = crate::api::update::install_update().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -3128,6 +3199,35 @@ fn wire__crate__api__instances__update_instance_settings_impl(
         },
     )
 }
+fn wire__crate__api__update__update_package_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_package",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Ok::<_, ()>(crate::api::update::update_package())?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__servers__update_server_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4146,6 +4246,17 @@ impl SseDecode for Option<u64> {
     }
 }
 
+impl SseDecode for Option<crate::api::update::UpdateView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::update::UpdateView>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<Vec<String>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4384,6 +4495,7 @@ impl SseDecode for crate::api::types::SettingsView {
         let mut var_defaultJvmArgs = <Vec<String>>::sse_decode(deserializer);
         let mut var_maxConcurrentDownloads = <u32>::sse_decode(deserializer);
         let mut var_discordRpc = <bool>::sse_decode(deserializer);
+        let mut var_checkUpdates = <bool>::sse_decode(deserializer);
         let mut var_msaClientIdSet = <bool>::sse_decode(deserializer);
         return crate::api::types::SettingsView {
             language: var_language,
@@ -4393,6 +4505,7 @@ impl SseDecode for crate::api::types::SettingsView {
             default_jvm_args: var_defaultJvmArgs,
             max_concurrent_downloads: var_maxConcurrentDownloads,
             discord_rpc: var_discordRpc,
+            check_updates: var_checkUpdates,
             msa_client_id_set: var_msaClientIdSet,
         };
     }
@@ -4557,6 +4670,28 @@ impl SseDecode for () {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
 }
 
+impl SseDecode for crate::api::update::UpdateView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_version = <String>::sse_decode(deserializer);
+        let mut var_current = <String>::sse_decode(deserializer);
+        let mut var_pubDate = <Option<String>>::sse_decode(deserializer);
+        let mut var_notes = <Option<String>>::sse_decode(deserializer);
+        let mut var_notesUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_canInstall = <bool>::sse_decode(deserializer);
+        let mut var_downloadUrl = <String>::sse_decode(deserializer);
+        return crate::api::update::UpdateView {
+            version: var_version,
+            current: var_current,
+            pub_date: var_pubDate,
+            notes: var_notes,
+            notes_url: var_notesUrl,
+            can_install: var_canInstall,
+            download_url: var_downloadUrl,
+        };
+    }
+}
+
 impl SseDecode for crate::api::types::VersionView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4629,112 +4764,114 @@ fn pde_ffi_dispatcher_primary_impl(
         8 => {
             wire__crate__api__content__check_content_updates_impl(port, ptr, rust_vec_len, data_len)
         }
-        9 => {
+        9 => wire__crate__api__update__check_update_impl(port, ptr, rust_vec_len, data_len),
+        10 => {
             wire__crate__api__content__clear_curseforge_key_impl(port, ptr, rust_vec_len, data_len)
         }
-        10 => wire__crate__api__accounts__complete_microsoft_login_impl(
+        11 => wire__crate__api__accounts__complete_microsoft_login_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__api__content__content_versions_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__backups__create_backup_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__instances__create_instance_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__backups__delete_backup_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__instances__delete_instance_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__worlds__delete_screenshot_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__worlds__delete_world_impl(port, ptr, rust_vec_len, data_len),
-        19 => {
+        12 => wire__crate__api__content__content_versions_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__backups__create_backup_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__instances__create_instance_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__backups__delete_backup_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__instances__delete_instance_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__worlds__delete_screenshot_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__worlds__delete_world_impl(port, ptr, rust_vec_len, data_len),
+        20 => {
             wire__crate__api__import__detect_import_sources_impl(port, ptr, rust_vec_len, data_len)
         }
-        20 => wire__crate__api__doctor__diagnose_impl(port, ptr, rust_vec_len, data_len),
-        21 => {
+        21 => wire__crate__api__doctor__diagnose_impl(port, ptr, rust_vec_len, data_len),
+        22 => {
             wire__crate__api__backups__get_backup_settings_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => wire__crate__api__skins__get_profile_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__content__get_project_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__settings__get_settings_impl(port, ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__content__has_curseforge_key_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__skins__hide_cape_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__content__identify_content_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__ui_prefs__import_background_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__import__import_minecraft_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__import__import_roxy_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__servers__import_servers_dat_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__content__install_content_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__java__install_java_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__content__install_modpack_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__instances__launch_instance_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__accounts__list_accounts_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__backups__list_backups_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__content__list_content_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__worlds__list_datapacks_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__instances__list_instances_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__java__list_java_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__instances__list_loader_versions_impl(
+        24 => wire__crate__api__skins__get_profile_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__content__get_project_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__settings__get_settings_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__content__has_curseforge_key_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__skins__hide_cape_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__content__identify_content_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__ui_prefs__import_background_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__import__import_minecraft_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__import__import_roxy_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__servers__import_servers_dat_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__app__init_app_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__content__install_content_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__java__install_java_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__content__install_modpack_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__update__install_update_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__instances__launch_instance_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__accounts__list_accounts_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__backups__list_backups_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__content__list_content_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__worlds__list_datapacks_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__instances__list_instances_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__java__list_java_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__instances__list_loader_versions_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__worlds__list_screenshots_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__servers__list_servers_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__instances__list_trash_impl(port, ptr, rust_vec_len, data_len),
-        50 => wire__crate__api__instances__list_versions_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__worlds__list_worlds_impl(port, ptr, rust_vec_len, data_len),
-        52 => wire__crate__api__servers__move_server_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__servers__ping_servers_impl(port, ptr, rust_vec_len, data_len),
-        54 => {
+        49 => wire__crate__api__worlds__list_screenshots_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__servers__list_servers_impl(port, ptr, rust_vec_len, data_len),
+        51 => wire__crate__api__instances__list_trash_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__instances__list_versions_impl(port, ptr, rust_vec_len, data_len),
+        53 => wire__crate__api__worlds__list_worlds_impl(port, ptr, rust_vec_len, data_len),
+        54 => wire__crate__api__servers__move_server_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__servers__ping_servers_impl(port, ptr, rust_vec_len, data_len),
+        56 => {
             wire__crate__api__import__plan_minecraft_import_impl(port, ptr, rust_vec_len, data_len)
         }
-        55 => wire__crate__api__import__plan_roxy_import_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__instances__purge_instance_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__accounts__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__content__remove_content_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__worlds__remove_datapack_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__servers__remove_server_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__worlds__rename_world_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__skins__reset_skin_impl(port, ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__backups__restore_backup_impl(port, ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__instances__restore_instance_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__instances__running_games_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__settings__save_settings_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__content__search_content_impl(port, ptr, rust_vec_len, data_len),
-        68 => {
+        57 => wire__crate__api__import__plan_roxy_import_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__instances__purge_instance_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__accounts__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__content__remove_content_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__worlds__remove_datapack_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__servers__remove_server_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__worlds__rename_world_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__skins__reset_skin_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__backups__restore_backup_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__instances__restore_instance_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__instances__running_games_impl(port, ptr, rust_vec_len, data_len),
+        68 => wire__crate__api__settings__save_settings_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__content__search_content_impl(port, ptr, rust_vec_len, data_len),
+        70 => {
             wire__crate__api__accounts__set_active_account_impl(port, ptr, rust_vec_len, data_len)
         }
-        69 => wire__crate__api__backups__set_backup_label_impl(port, ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__backups__set_backup_pinned_impl(port, ptr, rust_vec_len, data_len),
-        71 => {
+        71 => wire__crate__api__backups__set_backup_label_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__backups__set_backup_pinned_impl(port, ptr, rust_vec_len, data_len),
+        73 => {
             wire__crate__api__content__set_content_enabled_impl(port, ptr, rust_vec_len, data_len)
         }
-        72 => wire__crate__api__content__set_curseforge_key_impl(port, ptr, rust_vec_len, data_len),
-        73 => {
+        74 => wire__crate__api__content__set_curseforge_key_impl(port, ptr, rust_vec_len, data_len),
+        75 => {
             wire__crate__api__worlds__set_datapack_enabled_impl(port, ptr, rust_vec_len, data_len)
         }
-        74 => wire__crate__api__skins__set_skin_url_impl(port, ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__ui_prefs__set_ui_prefs_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__skins__show_cape_impl(port, ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__app__start_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__app__subscribe_events_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__backups__update_backup_settings_impl(
+        76 => wire__crate__api__skins__set_skin_url_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__ui_prefs__set_ui_prefs_impl(port, ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__skins__show_cape_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__app__start_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__app__subscribe_events_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__backups__update_backup_settings_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        81 => wire__crate__api__content__update_content_impl(port, ptr, rust_vec_len, data_len),
-        82 => wire__crate__api__instances__update_instance_settings_impl(
+        83 => wire__crate__api__content__update_content_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__instances__update_instance_settings_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        83 => wire__crate__api__servers__update_server_impl(port, ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__worlds__update_world_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__skins__upload_skin_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__servers__update_server_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__worlds__update_world_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__skins__upload_skin_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -4748,11 +4885,12 @@ fn pde_ffi_dispatcher_sync_impl(
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
         6 => wire__crate__api__accounts__cancel_microsoft_login_impl(ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__app__get_log_backlog_impl(ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__ui_prefs__get_ui_prefs_impl(ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__app__latest_game_for_instance_impl(ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__settings__system_memory_mb_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__app__core_version_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__app__get_log_backlog_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__ui_prefs__get_ui_prefs_impl(ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__app__latest_game_for_instance_impl(ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__settings__system_memory_mb_impl(ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__update__update_package_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5573,6 +5711,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::types::SettingsView {
             self.default_jvm_args.into_into_dart().into_dart(),
             self.max_concurrent_downloads.into_into_dart().into_dart(),
             self.discord_rpc.into_into_dart().into_dart(),
+            self.check_updates.into_into_dart().into_dart(),
             self.msa_client_id_set.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -5739,6 +5878,32 @@ impl flutter_rust_bridge::IntoDart for crate::api::types::UiEvent {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::types::UiEvent {}
 impl flutter_rust_bridge::IntoIntoDart<crate::api::types::UiEvent> for crate::api::types::UiEvent {
     fn into_into_dart(self) -> crate::api::types::UiEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::update::UpdateView {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.version.into_into_dart().into_dart(),
+            self.current.into_into_dart().into_dart(),
+            self.pub_date.into_into_dart().into_dart(),
+            self.notes.into_into_dart().into_dart(),
+            self.notes_url.into_into_dart().into_dart(),
+            self.can_install.into_into_dart().into_dart(),
+            self.download_url.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::update::UpdateView
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::update::UpdateView>
+    for crate::api::update::UpdateView
+{
+    fn into_into_dart(self) -> crate::api::update::UpdateView {
         self
     }
 }
@@ -6420,6 +6585,16 @@ impl SseEncode for Option<u64> {
     }
 }
 
+impl SseEncode for Option<crate::api::update::UpdateView> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::update::UpdateView>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<Vec<String>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -6570,6 +6745,7 @@ impl SseEncode for crate::api::types::SettingsView {
         <Vec<String>>::sse_encode(self.default_jvm_args, serializer);
         <u32>::sse_encode(self.max_concurrent_downloads, serializer);
         <bool>::sse_encode(self.discord_rpc, serializer);
+        <bool>::sse_encode(self.check_updates, serializer);
         <bool>::sse_encode(self.msa_client_id_set, serializer);
     }
 }
@@ -6706,6 +6882,19 @@ impl SseEncode for crate::api::types::UiEvent {
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for crate::api::update::UpdateView {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.version, serializer);
+        <String>::sse_encode(self.current, serializer);
+        <Option<String>>::sse_encode(self.pub_date, serializer);
+        <Option<String>>::sse_encode(self.notes, serializer);
+        <Option<String>>::sse_encode(self.notes_url, serializer);
+        <bool>::sse_encode(self.can_install, serializer);
+        <String>::sse_encode(self.download_url, serializer);
+    }
 }
 
 impl SseEncode for crate::api::types::VersionView {

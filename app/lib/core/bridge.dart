@@ -17,6 +17,7 @@ import '../src/rust/api/settings.dart' as settings;
 import '../src/rust/api/skins.dart' as skins;
 import '../src/rust/api/types.dart';
 import '../src/rust/api/ui_prefs.dart' as ui_prefs;
+import '../src/rust/api/update.dart' as update;
 import '../src/rust/api/worlds.dart' as worlds;
 
 import '../src/rust/api/backups.dart'
@@ -38,6 +39,7 @@ import '../src/rust/api/instances.dart' show TrashedView;
 import '../src/rust/api/java.dart' show JavaView;
 import '../src/rust/api/servers.dart' show ServerView, ServerStatusView;
 import '../src/rust/api/skins.dart' show ProfileView;
+import '../src/rust/api/update.dart' show UpdateView;
 import '../src/rust/api/worlds.dart'
     show WorldView, DatapackView, ScreenshotView;
 
@@ -69,6 +71,7 @@ export '../src/rust/api/java.dart' show JavaView;
 export '../src/rust/api/servers.dart' show ServerView, ServerStatusView;
 export '../src/rust/api/skins.dart' show ProfileView, SkinView, CapeView;
 export '../src/rust/api/types.dart';
+export '../src/rust/api/update.dart' show UpdateView;
 export '../src/rust/api/worlds.dart'
     show WorldView, DatapackView, ScreenshotView;
 
@@ -124,6 +127,16 @@ abstract class LauncherBridge {
 
   Future<SettingsView> getSettings();
   Future<SettingsView> saveSettings(SettingsView value);
+
+  /// Paquete de esta instalación: `appimage`, `flatpak`, `arch` o `unpackaged`.
+  String get updatePackage;
+
+  /// Versión nueva respecto a `current`, o `null` si no la hay.
+  Future<UpdateView?> checkUpdate(String current);
+
+  /// Instala la versión de la última consulta (solo AppImage) y devuelve la
+  /// ruta del AppImage que hay que relanzar.
+  Future<String> installUpdate();
 
   // Contenido.
   Future<SearchPageView> searchContent({
@@ -400,6 +413,16 @@ class RustBridge implements LauncherBridge {
   @override
   Future<SettingsView> saveSettings(SettingsView value) =>
       settings.saveSettings(settings: value);
+
+  @override
+  String get updatePackage => update.updatePackage();
+
+  @override
+  Future<UpdateView?> checkUpdate(String current) =>
+      update.checkUpdate(current: current);
+
+  @override
+  Future<String> installUpdate() => update.installUpdate();
 
   @override
   Future<SearchPageView> searchContent({
@@ -788,6 +811,7 @@ extension SettingsViewCopy on SettingsView {
     List<String>? defaultJvmArgs,
     int? maxConcurrentDownloads,
     bool? discordRpc,
+    bool? checkUpdates,
   }) =>
       SettingsView(
         language: language != null ? language() : this.language,
@@ -798,6 +822,7 @@ extension SettingsViewCopy on SettingsView {
         maxConcurrentDownloads:
             maxConcurrentDownloads ?? this.maxConcurrentDownloads,
         discordRpc: discordRpc ?? this.discordRpc,
+        checkUpdates: checkUpdates ?? this.checkUpdates,
         msaClientIdSet: msaClientIdSet,
       );
 }

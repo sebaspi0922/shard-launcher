@@ -3787,6 +3787,114 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Si el juego se cierra, te dice por qué y lo arregla.'**
   String get firstRunFeatureDoctorBody;
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Shard {version} disponible'**
+  String updateAvailableTitle(Object version);
+
+  /// No description provided for @updateAvailableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes la {current}.'**
+  String updateAvailableBody(Object current);
+
+  /// No description provided for @updateInstall.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizar'**
+  String get updateInstall;
+
+  /// No description provided for @updateDownload.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargar'**
+  String get updateDownload;
+
+  /// No description provided for @updateNotes.
+  ///
+  /// In es, this message translates to:
+  /// **'Novedades'**
+  String get updateNotes;
+
+  /// No description provided for @updateInstalling.
+  ///
+  /// In es, this message translates to:
+  /// **'Descargando y verificando…'**
+  String get updateInstalling;
+
+  /// No description provided for @updateReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Lista. Reinicia Shard para usar la nueva versión.'**
+  String get updateReady;
+
+  /// No description provided for @updateRestart.
+  ///
+  /// In es, this message translates to:
+  /// **'Reiniciar'**
+  String get updateRestart;
+
+  /// No description provided for @updateFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo actualizar'**
+  String get updateFailed;
+
+  /// No description provided for @updateManualHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Este paquete se actualiza a mano: descarga el nuevo e instálalo.'**
+  String get updateManualHint;
+
+  /// No description provided for @settingsUpdates.
+  ///
+  /// In es, this message translates to:
+  /// **'Actualizaciones'**
+  String get settingsUpdates;
+
+  /// No description provided for @settingsUpdatesCurrent.
+  ///
+  /// In es, this message translates to:
+  /// **'Versión {version}.'**
+  String settingsUpdatesCurrent(Object version);
+
+  /// No description provided for @settingsUpdatesUpToDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes la última versión ({version}).'**
+  String settingsUpdatesUpToDate(Object version);
+
+  /// No description provided for @settingsUpdatesChecking.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscando…'**
+  String get settingsUpdatesChecking;
+
+  /// No description provided for @settingsUpdatesCheck.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar'**
+  String get settingsUpdatesCheck;
+
+  /// No description provided for @settingsUpdatesAuto.
+  ///
+  /// In es, this message translates to:
+  /// **'Buscar actualizaciones automáticamente'**
+  String get settingsUpdatesAuto;
+
+  /// No description provided for @settingsUpdatesAutoDesc.
+  ///
+  /// In es, this message translates to:
+  /// **'Al abrir Shard y cada 6 horas. No se instala nada sin tu permiso.'**
+  String get settingsUpdatesAutoDesc;
+
+  /// No description provided for @errUpdateRejected.
+  ///
+  /// In es, this message translates to:
+  /// **'La actualización no tiene una firma válida y no se instaló.'**
+  String get errUpdateRejected;
 }
 
 class _AppLocalizationsDelegate

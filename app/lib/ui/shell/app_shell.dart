@@ -11,6 +11,7 @@ import '../../core/crash_notice.dart';
 import '../../core/launch.dart';
 import '../../core/logs.dart';
 import '../../core/providers.dart';
+import '../../core/updates.dart';
 import '../../core/window.dart';
 import '../../l10n/app_localizations.dart';
 import '../accounts/account_panel.dart';
@@ -22,6 +23,7 @@ import '../widgets/side_tooltip.dart';
 import 'backdrop.dart';
 import 'title_bar.dart';
 import 'tray_controller.dart';
+import 'update_banner.dart';
 
 class NavDestination {
   const NavDestination(this.path, this.icon, this.label);
@@ -100,6 +102,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     ref.watch(launchProvider);
     ref.watch(crashNoticeProvider);
     ref.watch(trayControllerProvider);
+    ref.watch(updateProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -124,7 +127,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           const Positioned(
             right: Space.x6,
             bottom: Space.x6,
-            child: CrashBanner(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              spacing: Space.x3,
+              children: [UpdateBanner(), CrashBanner()],
+            ),
           ),
         ],
       ),

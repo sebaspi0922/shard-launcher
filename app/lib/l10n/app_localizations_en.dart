@@ -2299,4 +2299,69 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get firstRunFeatureDoctorBody =>
       'If the game crashes, it tells you why and fixes it.';
+
+  @override
+  String updateAvailableTitle(Object version) {
+    return 'Shard $version is available';
+  }
+
+  @override
+  String updateAvailableBody(Object current) {
+    return 'You have $current.';
+  }
+
+  @override
+  String get updateInstall => 'Update';
+
+  @override
+  String get updateDownload => 'Download';
+
+  @override
+  String get updateNotes => 'What’s new';
+
+  @override
+  String get updateInstalling => 'Downloading and verifying…';
+
+  @override
+  String get updateReady => 'Ready. Restart Shard to use the new version.';
+
+  @override
+  String get updateRestart => 'Restart';
+
+  @override
+  String get updateFailed => 'Couldn’t update';
+
+  @override
+  String get updateManualHint =>
+      'This package updates manually: download the new one and install it.';
+
+  @override
+  String get settingsUpdates => 'Updates';
+
+  @override
+  String settingsUpdatesCurrent(Object version) {
+    return 'Version $version.';
+  }
+
+  @override
+  String settingsUpdatesUpToDate(Object version) {
+    return 'You’re on the latest version ($version).';
+  }
+
+  @override
+  String get settingsUpdatesChecking => 'Checking…';
+
+  @override
+  String get settingsUpdatesCheck => 'Check';
+
+  @override
+  String get settingsUpdatesAuto => 'Check for updates automatically';
+
+  @override
+  String get settingsUpdatesAutoDesc =>
+      'When Shard opens and every 6 hours. Nothing is installed without your permission.';
+
+  @override
+  String get errUpdateRejected =>
+      'The update isn’t validly signed and wasn’t installed.';
 }

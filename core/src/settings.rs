@@ -38,6 +38,8 @@ pub struct Settings {
     pub java_overrides: BTreeMap<u32, PathBuf>,
     pub max_concurrent_downloads: usize,
     pub discord_rpc: bool,
+    /// La app busca versiones nuevas al arrancar y cada pocas horas.
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -53,6 +55,7 @@ impl Default for Settings {
             java_overrides: BTreeMap::new(),
             max_concurrent_downloads: 12,
             discord_rpc: true,
+            check_updates: true,
         }
     }
 }

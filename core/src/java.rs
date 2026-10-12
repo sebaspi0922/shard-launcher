@@ -10,11 +10,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::task::JoinSet;
 
+use crate::download::{Sha256File, download_sha256};
 use crate::events::{Event, ProgressUnit};
 use crate::launcher::Core;
 use crate::meta::rules::{Arch, Os, Platform};
@@ -28,9 +27,6 @@ const PROBE_TIMEOUT: Duration = Duration::from_secs(10);
 /// Profundidad máxima al buscar `bin/java` dentro de una Java gestionada
 /// (en macOS vive en `Contents/Home/bin/java`).
 const BIN_SEARCH_DEPTH: u32 = 3;
-const DOWNLOAD_ATTEMPTS: u32 = 3;
-/// Mínimo de bytes entre dos eventos de progreso de la descarga.
-const PROGRESS_STEP: u64 = 128 * 1024;
 /// A partir de esta versión se acepta una Java mayor que la pedida
 /// (Minecraft moderno arranca bien con una Java más nueva).
 const MIN_MAJOR_FOR_NEWER: u32 = 17;
@@ -500,7 +496,17 @@ impl Core {
         };
 
         let result = async {
-            download_verified(http, &package, &archive, progress).await?;
+            download_sha256(
+                http,
+                &Sha256File {
+                    url: &package.link,
+                    sha256: &package.checksum,
+                    size: package.size,
+                },
+                &archive,
+                progress,
+            )
+            .await?;
             tokio::fs::create_dir_all(&extract)
                 .await
                 .map_err(|e| Error::io(&extract, e))?;
@@ -628,96 +634,6 @@ async fn fetch_package(
     Err(Error::InvalidInput(format!(
         "Java {major} no está disponible para esta plataforma ({last})"
     )))
-}
-
-/// Descarga el paquete comprobando SHA-256 y tamaño. Reintenta errores de red,
-/// 5xx y hashes que no coinciden.
-async fn download_verified(
-    http: &Http,
-    package: &Package,
-    dest: &Path,
-    progress: impl Fn(u64, u64),
-) -> Result<()> {
-    let mut last_err = None;
-    for attempt in 1..=DOWNLOAD_ATTEMPTS {
-        match try_download(http, package, dest, &progress).await {
-            Ok(()) => return Ok(()),
-            Err(e) => {
-                let retry = matches!(e, Error::Network(_) | Error::HashMismatch { .. })
-                    || matches!(e, Error::HttpStatus { status, .. } if status >= 500);
-                tracing::debug!(url = %package.link, attempt, error = %e, "descarga de Java fallida");
-                last_err = Some(e);
-                if !retry {
-                    break;
-                }
-                tokio::time::sleep(Duration::from_millis(300 * u64::from(attempt))).await;
-            }
-        }
-    }
-    Err(last_err.expect("al menos un intento"))
-}
-
-async fn try_download(
-    http: &Http,
-    package: &Package,
-    dest: &Path,
-    progress: &impl Fn(u64, u64),
-) -> Result<()> {
-    let mut part_name = dest.file_name().unwrap_or_default().to_os_string();
-    part_name.push(format!(".{:08x}.part", fastrand::u32(..)));
-    let part = dest.with_file_name(part_name);
-
-    let resp = http.send(|c| c.get(&package.link)).await?;
-    let mut resp = check_status(resp)?;
-    let total = package.size.or(resp.content_length()).unwrap_or(0);
-
-    let mut file = tokio::fs::File::create(&part)
-        .await
-        .map_err(|e| Error::io(&part, e))?;
-    let mut hasher = Sha256::new();
-    let mut written = 0u64;
-    let mut reported = 0u64;
-    let result = async {
-        while let Some(chunk) = resp.chunk().await? {
-            hasher.update(&chunk);
-            written += chunk.len() as u64;
-            file.write_all(&chunk)
-                .await
-                .map_err(|e| Error::io(&part, e))?;
-            if written - reported >= PROGRESS_STEP {
-                reported = written;
-                progress(written, total.max(written));
-            }
-        }
-        file.flush().await.map_err(|e| Error::io(&part, e))?;
-        drop(file);
-        progress(written, total.max(written));
-        let actual = hex::encode(hasher.finalize());
-        if !actual.eq_ignore_ascii_case(package.checksum.trim()) {
-            return Err(Error::HashMismatch {
-                url: package.link.clone(),
-                expected: package.checksum.clone(),
-                actual,
-            });
-        }
-        if let Some(size) = package.size
-            && written != size
-        {
-            return Err(Error::HashMismatch {
-                url: package.link.clone(),
-                expected: format!("{size} bytes"),
-                actual: format!("{written} bytes"),
-            });
-        }
-        tokio::fs::rename(&part, dest)
-            .await
-            .map_err(|e| Error::io(dest, e))
-    }
-    .await;
-    if result.is_err() {
-        let _ = tokio::fs::remove_file(&part).await;
-    }
-    result
 }
 
 // ---------------------------------------------------------------------------
@@ -973,6 +889,7 @@ mod tests {
     use crate::launcher::Options;
     use crate::net::RetryPolicy;
     use crate::secrets::MemoryStore;
+    use sha2::{Digest, Sha256};
     use std::sync::Arc;
     use wiremock::matchers::{method, path, query_param};
     use wiremock::{Mock, MockServer, ResponseTemplate};

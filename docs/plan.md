@@ -109,6 +109,13 @@ Por orden de valor:
 
 Se diseña en detalle al llegar; antes se registra la decisión en `docs/decisiones.md`.
 
+**Estado (2026-10-12):** actualizador hecho (D8), salvo publicarlo.
+- Núcleo: `update` (manifiesto, versiones, firma minisign con comentario confiable, sustitución atómica del AppImage) y `shard update [--install]`.
+- App: aviso flotante, sección en Ajustes › Acerca de y ajuste «Buscar actualizaciones automáticamente».
+- `tools/release.sh build|upload`: empaqueta, firma, escribe `latest.json` y sube a R2.
+- Probado en real con un servidor local: la CLI instala el AppImage publicado (idéntico byte a byte) y rechaza una firma de otra versión; el AppImage r27 encuentra solo una r28 y muestra el aviso.
+- Falta: comprar el dominio, crear el bucket `shard-dl` con `dl.shardlauncher.com` y publicar la primera release. El botón «Actualizar» de la app solo se ha probado con tests (la instalación en sí, también desde la CLI).
+
 ## Tareas del usuario (en paralelo)
 
 | Cuándo | Qué | Guía |
