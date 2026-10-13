@@ -33,6 +33,10 @@ abstract final class Motion {
   /// Cambio de sección.
   static const page = Duration(milliseconds: 260);
 
+  /// Constante de tiempo con que la lista persigue a la rueda del ratón: en
+  /// este tiempo recorre ~63 % de lo que falta (~95 % en el triple).
+  static const wheel = Duration(milliseconds: 70);
+
   /// Salida exponencial suave (diálogos, secciones, acordeones).
   static const emphasized = Cubic(0.16, 1, 0.3, 1);
 }
@@ -127,7 +131,8 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// Gris neutro y plano, con acento blanco de tinta casi negra.
   factory AppColors.graphite([AccentSet? accent]) {
-    final a = accent ??
+    final a =
+        accent ??
         const AccentSet(
           accent: Color(0xFFFFFFFF),
           hover: Color(0xFFE6E6E6),
@@ -163,7 +168,8 @@ class AppColors extends ThemeExtension<AppColors> {
 
   /// Negro profundo con dorado como único acento.
   factory AppColors.gold([AccentSet? accent]) {
-    final a = accent ??
+    final a =
+        accent ??
         const AccentSet(
           accent: Color(0xFFF1C40F),
           hover: Color(0xFFFAC814),

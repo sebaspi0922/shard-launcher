@@ -21,6 +21,7 @@ import 'ui/shell/ui_scale.dart';
 import 'ui/theme/accent.dart';
 import 'ui/theme/app_theme.dart';
 import 'ui/theme/tokens.dart';
+import 'ui/widgets/smooth_scroll.dart';
 
 /// Ruta inicial (los tests la cambian para abrir una pantalla concreta).
 final initialLocationProvider = Provider<String>((ref) => '/');
@@ -30,34 +31,35 @@ final initialLocationProvider = Provider<String>((ref) => '/');
 Page<void> _fade(BuildContext context, GoRouterState state, Widget child) =>
     // Modo rendimiento o «reducir movimiento» del sistema: cambio instantáneo.
     MediaQuery.disableAnimationsOf(context)
-        ? NoTransitionPage(key: state.pageKey, child: child)
-        : CustomTransitionPage(
-      key: state.pageKey,
-      child: child,
-      transitionDuration: Motion.page,
-      reverseTransitionDuration: Motion.page,
-      transitionsBuilder: (_, anim, secondary, child) => FadeTransition(
-        // Sale cuando otra página entra encima.
-        opacity: ReverseAnimation(
-          CurvedAnimation(parent: secondary, curve: const Interval(0, 0.35)),
-        ),
-        child: FadeTransition(
-          opacity: CurvedAnimation(
-            parent: anim,
-            curve: const Interval(0.35, 0.8, curve: Curves.easeOut),
+    ? NoTransitionPage(key: state.pageKey, child: child)
+    : CustomTransitionPage(
+        key: state.pageKey,
+        child: child,
+        transitionDuration: Motion.page,
+        reverseTransitionDuration: Motion.page,
+        transitionsBuilder: (_, anim, secondary, child) => FadeTransition(
+          // Sale cuando otra página entra encima.
+          opacity: ReverseAnimation(
+            CurvedAnimation(parent: secondary, curve: const Interval(0, 0.35)),
           ),
-          child: SlideTransition(
-            position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(
-              CurvedAnimation(
-                parent: anim,
-                curve: const Interval(0.35, 1, curve: Motion.emphasized),
-              ),
+          child: FadeTransition(
+            opacity: CurvedAnimation(
+              parent: anim,
+              curve: const Interval(0.35, 0.8, curve: Curves.easeOut),
             ),
-            child: child,
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.012), end: Offset.zero)
+                  .animate(
+                    CurvedAnimation(
+                      parent: anim,
+                      curve: const Interval(0.35, 1, curve: Motion.emphasized),
+                    ),
+                  ),
+              child: child,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
 final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
@@ -161,6 +163,7 @@ class LauncherApp extends ConsumerWidget {
         return const Locale('es');
       },
       routerConfig: ref.watch(routerProvider),
+      scrollBehavior: const AppScrollBehavior(),
       builder: (context, child) {
         final calm = ref.watch(uiPrefsProvider.select((p) => p.performance));
         final mq = MediaQuery.of(context);
