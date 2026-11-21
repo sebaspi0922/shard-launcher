@@ -7,7 +7,9 @@ La fase 3 empieza por H0 y H1.
 ## Estado (2026-10-12)
 
 - **H0**: hecho.
-- **H1**: hecho en el núcleo y probado contra un servidor simulado y el keyring real. Falta la prueba real con Microsoft (client ID de Azure y aprobación de Mojang).
+- **H1**: implementado en el núcleo. La cadena completa tiene pruebas simuladas y el keyring se probó por separado en el equipo. Queda pendiente la validación real de extremo a extremo.
+  - El núcleo usa el flujo OAuth por código de dispositivo. El client ID se busca primero en `SHARD_MSA_CLIENT_ID` y luego en el ajuste `msa_client_id`. El valor compilado, `DEFAULT_MSA_CLIENT_ID`, está vacío. Si falta el identificador, Shard devuelve `auth_missing_client_id`. [Configuración del client ID](guia-azure.md#configurar-el-client-id-en-shard).
+  - El 20 de noviembre se reportó que el inicio de sesión ya estaba integrado con Prism en el entorno del usuario. La revisión de `main` en `8ca4cc4` confirmó el flujo de Microsoft con client ID configurable y el importador de instancias de Prism. El mecanismo de integración de cuentas con Prism sigue por confirmar.
 - **H2**: hecho, salvo Rich Presence (necesita el application id de Discord).
   - Versiones, descargas, assets, Java gestionado (Adoptium), instancias, lanzamiento, logs, Doctor e importación desde Roxy.
   - Loaders: Fabric, Quilt, Forge (incluido el formato antiguo, sin Java) y NeoForge (incluido el esquema 26.x: `26.2` → `26.2.0.*`).
@@ -46,6 +48,18 @@ La fase 3 empieza por H0 y H1.
   - Los backups siguen los enlaces a carpetas fuera del juego (p. ej. `saves` en otro disco), sin bucles. Los enlaces a archivos de fuera se siguen omitiendo.
   - Con `--detach`, la salida del juego pasa por un relé (`shard __mask-log`) que oculta el token antes de escribir el log. Probado en real con la instancia técnica.
 
+## Próximo paso (2026-11-20)
+
+1. **Validar el flujo completo de Shard con una cuenta real de Microsoft.** Usar un client ID aprobado para Shard. [Guía de Azure](guia-azure.md).
+   - Iniciar sesión desde la app, cerrarla por completo y volver a abrirla. Comprobar que la cuenta sigue activa.
+   - Ejecutar `shard account refresh` con el mismo directorio de datos para forzar la renovación desde el keyring.
+   - Crear o importar una instancia e instalar un mod.
+   - Jugar con esa cuenta.
+   - Revisar la consola y el Doctor.
+
+   Con esto se cierra H1 y se verifica el flujo principal pendiente de H4.
+2. **H5, empezando por LAN por internet.** Registrar primero la decisión. [Decisiones del proyecto](decisiones.md).
+
 ## H0 – Esqueleto (corto)
 
 - Workspace Cargo con `core/` (lib + bin `shard`) y `.gitignore` de Rust.
@@ -63,7 +77,7 @@ La fase 3 empieza por H0 y H1.
 - Skins y capas: ver, subir archivo, reset, capa activa u oculta.
 - CLI: `account login|list|use|remove|add-offline|refresh`, `skin …`.
 - Pruebas: cadena completa con wiremock (incluidos 403 de app no aprobada y XErr), keyring con backend de prueba.
-- **Depende del usuario**: registro de la app de Azure y solicitud de acceso a la API de Minecraft (`docs/guia-azure.md`). Hasta que Mojang apruebe, se prueba en real hasta XSTS y el resto con mocks; el lanzamiento se prueba con cuentas offline.
+- **Depende del usuario**: un client ID aprobado para Shard con acceso a la API de Minecraft. Si todavía falta, registrar la app en Azure y pedir el acceso. Hasta la aprobación se puede probar en real hasta XSTS, simular el resto y lanzar con cuentas offline. [Guía de Azure](guia-azure.md).
 - **Hecho cuando**: con una app aprobada, `shard account login` deja una cuenta usable que sobrevive a un reinicio (refresco desde el keyring).
 
 ## H2 – Instancias, instalación y lanzamiento
@@ -120,7 +134,7 @@ Se diseña en detalle al llegar; antes se registra la decisión en `docs/decisio
 
 | Cuándo | Qué | Guía |
 |---|---|---|
-| Ya (bloquea el fin de H1) | Registrar la app en Azure y pedir acceso a la API de Minecraft; pasar el client ID | `docs/guia-azure.md` §1–2 |
+| Ya (si falta el client ID aprobado de Shard) | Registrar la app en Azure, pedir acceso a la API de Minecraft y configurar el client ID | `docs/guia-azure.md` §1–2 |
 | Antes de H2 (opcional) | Crear una aplicación de Discord para Rich Presence; pasar el application id | `docs/guia-azure.md` §3 |
 | Antes de H3 (opcional) | Pedir clave de API de CurseForge | `docs/guia-azure.md` §4 |
 | Antes de H4 | Elegir el nombre visible del launcher (D2) | — |
