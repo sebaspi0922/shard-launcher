@@ -1,6 +1,8 @@
 # Guía: app de Azure, acceso a la API de Minecraft y claves opcionales (2026-10-11)
 
-Para iniciar sesión con Microsoft el launcher necesita su **propia** app registrada en Microsoft Entra (Azure). El client ID de Roxy no se reutiliza. Además, Mojang tiene que aprobar esa app para que pueda usar `api.minecraftservices.com`; sin aprobación ese paso responde **403** («Invalid app registration») y solo funcionan las cuentas offline.
+Shard usa una aplicación propia de Microsoft Entra (Azure) con acceso a `api.minecraftservices.com`. [Decisión sobre cuentas](decisiones.md#d3--cuentas-sin-servidor-propio-2026-10-11).
+
+Si ya tienes el client ID aprobado para Shard, pasa directamente a [configurarlo](#configurar-el-client-id-en-shard).
 
 El client ID no es secreto (va dentro de cualquier launcher). Puedes pasármelo por el chat o por Telegram. **No hace falta ningún secreto ni contraseña** y no debes compartir ninguno.
 
@@ -31,7 +33,10 @@ Los menús del portal cambian con frecuencia: si algún nombre no coincide, busc
 4. **Plazo**: no hay uno publicado. Hay reportes de días a semanas, y de solicitudes sin respuesta; algún foro de Microsoft sugiere además el programa de Xbox para desarrolladores, pero eso no es una respuesta oficial. Mientras tanto:
    - El launcher se desarrolla con pruebas simuladas y se prueba en real hasta el paso de Xbox (XSTS), que no depende de la aprobación.
    - Las partidas se prueban con cuentas offline (un jugador y servidores en modo offline).
-5. Cuando llegue la aprobación (o un rechazo), avísame. Con la app aprobada, `shard account login` debe completar la cadena entera.
+
+### Configurar el client ID en Shard
+
+`shard settings set msa-client-id <UUID>` guarda el identificador en los ajustes. Para una prueba temporal, define `SHARD_MSA_CLIENT_ID` en el entorno con el que arrancas Shard. La variable tiene prioridad sobre el ajuste guardado. [Validación desde la app](plan.md#próximo-paso-2026-11-20).
 
 **Errores que puedes ver después:**
 - `403 Invalid app registration` en `login_with_xbox`: la app aún no está aprobada.
