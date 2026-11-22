@@ -2062,6 +2062,7 @@ fn kind(a: &Account) -> &'static str {
     match a.kind {
         AccountKind::Msa => "microsoft",
         AccountKind::Offline => "offline",
+        AccountKind::Shard => "shard",
     }
 }
 

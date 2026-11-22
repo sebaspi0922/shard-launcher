@@ -1,0 +1,9 @@
+Domain = "auth.shard.example.com"
+BaseURL = "https://auth.shard.example.com"
+DefaultAdmins = ["replace-with-admin-username"]
+StateDirectory = "/var/lib/drasl"
+PlayerUUIDGeneration = "offline"
+
+[RegistrationUsernamePassword.CreateNewPlayer]
+Allow = true
+RequireInvite = true

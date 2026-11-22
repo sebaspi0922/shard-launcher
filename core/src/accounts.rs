@@ -7,15 +7,17 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::auth::mc::{self, Profile, SkinVariant};
 use crate::auth::msa::{self, DeviceCode, MsaTokens};
-use crate::auth::{Account, AccountKind, AuthError, Session, UserType, offline, xbox};
+use crate::auth::{Account, AccountKind, AuthError, Session, UserType, offline, xbox, yggdrasil};
 use crate::events::Event;
 use crate::fsutil::{now_secs, read_json, write_json};
 use crate::launcher::Core;
 use crate::paths::APP_ID;
 use crate::secrets::Secret;
+use crate::settings::DEFAULT_YGGDRASIL_BASE_URL;
 use crate::{Error, Result};
 
 const ACCOUNTS_SCHEMA: u32 = 1;
@@ -56,6 +58,16 @@ fn mc_service() -> String {
     format!("{APP_ID}.mc")
 }
 
+fn shard_service() -> String {
+    format!("{APP_ID}.yggdrasil")
+}
+
+#[derive(Serialize, Deserialize)]
+struct ShardLogin {
+    base: String,
+    credentials: yggdrasil::Credentials,
+}
+
 impl Core {
     pub async fn accounts(&self) -> Result<AccountsFile> {
         Ok(read_json(&self.paths().accounts_file())
@@ -63,7 +75,7 @@ impl Core {
             .unwrap_or_default())
     }
 
-    /// Busca por UUID (con o sin guiones), prefijo de UUID o nombre exacto.
+    /// Busca por identificador local, prefijo o nombre exacto.
     pub async fn find_account(&self, query: &str) -> Result<Account> {
         let file = self.accounts().await?;
         let q = query.replace('-', "").to_lowercase();
@@ -91,13 +103,17 @@ impl Core {
         f: impl FnOnce(&mut AccountsFile) -> Result<T>,
     ) -> Result<T> {
         let _guard = self.inner.accounts_lock.lock().await;
-        let path = self.paths().accounts_file();
-        let mut file: AccountsFile = read_json(&path).await?.unwrap_or_default();
+        let mut file = self.accounts().await?;
         let out = f(&mut file)?;
-        file.schema = ACCOUNTS_SCHEMA;
-        write_json(&path, &file).await?;
-        self.inner.events.emit(Event::AccountsChanged);
+        self.save_accounts(file).await?;
         Ok(out)
+    }
+
+    async fn save_accounts(&self, mut file: AccountsFile) -> Result<()> {
+        file.schema = ACCOUNTS_SCHEMA;
+        write_json(&self.paths().accounts_file(), &file).await?;
+        self.inner.events.emit(Event::AccountsChanged);
+        Ok(())
     }
 
     async fn client_id(&self) -> Result<String> {
@@ -237,6 +253,58 @@ impl Core {
         .await
     }
 
+    pub async fn add_shard_account(&self, username: &str, password: &str) -> Result<Account> {
+        let settings = self.settings().await;
+        let base = yggdrasil::normalize_base(
+            settings
+                .yggdrasil_base_url
+                .as_deref()
+                .unwrap_or(DEFAULT_YGGDRASIL_BASE_URL),
+        )?;
+        let credentials = yggdrasil::authenticate(self.http(), &base, username, password).await?;
+        let profile = &credentials.selected_profile;
+        // Un UUID offline puede existir también en Drasl o en otro servidor Yggdrasil.
+        let digest = Sha256::digest(format!("{base}:{}", profile.id.simple()).as_bytes());
+        let id = format!("shard{}", hex::encode(digest));
+        let name = profile.name.clone();
+        let login = ShardLogin { base, credentials };
+        let json = serde_json::to_string(&login).map_err(|e| Error::json("sesión Shard", e))?;
+
+        let _guard = self.inner.accounts_lock.lock().await;
+        let mut file = self.accounts().await?;
+        let existing = file.accounts.iter_mut().find(|a| a.id == id);
+        let account = if let Some(account) = existing {
+            account.name = name;
+            account.clone()
+        } else {
+            let account = Account {
+                id: id.clone(),
+                name,
+                kind: AccountKind::Shard,
+                skin_url: None,
+                added_at: now_secs(),
+                last_used: None,
+            };
+            file.accounts.push(account.clone());
+            account
+        };
+        if file.active.is_none() {
+            file.active = Some(id.clone());
+        }
+
+        let service = shard_service();
+        let previous = self.secret_get(service.clone(), id.clone()).await?;
+        self.secret_set(service.clone(), id.clone(), json).await?;
+        if let Err(error) = self.save_accounts(file).await {
+            match previous {
+                Some(secret) => self.secret_set(service, id, secret).await?,
+                None => self.secret_delete(service, id).await?,
+            }
+            return Err(error);
+        }
+        Ok(account)
+    }
+
     pub async fn set_active_account(&self, id: &str) -> Result<()> {
         self.update_accounts(|file| {
             if file.find(id).is_none() {
@@ -251,36 +319,45 @@ impl Core {
     /// Borra los secretos y quita la cuenta. Si el keyring falla, la cuenta se
     /// queda en la lista para poder reintentar.
     pub async fn remove_account(&self, id: &str) -> Result<Account> {
-        let account = self
-            .accounts()
-            .await?
-            .find(id)
-            .cloned()
+        let _guard = self.inner.accounts_lock.lock().await;
+        let mut file = self.accounts().await?;
+        let pos = file
+            .accounts
+            .iter()
+            .position(|a| a.id == id)
             .ok_or_else(|| Error::AccountNotFound(id.to_owned()))?;
-        if account.kind == AccountKind::Msa {
-            let a = self.secret_delete(msa_service(), account.id.clone()).await;
-            let b = self.secret_delete(mc_service(), account.id.clone()).await;
-            a.and(b)?;
-        }
-        self.update_accounts(|file| {
-            let pos = file
-                .accounts
-                .iter()
-                .position(|a| a.id == id)
-                .ok_or_else(|| Error::AccountNotFound(id.to_owned()))?;
-            let removed = file.accounts.remove(pos);
-            if file.active.as_deref() == Some(id) {
-                file.active = file.accounts.first().map(|a| a.id.clone());
+        let account = file.accounts.remove(pos);
+        match account.kind {
+            AccountKind::Msa => {
+                let a = self.secret_delete(msa_service(), account.id.clone()).await;
+                let b = self.secret_delete(mc_service(), account.id.clone()).await;
+                a.and(b)?;
             }
-            Ok(removed)
-        })
-        .await
+            AccountKind::Shard => {
+                self.secret_delete(shard_service(), account.id.clone())
+                    .await?
+            }
+            AccountKind::Offline => {}
+        }
+        if file.active.as_deref() == Some(id) {
+            file.active = file.accounts.first().map(|a| a.id.clone());
+        }
+        self.save_accounts(file).await?;
+        Ok(account)
     }
 
     /// Sesión lista para lanzar; renueva el token si hace falta.
     /// `id = None` usa la cuenta activa.
     pub async fn session(&self, id: Option<&str>) -> Result<Session> {
+        self.session_with_base(id).await.map(|(session, _)| session)
+    }
+
+    pub(crate) async fn session_with_base(
+        &self,
+        id: Option<&str>,
+    ) -> Result<(Session, Option<String>)> {
         let account = self.resolve(id).await?;
+        let mut base = None;
         let session = match account.kind {
             AccountKind::Offline => Session {
                 uuid: account.id.clone(),
@@ -288,6 +365,21 @@ impl Core {
                 access_token: Secret::new("0"),
                 user_type: UserType::Legacy,
             },
+            AccountKind::Shard => {
+                let json = self
+                    .secret_get(shard_service(), account.id.clone())
+                    .await?
+                    .ok_or(AuthError::RefreshTokenMissing)?;
+                let login: ShardLogin =
+                    serde_json::from_str(&json).map_err(|e| Error::json("sesión Shard", e))?;
+                base = Some(login.base);
+                Session {
+                    uuid: login.credentials.selected_profile.id.simple().to_string(),
+                    name: login.credentials.selected_profile.name,
+                    access_token: Secret::new(login.credentials.access_token),
+                    user_type: UserType::Mojang,
+                }
+            }
             AccountKind::Msa => {
                 let token = self.valid_mc_token(&account, false).await?;
                 let account = self.find_account(&account.id).await?;
@@ -299,15 +391,14 @@ impl Core {
                 }
             }
         };
-        let uuid = session.uuid.clone();
         self.update_accounts(|file| {
-            if let Some(a) = file.accounts.iter_mut().find(|a| a.id == uuid) {
+            if let Some(a) = file.accounts.iter_mut().find(|a| a.id == account.id) {
                 a.last_used = Some(now_secs());
             }
             Ok(())
         })
         .await?;
-        Ok(session)
+        Ok((session, base))
     }
 
     /// Fuerza la renovación completa de la sesión de una cuenta de Microsoft.

@@ -1,4 +1,4 @@
-//! Cuentas de Microsoft y offline.
+//! Cuentas de Microsoft, offline y Shard.
 
 use std::sync::Mutex;
 
@@ -88,6 +88,16 @@ pub async fn add_offline_account(name: String) -> Result<AccountView, BridgeErro
     let core = core()?;
     on_rt(async move {
         let account = core.add_offline_account(&name).await?;
+        let active = core.accounts().await?.active;
+        Ok(AccountView::from_account(&account, active.as_deref()))
+    })
+    .await
+}
+
+pub async fn add_shard_account(username: String, password: String) -> Result<AccountView, BridgeError> {
+    let core = core()?;
+    on_rt(async move {
+        let account = core.add_shard_account(&username, &password).await?;
         let active = core.accounts().await?.active;
         Ok(AccountView::from_account(&account, active.as_deref()))
     })

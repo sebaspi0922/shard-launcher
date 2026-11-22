@@ -350,6 +350,24 @@ abstract class AppLocalizations {
   /// **'Añade una cuenta para jugar'**
   String get accountNoneHint;
 
+  /// **'Cuenta Shard'**
+  String get accountShard;
+
+  /// **'Usuario'**
+  String get shardUsername;
+
+  /// **'Contraseña'**
+  String get shardPassword;
+
+  /// **'Iniciar sesión'**
+  String get shardSignIn;
+
+  /// **'Usa tu cuenta de la comunidad Shard.'**
+  String get shardAccountBody;
+
+  /// **'Gestiona las skins y capas desde el sitio donde registraste tu cuenta Shard.'**
+  String get shardSkinsBody;
+
   /// No description provided for @offlineTitle.
   ///
   /// In es, this message translates to:

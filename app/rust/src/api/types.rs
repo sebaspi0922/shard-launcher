@@ -34,6 +34,7 @@ pub struct AccountView {
     pub id: String,
     pub name: String,
     pub microsoft: bool,
+    pub shard: bool,
     pub skin_url: Option<String>,
     pub active: bool,
 }
@@ -44,6 +45,7 @@ impl AccountView {
             id: a.id.clone(),
             name: a.name.clone(),
             microsoft: a.kind == AccountKind::Msa,
+            shard: a.kind == AccountKind::Shard,
             skin_url: a.skin_url.clone(),
             active: active == Some(a.id.as_str()),
         }

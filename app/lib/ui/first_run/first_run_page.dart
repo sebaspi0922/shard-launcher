@@ -1008,6 +1008,16 @@ class _AccountStep extends ConsumerWidget {
               const SizedBox(width: Space.x3),
               Expanded(
                 child: _ChoiceCard(
+                  icon: Symbols.login_rounded,
+                  title: l.accountShard,
+                  body: l.shardAccountBody,
+                  selected: false,
+                  onTap: () => showShardAccount(context),
+                ),
+              ),
+              const SizedBox(width: Space.x3),
+              Expanded(
+                child: _ChoiceCard(
                   icon: Symbols.person_rounded,
                   title: l.accountsAddOffline,
                   body: l.firstRunOfflineDesc,
@@ -1036,7 +1046,11 @@ class _AccountStep extends ConsumerWidget {
                           const SizedBox(width: Space.x3),
                           Expanded(child: Text(a.name, style: context.text.titleSmall)),
                           ColorBadge(
-                            a.microsoft ? l.accountMicrosoft : l.accountOffline,
+                            a.shard
+                                ? l.accountShard
+                                : a.microsoft
+                                ? l.accountMicrosoft
+                                : l.accountOffline,
                             color: a.microsoft ? c.accent : c.textSecondary,
                           ),
                         ],
