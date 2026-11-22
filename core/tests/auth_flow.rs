@@ -377,3 +377,106 @@ async fn cuentas_offline_y_borrado_de_secretos() {
     assert_eq!(file.accounts.len(), 1);
     assert_eq!(file.active.as_deref(), Some(offline.id.as_str()));
 }
+
+#[tokio::test]
+async fn shard_account_stores_tokens_and_launches_as_selected_profile() {
+    let env = env().await;
+    let base = format!("{}/yggdrasil/", env.server.uri());
+    env.core
+        .update_settings(|settings| settings.yggdrasil_base_url = Some(base))
+        .await
+        .unwrap();
+    let offline = env.core.add_offline_account("Steve").await.unwrap();
+    Mock::given(method("POST"))
+        .and(path("/yggdrasil/authserver/authenticate"))
+        .and(wiremock::matchers::body_json(json!({
+            "agent": {"name": "Minecraft", "version": 1},
+            "username": "test@example.org",
+            "password": "SHARD_PASSWORD",
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accessToken": "SHARD_ACCESS",
+            "clientToken": "SHARD_CLIENT",
+            "selectedProfile": {"id": offline.id, "name": "Steve"},
+        })))
+        .expect(2)
+        .mount(&env.server)
+        .await;
+
+    let login = || {
+        env.core
+            .add_shard_account("test@example.org", "SHARD_PASSWORD")
+    };
+    let shard = login().await.unwrap();
+    assert_eq!(shard.kind, AccountKind::Shard);
+    assert_ne!(shard.id, offline.id);
+    assert_eq!(login().await.unwrap().id, shard.id);
+    assert_eq!(env.core.accounts().await.unwrap().accounts.len(), 2);
+
+    let stored = env
+        .secrets
+        .get("shard.yggdrasil", &shard.id)
+        .unwrap()
+        .unwrap();
+    let stored: serde_json::Value = serde_json::from_str(&stored).unwrap();
+    assert_eq!(stored["credentials"]["accessToken"], "SHARD_ACCESS");
+    assert_eq!(stored["credentials"]["clientToken"], "SHARD_CLIENT");
+    assert!(!stored.to_string().contains("SHARD_PASSWORD"));
+    let accounts = tokio::fs::read_to_string(env.core.paths().accounts_file())
+        .await
+        .unwrap();
+    for secret in ["SHARD_PASSWORD", "SHARD_ACCESS", "SHARD_CLIENT"] {
+        assert!(!accounts.contains(secret));
+    }
+
+    env.core.set_active_account(&shard.id).await.unwrap();
+    let session = env.core.session(None).await.unwrap();
+    assert_eq!(session.uuid, offline.id);
+    assert_eq!(session.name, "Steve");
+    assert_eq!(session.user_type, UserType::Mojang);
+    assert_eq!(session.access_token.expose(), "SHARD_ACCESS");
+    assert_eq!(
+        env.core.session(Some(&offline.id)).await.unwrap().user_type,
+        UserType::Legacy
+    );
+    env.core.remove_account(&shard.id).await.unwrap();
+    assert!(
+        env.secrets
+            .get("shard.yggdrasil", &shard.id)
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(env.core.accounts().await.unwrap().active, Some(offline.id));
+}
+
+#[tokio::test]
+async fn shard_login_rejects_failed_or_incomplete_response() {
+    let env = env().await;
+    env.core
+        .update_settings(|settings| settings.yggdrasil_base_url = Some(env.server.uri()))
+        .await
+        .unwrap();
+    Mock::given(method("POST"))
+        .and(path("/authserver/authenticate"))
+        .respond_with(ResponseTemplate::new(403))
+        .up_to_n_times(1)
+        .mount(&env.server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/authenticate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accessToken": "SHARD_ACCESS",
+            "clientToken": "SHARD_CLIENT",
+        })))
+        .mount(&env.server)
+        .await;
+    for _ in 0..2 {
+        assert!(
+            env.core
+                .add_shard_account("Steve", "password")
+                .await
+                .is_err()
+        );
+    }
+    assert!(env.core.accounts().await.unwrap().accounts.is_empty());
+}

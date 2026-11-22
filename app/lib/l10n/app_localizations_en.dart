@@ -147,6 +147,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountNoneHint => 'Add an account to play';
 
   @override
+  String get accountShard => 'Shard account';
+
+  @override
+  String get shardUsername => 'Username';
+
+  @override
+  String get shardPassword => 'Password';
+
+  @override
+  String get shardSignIn => 'Sign in';
+
+  @override
+  String get shardAccountBody => 'Use your Shard community account.';
+
+  @override
+  String get shardSkinsBody => 'Manage skins and capes on the site where you registered your Shard account.';
+
+  @override
   String get offlineTitle => 'Offline account';
 
   @override

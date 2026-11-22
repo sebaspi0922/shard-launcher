@@ -1,10 +1,11 @@
 //! Autenticación: Microsoft (device code) → Xbox Live → XSTS → Minecraft
-//! Services, y cuentas offline. Referencia: research/05 §2 y docs/guia-azure.md.
+//! Services, cuentas offline y cuentas Shard (Yggdrasil).
 
 pub mod mc;
 pub mod msa;
 pub mod offline;
 pub mod xbox;
+pub(crate) mod yggdrasil;
 
 use serde::{Deserialize, Serialize};
 
@@ -126,12 +127,13 @@ impl AuthError {
 pub enum AccountKind {
     Msa,
     Offline,
+    Shard,
 }
 
 /// Datos públicos de una cuenta (`accounts.json`). Sin tokens.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Account {
-    /// UUID de Minecraft en forma simple (32 hex).
+    /// Identificador local. Para Microsoft y offline coincide con el UUID de Minecraft.
     pub id: String,
     pub name: String,
     pub kind: AccountKind,
@@ -145,6 +147,7 @@ pub struct Account {
 pub enum UserType {
     Msa,
     Legacy,
+    Mojang,
 }
 
 impl UserType {
@@ -153,6 +156,7 @@ impl UserType {
         match self {
             UserType::Msa => "msa",
             UserType::Legacy => "legacy",
+            UserType::Mojang => "mojang",
         }
     }
 }

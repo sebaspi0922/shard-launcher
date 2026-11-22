@@ -16,6 +16,7 @@ class AccountView {
   final String id;
   final String name;
   final bool microsoft;
+  final bool shard;
   final String? skinUrl;
   final bool active;
 
@@ -23,6 +24,7 @@ class AccountView {
     required this.id,
     required this.name,
     required this.microsoft,
+    this.shard = false,
     this.skinUrl,
     required this.active,
   });
@@ -32,6 +34,7 @@ class AccountView {
       id.hashCode ^
       name.hashCode ^
       microsoft.hashCode ^
+      shard.hashCode ^
       skinUrl.hashCode ^
       active.hashCode;
 
@@ -43,6 +46,7 @@ class AccountView {
           id == other.id &&
           name == other.name &&
           microsoft == other.microsoft &&
+          shard == other.shard &&
           skinUrl == other.skinUrl &&
           active == other.active;
 }
