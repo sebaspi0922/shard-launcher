@@ -1,5 +1,7 @@
 // Biblioteca de instancias: rejilla o lista, búsqueda y creación.
 
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -34,6 +36,17 @@ class InstancesPage extends ConsumerStatefulWidget {
   ConsumerState<InstancesPage> createState() => _InstancesPageState();
 }
 
+/// Spike GPUI (medición): con `SHARD_SPIKE_TIMING=1` imprime la hora del
+/// primer fotograma con instancias pintadas.
+bool _firstFrameLogged = false;
+void _logFirstFrame() {
+  if (_firstFrameLogged || Platform.environment['SHARD_SPIKE_TIMING'] != '1') return;
+  _firstFrameLogged = true;
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    stdout.writeln('SHARD_FIRST_FRAME unix_ms=${DateTime.now().millisecondsSinceEpoch}');
+  });
+}
+
 class _InstancesPageState extends ConsumerState<InstancesPage> {
   final _search = TextEditingController();
 
@@ -58,6 +71,7 @@ class _InstancesPageState extends ConsumerState<InstancesPage> {
     final grid = ref.watch(instancesGridProvider);
     final q = _search.text.trim().toLowerCase();
     final list = all.where((i) => _matches(l, i, q)).toList();
+    if (async is AsyncData && all.isNotEmpty) _logFirstFrame();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Space.x8, Space.x1, Space.x8, 0),

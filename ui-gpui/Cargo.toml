@@ -1,0 +1,30 @@
+[package]
+name = "shard-gpui"
+description = "Spike: UI de Shard en GPUI (fase 0 del PLAN)"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "shard-gpui"
+path = "src/main.rs"
+
+[dependencies]
+lcore = { path = "../core", default-features = false }
+gpui-kit = { version = "=0.11.0" }
+gpui-tray = { version = "=0.3.0", default-features = false, features = ["gpui-kit"] }
+tokio = { version = "1.53.2", features = ["rt-multi-thread"] }
+material-colors = "=0.5.0"
+image = { version = "0.25", default-features = false, features = ["png"] }
+smallvec = "1"
+
+[dev-dependencies]
+tokio = { version = "1.53.2", features = ["rt-multi-thread", "macros"] }
+
+# Workspace propio: no toca el Cargo.lock de core/app.
+[workspace]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

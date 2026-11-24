@@ -50,6 +50,11 @@ Future<void> main(List<String> args) async {
       location = '/welcome';
     }
   }
+  // Spike GPUI (medición): `SHARD_START_ROUTE=/instances` abre otra pantalla.
+  final startRoute = Platform.environment['SHARD_START_ROUTE'];
+  if (location == '/' && startRoute != null && startRoute.isNotEmpty) {
+    location = startRoute;
+  }
 
   // Autoarranque con la sesión: empieza oculta si hay bandeja.
   final tray = DesktopTrayHost();
