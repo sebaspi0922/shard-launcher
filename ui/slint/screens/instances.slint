@@ -287,6 +287,7 @@ export component InstancesPage inherits Rectangle {
             placeholder: @tr("instancesSearch");
             prefix-icon: Icons.search;
             clearable: true;
+            clear-label: @tr("consoleClear");
             text <=> InstancesState.query;
             accessible-id: "search";
             edited(q) => { InstancesState.search(q); }
