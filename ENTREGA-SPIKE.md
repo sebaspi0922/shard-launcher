@@ -199,3 +199,37 @@ unos 15 min).
   diferencias y golden.
 - `cargo test` en `ui-gpui/`: 6 tests (hash y `Random` iguales a Dart, textos
   del golden, siembra y lectura con `lcore`, lectura de `ui.json`).
+
+## Medición en el PC de Sebas (2026-11-23)
+
+Equipo: Ryzen 7 5800XT, 31 GB, **RTX 4070 (driver nvidia 620.73)**, Arch
+(CachyOS 7.3), niri Wayland. Las dos apps por X11 (xwayland-satellite `:1`),
+`medir.sh --runs 3`, mismos binarios release que en Bash. **GPU real en las
+dos**: Flutter carga `libEGL_nvidia`/`libGLX_nvidia`; GPUI abre `/dev/nvidia0`
+y carga `libnvidia-glvkspirv`/`rtcore` (Vulkan nvidia); las dos aparecen en
+`nvidia-smi`. Datos: `docs/spike-gpui/medicion-pc/medicion-niri-x11/`.
+
+| métrica (mediana de 3) | Flutter | GPUI | GPUI/Flutter |
+|---|---|---|---|
+| Arranque hasta 1er frame | 420 ms | 275 ms | 65 % |
+| RSS / PSS a 10 s, animado | 347.7 / 173.1 MB | 272.4 / 117.1 MB | 78 % / **68 %** |
+| RSS / PSS tras 30 s de uso, animado | 351.2 / 177.4 MB | 292.3 / 138.3 MB | 83 % / **78 %** |
+| CPU reposo, fondo animado | 47.0 % | 15.2 % | 32 % |
+| CPU reposo, fondo quieto | 0.0 % | 0.1 % | — |
+| RSS / PSS a 10 s, quieto | 343.5 / 173.7 MB | 270.0 / 118.0 MB | 79 % / 68 % |
+| RSS / PSS tras uso, quieto | 344.5 / 174.6 MB | 308.5 / 156.5 MB | 90 % / 90 % |
+
+- Con GPU real la ventaja de RAM se achica: en Bash (render por software)
+  GPUI estaba en 46-51 % del PSS; aquí 68-90 %. El driver nvidia mapea
+  ~150 MB compartidos en las dos (RSS alto, PSS más bajo).
+- Bandeja: niri no tiene bandeja propia; Sebas usa **Noctalia** (no waybar),
+  que es host SNI. El item de GPUI quedó registrado en
+  `StatusNotifierWatcher` y el icono sale en el panel. «Salir» desde el menú
+  terminó el proceso en 4/6 corridas de GPUI y 3/6 de Flutter (los «no» son
+  todos del modo animado, tras la fase de uso).
+- La fase de uso automatizada no sirvió del todo aquí: el clic en el botón
+  cerrar (coordenada fija 1253,22) no ocultó la ventana en ninguna app
+  (72 avisos), así que el «cerrar a la bandeja» no se ejercitó.
+- **Veredicto según el criterio (PSS GPUI ≤ 60 % de Flutter y bandeja
+  funciona): no se cumple en el PC.** GPUI arranca más rápido y gasta
+  ~1/3 de CPU animado, pero la RAM queda en 68-90 %.
