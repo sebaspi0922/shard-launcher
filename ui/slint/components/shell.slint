@@ -1,0 +1,325 @@
+// Marco de la app (app_shell.dart, title_bar.dart, atmosphere.dart, art.dart):
+// fondo, raíl de navegación, barra de título y marca.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Icon, Spinner } from "base.slint";
+import { LaunchPhase } from "buttons.slint";
+
+struct Shape { x: float, fx: float, y: float, fy: float, sx: float, lx: float, sy: float, ly: float, size: float, c: color, radius: float, outline: bool }
+
+// Fondo «Grafito»: formas que van y vuelven en 18 s (lineal).
+export component Atmosphere inherits Rectangle {
+    // `false` = formas quietas en `still-at` (modo rendimiento, capturas).
+    in property <bool> animate: true;
+    in property <duration> still-at: 0ms;
+    property <duration> t: animate && Theme.motion ? animation-tick() : still-at;
+    property <float> phase: mod(t / 18s, 1) * 2;
+    property <float> swing: phase < 1 ? phase : 2 - phase;
+    property <float> sway: -28 + 62 * swing;
+    property <float> lift: 30 - 72 * swing;
+    property <[Shape]> shapes: [
+        { x: -70, fx: 0, y: -40, fy: 0, sx: 0.4, lx: 0, sy: 0, ly: 1, size: 340, c: #AEBCFF66, radius: -1, outline: true },
+        { x: 70, fx: 0, y: 0, fy: 0.38, sx: -0.3, lx: 0, sy: 0, ly: 1, size: 220, c: #C4B6FF55, radius: -1, outline: true },
+        { x: -210, fx: 1, y: -250, fy: 1, sx: 1, lx: 0, sy: 0, ly: -1, size: 260, c: #8FD4FF50, radius: -1, outline: true },
+        { x: 0, fx: 0.55, y: 18, fy: 0, sx: 0, lx: -0.4, sy: 0.2, ly: 0, size: 92, c: #FFFFFF38, radius: -1, outline: true },
+        { x: 36, fx: 0, y: -120, fy: 1, sx: 0, lx: 0.2, sy: 0.3, ly: 0, size: 14, c: #9EB0FF, radius: 3, outline: false },
+        { x: 0, fx: 0.22, y: 64, fy: 0, sx: 1, lx: 0, sy: 0, ly: -0.3, size: 8, c: #D2C6FF, radius: -1, outline: false },
+        { x: -120, fx: 1, y: 0, fy: 0.22, sx: -0.5, lx: 0, sy: 0, ly: 1, size: 10, c: #8FD4FF, radius: -1, outline: false },
+        { x: 0, fx: 0.4, y: -70, fy: 1, sx: 0, lx: 0.5, sy: -0.2, ly: 0, size: 6, c: #FFFFFF88, radius: 1, outline: false },
+        { x: 180, fx: 0, y: 0, fy: 0.62, sx: -0.6, lx: 0, sy: 0, ly: 0, size: 18, c: #AEBCFF, radius: -1, outline: true },
+        { x: 0, fx: 0.72, y: 120, fy: 0, sx: 0.5, lx: 0, sy: 0, ly: 0.4, size: 150, c: #FFFFFF30, radius: -1, outline: true },
+        { x: 0, fx: 0.12, y: 0, fy: 0.18, sx: 0, lx: -0.3, sy: 0.4, ly: 0, size: 7, c: #C4B6FF, radius: -1, outline: false },
+        { x: -64, fx: 1, y: 0, fy: 0.72, sx: 0.2, lx: 0, sy: 0, ly: -0.3, size: 11, c: #8FD4FFAA, radius: 2, outline: false },
+    ];
+    background: Palette.background;
+    clip: true;
+    accessible-role: none;
+    for s in shapes: Rectangle {
+        x: (s.x + s.fx * root.width / 1px + s.sx * sway + s.lx * lift) * 1px;
+        y: (s.y + s.fy * root.height / 1px + s.sy * sway + s.ly * lift) * 1px;
+        width: s.size * 1px;
+        height: s.size * 1px;
+        border-radius: s.radius < 0 ? s.size * 0.5px : s.radius * 1px;
+        background: s.outline ? transparent : s.c;
+        border-width: s.outline ? 1px : 0;
+        border-color: s.c;
+    }
+}
+
+// Marca: S de dos fragmentos en cuatro tonos del acento (BrandMarkPainter,
+// diseño en una caja de 256 ampliado 1,14).
+export component BrandMark inherits Rectangle {
+    in property <length> size: 30px;
+    property <float> vb: 256 / 1.14;
+    property <float> vo: 128 - vb / 2;
+    width: size;
+    height: size;
+    accessible-role: image;
+    accessible-label: "Shard";
+    Path {
+        width: size; height: size;
+        viewbox-x: vo; viewbox-y: vo; viewbox-width: vb; viewbox-height: vb;
+        fill: Palette.brand[0];
+        MoveTo { x: 206; y: 30; } LineTo { x: 98; y: 30; } LineTo { x: 158; y: 122; } Close { }
+    }
+    Path {
+        width: size; height: size;
+        viewbox-x: vo; viewbox-y: vo; viewbox-width: vb; viewbox-height: vb;
+        fill: Palette.brand[1];
+        MoveTo { x: 98; y: 30; } LineTo { x: 50; y: 122; } LineTo { x: 158; y: 122; } Close { }
+    }
+    Path {
+        width: size; height: size;
+        viewbox-x: vo; viewbox-y: vo; viewbox-width: vb; viewbox-height: vb;
+        fill: Palette.brand[2];
+        MoveTo { x: 50; y: 226; } LineTo { x: 98; y: 134; } LineTo { x: 158; y: 226; } Close { }
+    }
+    Path {
+        width: size; height: size;
+        viewbox-x: vo; viewbox-y: vo; viewbox-width: vb; viewbox-height: vb;
+        fill: Palette.brand[3];
+        MoveTo { x: 158; y: 226; } LineTo { x: 206; y: 134; } LineTo { x: 98; y: 134; } Close { }
+    }
+}
+
+// Cuenta activa en el raíl.
+export struct AccountChip {
+    present: bool,
+    name: string,
+    // Cara 8 × 8 (generada o de la skin), escalada sin suavizar.
+    face: image,
+}
+
+// Avatar del jugador (avatar.dart): cara o icono de persona.
+export component PlayerAvatar inherits Rectangle {
+    in property <AccountChip> account;
+    in property <length> size: 40px;
+    width: size;
+    height: size;
+    border-radius: size * 0.24;
+    clip: true;
+    background: account.present ? transparent : Palette.surface2;
+    if account.present: Image {
+        width: root.size;
+        height: root.size;
+        source: root.account.face;
+        image-rendering: pixelated;
+    }
+    if !account.present: Icon { glyph: Icons.person; size: root.size * 0.55; color: Palette.text-muted; }
+    Rectangle {
+        border-radius: root.border-radius;
+        border-width: 1px;
+        border-color: #FFFFFF24;
+    }
+}
+
+export enum Route { home, instances, content, servers, skins, settings }
+
+component RailItem inherits Rectangle {
+    in property <string> glyph;
+    in property <string> label;
+    in property <bool> selected;
+    callback clicked;
+    width: 76px;
+    height: 54px;
+    accessible-role: tab;
+    accessible-label: label;
+    accessible-item-selectable: true;
+    accessible-item-selected: selected;
+    accessible-action-default => { clicked(); }
+    // Indicador lateral de la sección activa.
+    Rectangle {
+        x: 0;
+        y: selected ? 15px : 27px;
+        width: 3px;
+        height: selected ? 24px : 0px;
+        background: selected ? Palette.accent : transparent;
+        border-top-right-radius: 3px;
+        border-bottom-right-radius: 3px;
+        animate y, height { duration: Theme.medium; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
+    }
+    Rectangle {
+        width: 48px;
+        height: 44px;
+        border-radius: Theme.radius-card;
+        background: selected ? Palette.accent-container.with-alpha(0.75) : ta.has-hover ? Palette.surface2 : transparent;
+        animate background { duration: Theme.fast; }
+        Icon {
+            glyph: root.glyph;
+            size: 24px;
+            filled: root.selected;
+            color: root.selected ? Palette.on-accent-container : Palette.text-secondary;
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Raíl de navegación (_NavRail).
+export component NavRail inherits Rectangle {
+    in property <Route> route;
+    in property <AccountChip> account;
+    callback navigate(Route);
+    callback account-clicked;
+    callback toggle-max;
+    width: 76px;
+    background: Palette.background-deep.with-alpha(0.55);
+    accessible-role: tab-list;
+    Rectangle { x: parent.width - 1px; width: 1px; background: Palette.border; }
+    VerticalLayout {
+        alignment: start;
+        width: 76px;
+        Rectangle {
+            height: 72px;
+            WindowMoveArea {
+                TouchArea { double-clicked => { root.toggle-max(); } }
+            }
+            BrandMark { size: 30px; }
+        }
+        Rectangle { height: 8px; }
+        RailItem { glyph: Icons.home; label: @tr("navHome"); selected: route == Route.home; clicked => { navigate(Route.home); } }
+        RailItem { glyph: Icons.deployed-code; label: @tr("navInstances"); selected: route == Route.instances; clicked => { navigate(Route.instances); } }
+        RailItem { glyph: Icons.extension; label: @tr("navContent"); selected: route == Route.content; clicked => { navigate(Route.content); } }
+        RailItem { glyph: Icons.dns; label: @tr("navServers"); selected: route == Route.servers; clicked => { navigate(Route.servers); } }
+        RailItem { glyph: Icons.checkroom; label: @tr("navSkins"); selected: route == Route.skins; clicked => { navigate(Route.skins); } }
+    }
+    VerticalLayout {
+        alignment: end;
+        width: 76px;
+        padding-bottom: 16px;
+        RailItem { glyph: Icons.settings; label: @tr("navSettings"); selected: route == Route.settings; clicked => { navigate(Route.settings); } }
+        Rectangle { height: 8px; }
+        Rectangle { height: 1px; Rectangle { width: 36px; background: Palette.border; } }
+        Rectangle { height: 12px; }
+        Rectangle {
+            height: 52px;
+            accessible-role: button;
+            accessible-label: root.account.present ? root.account.name : @tr("accountNone");
+            accessible-action-default => { root.account-clicked(); }
+            Rectangle {
+                width: 52px;
+                border-radius: Theme.radius-card;
+                background: account-ta.has-hover ? Palette.surface2 : transparent;
+            }
+            PlayerAvatar { account: root.account; size: 40px; }
+            if !root.account.present: Rectangle {
+                x: (parent.width - 40px) / 2 + 40px - 13px;
+                y: (parent.height - 40px) / 2 + 40px - 13px;
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                background: Palette.accent;
+                border-width: 2px;
+                border-color: Palette.background-deep;
+                Icon { glyph: Icons.add; size: 11px; color: Palette.on-accent; }
+            }
+            account-ta := TouchArea { mouse-cursor: pointer; clicked => { root.account-clicked(); } }
+        }
+    }
+}
+
+// Lanzamiento o partida en curso (para la píldora de la barra de título).
+export struct Activity {
+    present: bool,
+    instance-id: string,
+    name: string,
+    phase: LaunchPhase,
+    done: int,
+    total: int,
+    progress: float,
+}
+
+component WindowButton inherits Rectangle {
+    in property <string> glyph;
+    in property <length> glyph-size: 18px;
+    in property <string> label;
+    in property <bool> danger;
+    callback clicked;
+    width: 44px;
+    height: 30px;
+    accessible-role: button;
+    accessible-label: label;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        x: 2px;
+        width: 40px;
+        border-radius: Theme.radius-control;
+        background: !ta.has-hover ? transparent : root.danger ? #E5484D : Palette.surface2;
+        animate background { duration: Theme.fast; }
+    }
+    Icon { glyph: root.glyph; size: root.glyph-size; color: ta.has-hover && root.danger ? white : Palette.text-secondary; }
+    ta := TouchArea { clicked => { root.clicked(); } }
+}
+
+// Barra de título propia (TitleBar): arrastre, doble clic, píldora y botones.
+export component TitleBar inherits Rectangle {
+    in property <bool> maximized;
+    in property <Activity> activity;
+    in property <string> activity-label;
+    callback minimize;
+    callback toggle-max;
+    callback close;
+    callback activity-clicked;
+    height: 44px;
+    accessible-role: groupbox;
+    drag := WindowMoveArea {
+        x: 0;
+        width: parent.width - 3 * 44px - 4px;
+        TouchArea { double-clicked => { root.toggle-max(); } }
+    }
+    if activity.present: pill := Rectangle {
+        x: (drag.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: row.preferred-width;
+        height: 28px;
+        border-radius: 14px;
+        background: Palette.surface2;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+        accessible-role: button;
+        accessible-label: root.activity.name + " " + root.activity-label;
+        accessible-id: "pill";
+        accessible-action-default => { root.activity-clicked(); }
+        if root.activity.progress >= 0: Rectangle {
+            x: 0;
+            width: parent.width * root.activity.progress;
+            background: Palette.accent.with-alpha(0.18);
+        }
+        row := HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+            if root.activity.phase == LaunchPhase.running: Rectangle {
+                width: 7px;
+                height: 7px;
+                y: (28px - 7px) / 2;
+                border-radius: 3.5px;
+                background: Palette.success;
+            }
+            if root.activity.phase != LaunchPhase.running: Spinner { size: 12px; stroke: 1.6px; y: 8px; }
+            Txt { text: root.activity.name; style: Type.label-medium; }
+            Txt {
+                text: root.activity-label;
+                style: Type.label-medium;
+                color: root.activity.phase == LaunchPhase.running ? Palette.success : Palette.text-secondary;
+            }
+        }
+        TouchArea { mouse-cursor: pointer; clicked => { root.activity-clicked(); } }
+    }
+    HorizontalLayout {
+        x: parent.width - 3 * 44px - 4px;
+        width: 3 * 44px + 4px;
+        padding-top: 7px;
+        padding-bottom: 7px;
+        padding-right: 4px;
+        WindowButton { glyph: Icons.remove; label: @tr("windowMinimize"); clicked => { root.minimize(); } }
+        WindowButton {
+            glyph: root.maximized ? Icons.filter-none : Icons.crop-square;
+            glyph-size: root.maximized ? 14px : 16px;
+            label: root.maximized ? @tr("windowRestore") : @tr("windowMaximize");
+            clicked => { root.toggle-max(); }
+        }
+        WindowButton { glyph: Icons.close; label: @tr("windowClose"); danger: true; clicked => { root.close(); } }
+    }
+}

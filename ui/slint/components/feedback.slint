@@ -1,0 +1,153 @@
+// Estados y avisos: vacío, error, carga, aviso breve (SnackBar) y diálogo.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Para, Icon, Spinner } from "base.slint";
+import { FilledButton } from "buttons.slint";
+
+// EmptyState (common.dart): icono en caja de acento, título, texto y acción.
+export component EmptyState inherits VerticalLayout {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> body;
+    in property <string> action;
+    in property <string> action-icon;
+    callback act;
+    alignment: center;
+    accessible-role: groupbox;
+    accessible-label: title;
+    HorizontalLayout {
+        alignment: center;
+        VerticalLayout {
+            width: 380px;
+            spacing: 0;
+            HorizontalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 64px;
+                    height: 64px;
+                    border-radius: Theme.radius-panel;
+                    background: Palette.accent-container.with-alpha(Palette.accent-container.alpha / 255 * 0.6);
+                    border-width: 1px;
+                    border-color: Palette.accent.with-alpha(0.25);
+                    Icon { glyph: root.icon; size: 30px; color: Palette.accent; }
+                }
+            }
+            Rectangle { height: 20px; }
+            Para { text: root.title; style: Type.title-large; color: Palette.text; horizontal-alignment: center; }
+            Rectangle { height: 8px; }
+            Para { text: root.body; horizontal-alignment: center; }
+            if root.action != "": VerticalLayout {
+                Rectangle { height: 20px; }
+                HorizontalLayout {
+                    alignment: center;
+                    FilledButton { text: root.action; icon: root.action-icon; clicked => { root.act(); } }
+                }
+            }
+        }
+    }
+}
+
+// ErrorNote: caja roja con el texto del error y «Detalles» desplegable.
+export component ErrorNote inherits Rectangle {
+    in property <string> message;
+    in property <string> detail;
+    in property <string> details-label;
+    in-out property <bool> open;
+    border-radius: Theme.radius-control;
+    background: Palette.danger.with-alpha(0.10);
+    border-width: 1px;
+    border-color: Palette.danger.with-alpha(0.35);
+    accessible-role: text;
+    accessible-label: message;
+    VerticalLayout {
+        padding: 12px;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 8px;
+            Icon { glyph: "\u{f8b6}"; size: 18px; color: Palette.danger; }
+            Para { text: root.message; color: Palette.text; horizontal-stretch: 1; }
+            if root.detail != "": Rectangle {
+                width: label.preferred-width + 12px;
+                label := Text {
+                    text: root.details-label;
+                    font-family: "Inter";
+                    font-size: Type.label-medium.size;
+                    font-weight: Type.label-medium.weight;
+                    color: Palette.text-secondary;
+                    font-italic: false;
+                }
+                TouchArea { mouse-cursor: pointer; clicked => { root.open = !root.open; } }
+            }
+        }
+        if root.open && root.detail != "": Text {
+            text: root.detail;
+            font-family: "JetBrains Mono";
+            font-size: 11.5px;
+            color: Palette.text-secondary;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// Carga a pantalla completa.
+export component Loading inherits Rectangle {
+    Spinner { }
+}
+
+// SnackBar flotante (ancho 420, superficie 3 sobre fondo profundo).
+export component Snackbar inherits Rectangle {
+    in property <string> message;
+    in property <bool> error;
+    in property <bool> shown;
+    width: 420px;
+    height: row.preferred-height;
+    border-radius: Theme.radius-card;
+    background: Theme.blend(Palette.surface3, Palette.background-deep);
+    border-width: 1px;
+    border-color: Palette.border-strong;
+    opacity: shown ? 1 : 0;
+    animate opacity { duration: Theme.medium; }
+    accessible-role: text;
+    accessible-label: message;
+    row := HorizontalLayout {
+        padding: 14px;
+        spacing: 10px;
+        Icon {
+            glyph: root.error ? "\u{f8b6}" : "\u{f0be}";
+            size: 18px;
+            color: root.error ? Palette.danger : Palette.success;
+        }
+        Para { text: root.message; color: Palette.text; horizontal-stretch: 1; }
+    }
+}
+
+// Diálogo modal (DialogThemeData): velo, panel con borde fuerte y sombra.
+// El contenido va como hijo (@children) dentro del panel.
+export component AppDialog inherits Rectangle {
+    in property <string> title;
+    in property <length> panel-width: 440px;
+    callback dismissed;
+    background: #00000080;
+    accessible-role: none;
+    TouchArea { clicked => { root.dismissed(); } }
+    panel := Rectangle {
+        width: min(root.panel-width, root.width - 48px);
+        height: body.preferred-height;
+        border-radius: Theme.radius-panel;
+        background: Theme.blend(Palette.surface2, Palette.background);
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        drop-shadow-color: Theme.shadow;
+        drop-shadow-blur: Theme.shadow-dialog-blur;
+        drop-shadow-offset-y: Theme.shadow-dialog-y;
+        accessible-role: groupbox;
+        accessible-label: root.title;
+        TouchArea { }
+        body := VerticalLayout {
+            padding: 24px;
+            spacing: 12px;
+            if root.title != "": Txt { text: root.title; style: Type.title-large; }
+            @children
+        }
+    }
+}

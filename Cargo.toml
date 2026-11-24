@@ -1,8 +1,16 @@
 [workspace]
 resolver = "3"
-members = ["core", "app/rust"]
+members = ["core", "app/rust", "ui"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 publish = false
+
+# Binario de la UI Slint para distribuir y medir (no cambia el `release` que
+# usa el bridge de Flutter).
+[profile.release-ui]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+strip = true

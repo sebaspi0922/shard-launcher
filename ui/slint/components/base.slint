@@ -1,0 +1,102 @@
+// Piezas mínimas: texto con estilo del tema e icono de Material Symbols.
+
+import { Palette, Theme, TextStyle, Type } from "../theme.slint";
+
+// Métricas de Inter (hhea): alto natural 1,20996 em, del que el 80,066 %
+// es ascendente. Flutter reparte el interlineado extra en esa proporción
+// (TextLeadingDistribution.proportional), no a partes iguales.
+export global InterMetrics {
+    out property <float> natural: 1.20996;
+    out property <float> ascent-share: 0.80066;
+}
+
+// Texto de una línea con el estilo de `TextTheme`. Mide lo que el párrafo de
+// Flutter (tamaño × alto de línea, redondeado) y coloca el glifo donde lo
+// pone Flutter, para que cajas y píxeles coincidan.
+export component Txt {
+    in property <string> text;
+    in property <TextStyle> style: Type.body-medium;
+    in property <color> color: Palette.text;
+    in property <TextHorizontalAlignment> horizontal-alignment: left;
+    property <length> block: style.size * style.line-height;
+    height: round(block / 1px) * 1px;
+    preferred-width: t.preferred-width;
+    min-width: 0;
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    t := Text {
+        x: 0;
+        width: parent.width;
+        // Bloque del párrafo centrado en el alto disponible y glifo dentro
+        // del bloque con el reparto proporcional.
+        y: (parent.height - root.block) / 2 + (root.block - root.style.size * InterMetrics.natural) * InterMetrics.ascent-share;
+        height: root.style.size * InterMetrics.natural;
+        text: root.text;
+        font-family: "Inter";
+        font-size: root.style.size;
+        font-weight: root.style.weight;
+        letter-spacing: root.style.letter-spacing;
+        color: root.color;
+        horizontal-alignment: root.horizontal-alignment;
+        vertical-alignment: top;
+        overflow: elide;
+        wrap: no-wrap;
+        accessible-role: none;
+    }
+}
+
+// Texto que puede ocupar varias líneas (cuerpo de diálogos, estados vacíos).
+export component Para inherits Text {
+    in property <TextStyle> style: Type.body-medium;
+    font-family: "Inter";
+    font-size: style.size;
+    font-weight: style.weight;
+    letter-spacing: style.letter-spacing;
+    color: Palette.text-secondary;
+    wrap: word-wrap;
+}
+
+// Icono de Material Symbols Rounded (subset en fonts/ShardIcons*.ttf).
+export component Icon inherits Text {
+    in property <string> glyph;
+    in property <length> size: 20px;
+    // FILL 1 + peso 500 (icono seleccionado).
+    in property <bool> filled;
+    text: glyph;
+    font-family: filled ? "ShardIconsFill" : "ShardIcons";
+    font-size: size;
+    color: Palette.text-secondary;
+    width: size;
+    height: size;
+    horizontal-alignment: center;
+    vertical-alignment: center;
+    accessible-role: none;
+}
+
+// Indicador circular indeterminado (CircularProgressIndicator).
+export component Spinner inherits Rectangle {
+    in property <length> size: 36px;
+    in property <length> stroke: 3.6px;
+    in property <color> tint: Palette.accent;
+    // Con el tiempo simulado de los tests queda quieto en el primer cuadro.
+    property <float> turn: Theme.motion ? mod(animation-tick() / 1333ms, 1) : 0.1;
+    width: size;
+    height: size;
+    accessible-role: progress-indicator;
+    Path {
+        width: size;
+        height: size;
+        viewbox-width: 100;
+        viewbox-height: 100;
+        stroke: root.tint;
+        stroke-width: root.stroke;
+        stroke-line-cap: round;
+        // Arco de 270° que gira.
+        MoveTo { x: 50 + 45 * cos(turn * 360deg); y: 50 + 45 * sin(turn * 360deg); }
+        ArcTo {
+            x: 50 + 45 * cos(turn * 360deg + 270deg);
+            y: 50 + 45 * sin(turn * 360deg + 270deg);
+            radius-x: 45; radius-y: 45; large-arc: true; sweep: true;
+        }
+    }
+}

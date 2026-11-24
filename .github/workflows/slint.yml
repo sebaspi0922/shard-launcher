@@ -1,0 +1,69 @@
+# UI Slint (ui/): compila y prueba en Linux, Windows y macOS; en Linux además
+# corre el arnés de paridad contra las referencias de Flutter.
+name: UI Slint
+
+on:
+  push:
+    branches: [main, "slint/**"]
+    paths: [ui/**, core/**, tools/paridad.sh, tools/paridad/**, app/lib/l10n/**, Cargo.toml, Cargo.lock, .github/workflows/slint.yml]
+  pull_request:
+    paths: [ui/**, core/**, tools/paridad.sh, tools/paridad/**, app/lib/l10n/**, Cargo.toml, Cargo.lock, .github/workflows/slint.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slint-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    name: Linux (build, tests, paridad)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencias del sistema
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libfontconfig1-dev libxkbcommon-dev libwayland-dev libdbus-1-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: slint
+      - name: Compilar
+        run: cargo build -p shard-ui --locked
+      - name: Tests (unidad, interacción y escenas de paridad)
+        run: cargo test -p shard-ui --locked
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dependencias del comparador
+        run: pip install numpy==2.5.5 pillow==13.0.0 scikit-image==0.26.0
+      - name: Paridad Flutter → Slint
+        run: tools/paridad.sh all
+      - name: Informe de paridad
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paridad
+          path: target/paridad/informe
+          if-no-files-found: ignore
+
+  otros:
+    name: ${{ matrix.os }} (build y tests)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: slint
+      - name: Compilar
+        run: cargo build -p shard-ui --locked
+      - name: Tests
+        run: cargo test -p shard-ui --locked
