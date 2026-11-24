@@ -91,6 +91,7 @@ abstract class LauncherBridge {
   Future<AccountView> completeMicrosoftLogin();
   void cancelMicrosoftLogin();
   Future<AccountView> addOfflineAccount(String name);
+  Future<AccountView> addShardAccount(String username, String password);
   Future<void> setActiveAccount(String id);
   Future<void> removeAccount(String id);
 
@@ -339,6 +340,10 @@ class RustBridge implements LauncherBridge {
   @override
   Future<AccountView> addOfflineAccount(String name) =>
       accounts.addOfflineAccount(name: name);
+
+  @override
+  Future<AccountView> addShardAccount(String username, String password) =>
+      accounts.addShardAccount(username: username, password: password);
 
   @override
   Future<void> setActiveAccount(String id) => accounts.setActiveAccount(id: id);

@@ -17,6 +17,7 @@ String errorText(AppLocalizations l, Object error) {
     'auth_session_expired' || 'auth_refresh_token_missing' =>
       l.errAuthSessionExpired,
     'auth_invalid_offline_name' => l.offlineNameInvalid,
+    'auth_invalid_credentials' => l.errAuthInvalidCredentials,
     'auth_msa' || 'auth_unexpected' || 'auth_offline_account' =>
       l.errAuthGeneric,
     'network' || 'http_status' => l.errNetwork,

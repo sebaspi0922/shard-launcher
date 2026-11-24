@@ -109,6 +109,14 @@ class AccountPanel extends ConsumerWidget {
                 },
               ),
               _ActionTile(
+                icon: Symbols.login_rounded,
+                label: l.accountShard,
+                onTap: () {
+                  final nav = Navigator.of(context)..pop();
+                  showShardAccount(nav.context);
+                },
+              ),
+              _ActionTile(
                 icon: Symbols.person_add_rounded,
                 label: l.accountsAddOffline,
                 onTap: () {
@@ -179,7 +187,11 @@ class _AccountTile extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            account.microsoft ? l.accountMicrosoft : l.accountOffline,
+                            account.shard
+                                ? l.accountShard
+                                : account.microsoft
+                                ? l.accountMicrosoft
+                                : l.accountOffline,
                             style: context.text.bodySmall,
                           ),
                         ],
