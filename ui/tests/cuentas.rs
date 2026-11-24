@@ -179,6 +179,11 @@ fn alta_offline_valida_el_nombre() {
     click(&by_label(&a.ui, "Cancel")[0]);
     a.ui.global::<AccountsState>().invoke_add_offline();
     settle();
+    // Abierto sin enviar: tampoco lo toca.
+    a.acc.offline_added(first, Err(Failure { kind: "io".into(), message: "Viejo".into(), detail: String::new() }));
+    settle();
+    assert!(a.ui.global::<AccountsState>().get_offline_open() && !a.ui.global::<AccountsState>().get_offline_busy());
+    assert!(by_label(&a.ui, "Viejo").is_empty());
     type_text(&a.ui, "abc_9");
     click(&by_label(&a.ui, "Add")[0]);
     assert_eq!(a.rec.take(), ["offline abc_9"]);
