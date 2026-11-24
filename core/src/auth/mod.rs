@@ -1,5 +1,5 @@
-//! Autenticación: Microsoft (device code) → Xbox Live → XSTS → Minecraft
-//! Services, cuentas offline y cuentas Shard (Yggdrasil).
+//! Autenticación premium con SISU mediante `minecraft-auth`, cuentas offline
+//! y cuentas Shard (Yggdrasil).
 
 pub mod mc;
 pub mod msa;
@@ -70,6 +70,11 @@ pub enum AuthError {
     #[error("la sesión caducó o se revocó; inicia sesión de nuevo")]
     SessionExpired,
 
+    #[error(
+        "esta sesión de Microsoft usa el antiguo client ID de Azure; vuelve a iniciar sesión con Microsoft"
+    )]
+    LegacyMsaSession,
+
     #[error("las credenciales de la cuenta Shard no son válidas")]
     InvalidCredentials,
 
@@ -112,7 +117,7 @@ impl AuthError {
             AuthError::DeviceCodeExpired => "auth_device_code_expired",
             AuthError::DeviceCodeDeclined => "auth_declined",
             AuthError::Msa { .. } => "auth_msa",
-            AuthError::SessionExpired => "auth_session_expired",
+            AuthError::SessionExpired | AuthError::LegacyMsaSession => "auth_session_expired",
             AuthError::InvalidCredentials => "auth_invalid_credentials",
             AuthError::Xbox { .. } => "auth_xbox",
             AuthError::AppNotApproved => "auth_app_not_approved",

@@ -10,10 +10,11 @@ pub const DEFAULT_YGGDRASIL_BASE_URL: &str = "https://auth.sebaspi.com/authlib-i
 
 pub const SETTINGS_SCHEMA: u32 = 1;
 
-/// Variable de entorno que fija el client ID de Azure sin tocar los ajustes.
+/// Obsoleto: el login premium usa SISU y no consulta esta variable. Se conserva
+/// para que configuraciones y llamadas antiguas sigan compilando.
 pub const MSA_CLIENT_ID_ENV: &str = "SHARD_MSA_CLIENT_ID";
 
-/// Client ID de la app de Azure propia, cuando exista (docs/guia-azure.md).
+/// Obsoleto: SISU usa la aplicación del launcher oficial, sin client ID de Azure.
 pub const DEFAULT_MSA_CLIENT_ID: Option<&str> = None;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -31,7 +32,8 @@ pub struct Settings {
     pub schema: u32,
     /// Código de idioma (`es`, `en`); `None` = el del sistema.
     pub language: Option<String>,
-    /// Client ID de Azure; tiene prioridad sobre el valor compilado.
+    /// Obsoleto: ya no se usa para el login SISU. Se conserva al leer y
+    /// escribir `settings.json` para no romper instalaciones existentes.
     pub msa_client_id: Option<String>,
     /// Base de Yggdrasil para las nuevas cuentas Shard.
     pub yggdrasil_base_url: Option<String>,
@@ -67,7 +69,8 @@ impl Default for Settings {
 }
 
 impl Settings {
-    /// Client ID efectivo: variable de entorno, ajustes o valor compilado.
+    /// Obsoleto: solo queda para compatibilidad con el bridge antiguo. El
+    /// carril premium no llama a este método.
     pub fn effective_msa_client_id(&self) -> Option<String> {
         std::env::var(MSA_CLIENT_ID_ENV)
             .ok()
