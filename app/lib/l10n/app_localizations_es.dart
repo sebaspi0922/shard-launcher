@@ -250,6 +250,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'La sesión de esta cuenta caducó. Vuelve a iniciar sesión.';
 
   @override
+  String get errAuthInvalidCredentials =>
+      'Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).';
+
+  @override
   String get errAuthGeneric => 'No se pudo iniciar sesión con Microsoft.';
 
   @override

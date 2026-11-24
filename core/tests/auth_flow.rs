@@ -430,6 +430,16 @@ async fn shard_account_stores_tokens_and_launches_as_selected_profile() {
     }
 
     env.core.set_active_account(&shard.id).await.unwrap();
+    Mock::given(method("POST"))
+        .and(path("/yggdrasil/authserver/validate"))
+        .and(wiremock::matchers::body_json(json!({
+            "accessToken": "SHARD_ACCESS",
+            "clientToken": "SHARD_CLIENT",
+        })))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&env.server)
+        .await;
     let session = env.core.session(None).await.unwrap();
     assert_eq!(session.uuid, offline.id);
     assert_eq!(session.name, "Steve");
@@ -471,12 +481,169 @@ async fn shard_login_rejects_failed_or_incomplete_response() {
         .mount(&env.server)
         .await;
     for _ in 0..2 {
-        assert!(
-            env.core
-                .add_shard_account("Steve", "password")
-                .await
-                .is_err()
-        );
+        let err = env
+            .core
+            .add_shard_account("Steve", "password")
+            .await
+            .unwrap_err();
+        assert_eq!(err.kind(), "auth_unexpected");
     }
     assert!(env.core.accounts().await.unwrap().accounts.is_empty());
+}
+
+#[tokio::test]
+async fn shard_login_maps_invalid_credentials() {
+    let env = env().await;
+    env.core
+        .update_settings(|settings| settings.yggdrasil_base_url = Some(env.server.uri()))
+        .await
+        .unwrap();
+    Mock::given(method("POST"))
+        .and(path("/authserver/authenticate"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid credentials. Invalid username or password."
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+
+    let err = env
+        .core
+        .add_shard_account("Steve", "wrong password")
+        .await
+        .unwrap_err();
+    assert!(
+        matches!(err, Error::Auth(AuthError::InvalidCredentials)),
+        "{err:?}"
+    );
+    assert_eq!(err.kind(), "auth_invalid_credentials");
+    assert!(env.core.accounts().await.unwrap().accounts.is_empty());
+}
+
+#[tokio::test]
+async fn shard_login_maps_unreachable_server_to_network() {
+    let env = env().await;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    drop(listener);
+    env.core
+        .update_settings(|settings| settings.yggdrasil_base_url = Some(base))
+        .await
+        .unwrap();
+
+    let err = env
+        .core
+        .add_shard_account("Steve", "password")
+        .await
+        .unwrap_err();
+    assert!(matches!(err, Error::Network(_)), "{err:?}");
+    assert_eq!(err.kind(), "network");
+    assert!(env.core.accounts().await.unwrap().accounts.is_empty());
+}
+
+async fn shard_account_for_refresh(env: &Env) -> lcore::auth::Account {
+    env.core
+        .update_settings(|settings| settings.yggdrasil_base_url = Some(env.server.uri()))
+        .await
+        .unwrap();
+    Mock::given(method("POST"))
+        .and(path("/authserver/authenticate"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accessToken": "SHARD_ACCESS",
+            "clientToken": "SHARD_CLIENT",
+            "selectedProfile": {"id": UUID, "name": "JugadorShard"},
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+    env.core
+        .add_shard_account("Steve", "password")
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn shard_session_refreshes_and_stores_rejected_token() {
+    let env = env().await;
+    let shard = shard_account_for_refresh(&env).await;
+    env.server.reset().await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/validate"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid token."
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/refresh"))
+        .and(wiremock::matchers::body_json(json!({
+            "accessToken": "SHARD_ACCESS",
+            "clientToken": "SHARD_CLIENT",
+        })))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accessToken": "SHARD_ACCESS_2",
+            "clientToken": "SHARD_CLIENT",
+            "selectedProfile": {"id": UUID, "name": "JugadorShard"},
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+
+    let session = env.core.session(Some(&shard.id)).await.unwrap();
+    assert_eq!(session.access_token.expose(), "SHARD_ACCESS_2");
+    let stored = env
+        .secrets
+        .get("shard.yggdrasil", &shard.id)
+        .unwrap()
+        .unwrap();
+    let stored: serde_json::Value = serde_json::from_str(&stored).unwrap();
+    assert_eq!(stored["credentials"]["accessToken"], "SHARD_ACCESS_2");
+
+    env.server.reset().await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/validate"))
+        .and(body_string_contains("SHARD_ACCESS_2"))
+        .respond_with(ResponseTemplate::new(204))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+    let session = env.core.session(Some(&shard.id)).await.unwrap();
+    assert_eq!(session.access_token.expose(), "SHARD_ACCESS_2");
+}
+
+#[tokio::test]
+async fn shard_session_with_rejected_refresh_is_expired() {
+    let env = env().await;
+    let shard = shard_account_for_refresh(&env).await;
+    env.server.reset().await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/validate"))
+        .and(body_string_contains("SHARD_ACCESS"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid token."
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/authserver/refresh"))
+        .and(body_string_contains("SHARD_ACCESS"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({
+            "error": "ForbiddenOperationException",
+            "errorMessage": "Invalid token."
+        })))
+        .expect(1)
+        .mount(&env.server)
+        .await;
+
+    let err = env.core.session(Some(&shard.id)).await.unwrap_err();
+    assert!(
+        matches!(err, Error::Auth(AuthError::SessionExpired)),
+        "{err:?}"
+    );
+    assert_eq!(err.kind(), "auth_session_expired");
 }

@@ -370,8 +370,16 @@ impl Core {
                     .secret_get(shard_service(), account.id.clone())
                     .await?
                     .ok_or(AuthError::RefreshTokenMissing)?;
-                let login: ShardLogin =
+                let mut login: ShardLogin =
                     serde_json::from_str(&json).map_err(|e| Error::json("sesión Shard", e))?;
+                if !yggdrasil::validate(self.http(), &login.base, &login.credentials).await? {
+                    login.credentials =
+                        yggdrasil::refresh(self.http(), &login.base, &login.credentials).await?;
+                    let json = serde_json::to_string(&login)
+                        .map_err(|e| Error::json("sesión Shard", e))?;
+                    self.secret_set(shard_service(), account.id.clone(), json)
+                        .await?;
+                }
                 base = Some(login.base);
                 Session {
                     uuid: login.credentials.selected_profile.id.simple().to_string(),

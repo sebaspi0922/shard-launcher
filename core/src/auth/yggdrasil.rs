@@ -33,6 +33,13 @@ pub(crate) struct Profile {
     pub name: String,
 }
 
+#[derive(Deserialize)]
+struct ErrorResponse {
+    error: String,
+    #[serde(rename = "errorMessage")]
+    error_message: String,
+}
+
 fn unexpected(detail: &str) -> Error {
     AuthError::Unexpected {
         service: "Yggdrasil",
@@ -74,11 +81,27 @@ pub(crate) async fn authenticate(
         "password": password,
     });
     let response = http.send(|client| client.post(&url).json(&body)).await?;
-    if matches!(response.status().as_u16(), 401 | 403) {
+    if response.status().as_u16() == 403 {
+        let bytes = response.bytes().await?;
+        if serde_json::from_slice::<ErrorResponse>(&bytes).is_ok_and(|error| {
+            let message = error.error_message.to_ascii_lowercase();
+            error.error == "ForbiddenOperationException"
+                && (message.contains("credential")
+                    || message.contains("invalid username or password"))
+        }) {
+            return Err(AuthError::InvalidCredentials.into());
+        }
+        return Err(unexpected("el servidor rechazó el inicio de sesión"));
+    }
+    if response.status().as_u16() == 401 {
         return Err(unexpected("el servidor rechazó el inicio de sesión"));
     }
     let bytes = check_status(response)?.bytes().await?;
-    let credentials: Credentials = serde_json::from_slice(&bytes).map_err(|_| {
+    parse_credentials(&bytes)
+}
+
+fn parse_credentials(bytes: &[u8]) -> Result<Credentials> {
+    let credentials: Credentials = serde_json::from_slice(bytes).map_err(|_| {
         unexpected("la respuesta no contiene tokens y un perfil seleccionado válidos")
     })?;
     if credentials.access_token.is_empty()
@@ -89,6 +112,47 @@ pub(crate) async fn authenticate(
         return Err(unexpected("el servidor devolvió una sesión incompleta"));
     }
     Ok(credentials)
+}
+
+pub(crate) async fn validate(http: &Http, base: &str, credentials: &Credentials) -> Result<bool> {
+    let url = join(base, "authserver/validate");
+    if http.is_offline() {
+        return Err(Error::Offline { url });
+    }
+    let body = serde_json::json!({
+        "accessToken": credentials.access_token,
+        "clientToken": credentials.client_token,
+    });
+    let response = http.send(|client| client.post(&url).json(&body)).await?;
+    match response.status().as_u16() {
+        204 => Ok(true),
+        401 | 403 => Ok(false),
+        status if (200..300).contains(&status) => Err(unexpected(
+            "validate respondió con éxito pero sin el estado 204 esperado",
+        )),
+        _ => check_status(response).map(|_| true),
+    }
+}
+
+pub(crate) async fn refresh(
+    http: &Http,
+    base: &str,
+    credentials: &Credentials,
+) -> Result<Credentials> {
+    let url = join(base, "authserver/refresh");
+    if http.is_offline() {
+        return Err(Error::Offline { url });
+    }
+    let body = serde_json::json!({
+        "accessToken": credentials.access_token,
+        "clientToken": credentials.client_token,
+    });
+    let response = http.send(|client| client.post(&url).json(&body)).await?;
+    if matches!(response.status().as_u16(), 401 | 403) {
+        return Err(AuthError::SessionExpired.into());
+    }
+    let bytes = check_status(response)?.bytes().await?;
+    parse_credentials(&bytes)
 }
 
 fn prefetched(bytes: &[u8]) -> Result<String> {
