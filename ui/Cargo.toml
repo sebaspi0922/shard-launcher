@@ -27,6 +27,9 @@ serde_json = "1.0.154"
 # Texturas de skin y capa.
 png = "0.18"
 tracing = "0.1.44"
+# Abrir la página del login de Microsoft y elegir el PNG de la skin.
+webbrowser = "1.2.7"
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # Saber si hay host de bandeja (StatusNotifierWatcher) antes de ocultar la
@@ -36,6 +39,7 @@ zbus = { version = "5.19.0", default-features = false, features = ["async-io", "
 
 [dev-dependencies]
 i-slint-backend-testing = { version = "=1.19.0", features = ["renderer-software"] }
+tempfile = "3.27.0"
 
 [build-dependencies]
 slint-build = "=1.19.0"

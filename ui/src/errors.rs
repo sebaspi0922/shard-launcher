@@ -36,6 +36,22 @@ pub fn describe(lang: &str, e: &lcore::Error) -> (String, String) {
     (crate::i18n::text(lang, key(e.kind())), format!("{}: {e}", e.kind()))
 }
 
+/// Error del núcleo ya traducido, para cruzar de tokio al hilo de la UI.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Failure {
+    /// `lcore::Error::kind` (decide qué hace la UI: caducado, cancelado…).
+    pub kind: String,
+    pub message: String,
+    pub detail: String,
+}
+
+impl Failure {
+    pub fn new(lang: &str, e: &lcore::Error) -> Self {
+        let (message, detail) = describe(lang, e);
+        Self { kind: e.kind().to_owned(), message, detail }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

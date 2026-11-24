@@ -49,7 +49,7 @@ pub struct Backend {
 }
 
 impl Backend {
-    /// Instancias, cuenta activa y partidas en marcha.
+    /// Instancias y partidas en marcha (la cuenta activa la lleva `accounts`).
     pub fn load(&self) {
         let core = self.core.clone();
         self.rt.spawn(async move {
@@ -63,8 +63,6 @@ impl Backend {
                     c.set_failed(msg, detail);
                 }),
             }
-            let active = core.accounts().await.ok().and_then(|f| f.active_account().map(|a| a.name.clone()));
-            post(move |c| c.set_account(active.as_deref()));
             for g in core.running_games().await {
                 post(move |c| c.set_phase(&g.instance_id, Phase::Running));
             }
@@ -87,7 +85,7 @@ impl Backend {
                         // Tiempo jugado y última partida cambiaron.
                         me.load();
                     }
-                    Ok(Event::AccountsChanged) => me.load(),
+                    Ok(Event::AccountsChanged) => crate::accounts::post(|a| a.reload()),
                     Ok(_) => {}
                     Err(RecvError::Lagged(n)) => tracing::debug!(n, "eventos omitidos hacia la UI"),
                     Err(RecvError::Closed) => break,
