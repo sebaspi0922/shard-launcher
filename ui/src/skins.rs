@@ -581,7 +581,12 @@ impl Skins {
             }
             None => Image::default(),
         };
-        self.stages.borrow_mut().insert(key, img.clone());
+        let mut stages = self.stages.borrow_mut();
+        // Al redimensionar la ventana cambian los tamaños: no guardar todos.
+        if stages.len() >= 8 {
+            stages.clear();
+        }
+        stages.insert(key, img.clone());
         img
     }
 
