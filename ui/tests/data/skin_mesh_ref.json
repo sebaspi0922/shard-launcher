@@ -1,0 +1,52 @@
+{
+  "cases": [
+    {
+      "name": "frente",
+      "w": 400.0,
+      "h": 600.0,
+      "yaw": 0.0,
+      "pitch": 0.0,
+      "slim": true,
+      "cape": false,
+      "legacy": false,
+      "shadow": false,
+      "quads": 352
+    },
+    {
+      "name": "defecto",
+      "w": 446.0,
+      "h": 551.0,
+      "yaw": -0.5,
+      "pitch": 0.16,
+      "slim": true,
+      "cape": true,
+      "legacy": false,
+      "shadow": true,
+      "quads": 1082
+    },
+    {
+      "name": "espalda",
+      "w": 116.0,
+      "h": 275.5,
+      "yaw": 3.14159265,
+      "pitch": 0.0,
+      "slim": true,
+      "cape": true,
+      "legacy": false,
+      "shadow": false,
+      "quads": 914
+    },
+    {
+      "name": "antigua",
+      "w": 300.0,
+      "h": 300.0,
+      "yaw": 0.7,
+      "pitch": -0.3,
+      "slim": false,
+      "cape": false,
+      "legacy": true,
+      "shadow": false,
+      "quads": 864
+    }
+  ]
+}
