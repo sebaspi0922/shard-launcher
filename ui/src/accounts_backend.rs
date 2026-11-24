@@ -71,6 +71,14 @@ impl AccountActions for CoreAccounts {
         });
     }
 
+    fn add_shard(&self, username: &str, password: &str) {
+        let (core, lang, user, password) = (self.backend.core.clone(), self.lang.clone(), username.to_owned(), password.to_owned());
+        self.backend.rt.spawn(async move {
+            let r = core.add_shard_account(&user, &password).await.map(|a| a.name).map_err(|e| fail(&lang, &e));
+            accounts::post(move |a| a.offline_added(r));
+        });
+    }
+
     fn begin_login(&self, attempt: u64) {
         self.cancel_login();
         let (core, lang) = (self.backend.core.clone(), self.lang.clone());
