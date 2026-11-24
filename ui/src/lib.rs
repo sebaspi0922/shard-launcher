@@ -13,4 +13,6 @@ pub mod fixtures;
 pub mod i18n;
 pub mod instances;
 pub mod prefs;
+pub mod skin;
+pub mod skin_mesh;
 pub mod window;
