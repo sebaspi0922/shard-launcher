@@ -1,0 +1,26 @@
+services:
+  drasl:
+    image: unmojang/drasl:latest
+    restart: unless-stopped
+    volumes:
+      - ./config.toml:/etc/drasl/config.toml:ro
+      - drasl_state:/var/lib/drasl
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - drasl
+    environment:
+      SHARD_AUTH_DOMAIN: ${SHARD_AUTH_DOMAIN:-auth.shard.example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  drasl_state:
+  caddy_data:
+  caddy_config:
