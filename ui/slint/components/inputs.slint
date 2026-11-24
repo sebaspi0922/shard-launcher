@@ -1,0 +1,83 @@
+// Campos de texto con el `inputDecorationTheme` de app_theme.dart.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icon } from "base.slint";
+
+// TextField relleno (superficie 1), borde de 1 px que pasa al acento con el
+// foco, icono opcional delante y botón de borrar detrás.
+export component TextField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder;
+    in property <string> prefix-icon;
+    in property <bool> clearable;
+    in property <string> clear-label;
+    out property <bool> has-focus: input.has-focus;
+    callback edited(string);
+    callback accepted(string);
+    height: 48px;
+    border-radius: Theme.radius-control;
+    background: Palette.surface1;
+    border-width: input.has-focus ? 1.5px : 1px;
+    border-color: input.has-focus ? Palette.accent : Palette.border;
+    accessible-role: text-input;
+    accessible-placeholder-text: placeholder;
+    accessible-value: text;
+    accessible-action-set-value(v) => {
+        input.text = v;
+        edited(v);
+    }
+    forward-focus: input;
+    property <length> lead: prefix-icon != "" ? 48px : 14px;
+    property <length> trail: clearable && text != "" ? 48px : 14px;
+    if prefix-icon != "": Icon {
+        x: (48px - self.width) / 2;
+        glyph: prefix-icon;
+        size: 18px;
+        color: Palette.text-muted;
+    }
+    if text == "": Text {
+        x: root.lead + 4px;
+        width: parent.width - self.x - root.trail;
+        text: root.placeholder;
+        font-family: "Inter";
+        font-size: Type.body-medium.size;
+        color: Palette.text-muted;
+        vertical-alignment: center;
+        overflow: elide;
+        accessible-role: none;
+    }
+    input := TextInput {
+        x: root.lead + 4px;
+        width: parent.width - self.x - root.trail;
+        height: parent.height;
+        font-family: "Inter";
+        font-size: Type.body-medium.size;
+        color: Palette.text;
+        selection-background-color: Palette.accent.with-alpha(0.35);
+        selection-foreground-color: Palette.text;
+        vertical-alignment: center;
+        single-line: true;
+        accessible-role: none;
+        edited => { root.edited(self.text); }
+        accepted => { root.accepted(self.text); }
+    }
+    if clearable && text != "": Rectangle {
+        x: parent.width - 48px;
+        width: 48px;
+        accessible-role: button;
+        accessible-label: root.clear-label;
+        accessible-action-default => { root.clear(); }
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            border-radius: Theme.radius-control;
+            background: clear-ta.has-hover ? Palette.surface2 : transparent;
+            Icon { glyph: "\u{e5cd}"; size: 16px; color: Palette.text-muted; }
+        }
+        clear-ta := TouchArea { mouse-cursor: pointer; clicked => { root.clear(); } }
+    }
+    public function clear() {
+        input.text = "";
+        edited("");
+    }
+}

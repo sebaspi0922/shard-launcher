@@ -1,0 +1,389 @@
+// Biblioteca de instancias (instances_page.dart): rejilla o lista, búsqueda,
+// estados de carga, error, vacío y sin resultados.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Fmt } from "../fmt.slint";
+import { Txt, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedIconButton, SegmentedIcons, PlayButton, LaunchState, LaunchPhase } from "../components/buttons.slint";
+import { TextField } from "../components/inputs.slint";
+import { EmptyState, ErrorNote } from "../components/feedback.slint";
+
+// Una instancia lista para pintar (Rust la prepara en `state::instances`).
+export struct InstanceItem {
+    id: string,
+    name: string,
+    mc: string,
+    loader: string,
+    playtime: int,
+    // Segundos desde la última partida; < 0 = nunca.
+    last-ago: int,
+    initials: string,
+    icon-from: color,
+    icon-to: color,
+    launch: LaunchState,
+}
+
+export enum LoadState { loading, ready, failed }
+
+// Estado de la pantalla (Rust es la fuente de verdad y lo rellena).
+export global InstancesState {
+    in property <LoadState> state: LoadState.loading;
+    in property <string> error-message;
+    in property <string> error-detail;
+    // Ya filtradas por la búsqueda.
+    in property <[InstanceItem]> items;
+    // Todas (para el contador y el estado vacío).
+    in property <int> total;
+    in-out property <bool> grid: true;
+    in-out property <string> query;
+    callback search(string);
+    callback grid-changed(bool);
+    callback open(string);
+    callback play(string);
+    callback new-instance;
+    callback show-trash;
+    // Paisaje de bloques de la tarjeta (art.dart) para un ancho lógico.
+    pure callback art(string, float) -> image;
+}
+
+// Icono de la instancia (InstanceIcon): degradado, iniciales y sombra.
+export component InstanceIcon inherits Rectangle {
+    in property <InstanceItem> item;
+    in property <length> size: 48px;
+    width: size;
+    height: size;
+    border-radius: size * 0.26;
+    background: @linear-gradient(135deg, item.icon-from 0%, item.icon-to 100%);
+    border-width: 1px;
+    border-color: #FFFFFF29;
+    drop-shadow-color: #00000059;
+    drop-shadow-blur: size * 0.3;
+    drop-shadow-offset-y: size * 0.08;
+    accessible-role: image;
+    accessible-label: item.name;
+    Text {
+        text: root.item.initials;
+        font-family: "Inter";
+        font-size: root.size * 0.36;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #FFFFFFF2;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// Tarjeta de la rejilla (InstanceCard).
+component InstanceCard inherits Rectangle {
+    in property <InstanceItem> item;
+    callback open;
+    callback play;
+    height: 232px;
+    border-radius: Theme.radius-card + 2px;
+    background: Palette.card(ta.has-hover ? Palette.surface2 : Palette.surface1);
+    border-width: 1px;
+    border-color: ta.has-hover ? Palette.border-strong : Palette.border;
+    animate background, border-color { duration: Theme.fast; }
+    clip: true;
+    accessible-role: list-item;
+    accessible-id: "card";
+    accessible-label: item.name;
+    accessible-action-default => { open(); }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+    // Container con borde: Flutter mete el hijo 1 px dentro (BoxDecoration.padding).
+    inner := Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        Image {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            height: 104px;
+            source: InstancesState.art(root.item.id, self.width / 1px);
+            image-fit: fill;
+            accessible-role: none;
+        }
+        PlayButton {
+            x: parent.width - self.width - 12px;
+            y: 12px;
+            state: root.item.launch;
+            label: Fmt.launch-label(root.item.launch);
+            opacity: ta.has-hover || root.item.launch.phase != LaunchPhase.idle ? 1 : 0;
+            animate opacity { duration: Theme.fast; }
+            accessible-id: "card-play";
+            clicked => { root.play(); }
+        }
+        InstanceIcon {
+            x: 16px;
+            y: 104px - 24px;
+            item: root.item;
+            size: 48px;
+            accessible-id: "card-icon";
+        }
+        Txt {
+            x: 16px;
+            y: 104px + 48px - 16px;
+            width: parent.width - 32px;
+            text: root.item.name;
+            style: Type.title-medium;
+        }
+        Rectangle {
+            x: 16px;
+            y: 104px + 48px - 16px + 20px + 3px;
+            width: parent.width - 32px;
+            height: 17px;
+            Rectangle {
+                x: 0;
+                width: 7px;
+                height: 7px;
+                border-radius: 2px;
+                background: Fmt.loader-color(root.item.loader);
+            }
+            Txt {
+                x: 13px;
+                width: parent.width - 13px;
+                text: Fmt.version-line(root.item.mc, root.item.loader);
+                style: Type.body-small;
+                color: Palette.text-secondary;
+            }
+        }
+        // Fila inferior: termina 16 px por encima del final (translate -16).
+        Rectangle {
+            x: 16px;
+            y: parent.height - 16px - self.height;
+            width: parent.width - 32px;
+            height: 17px;
+            Icon { x: 0; glyph: Icons.schedule; size: 14px; color: Palette.text-muted; }
+            Txt {
+                x: 18px;
+                text: Fmt.playtime(root.item.playtime);
+                style: Type.body-small;
+                color: Palette.text-muted;
+            }
+            Txt {
+                x: parent.width - self.width;
+                width: self.preferred-width;
+                text: Fmt.relative(root.item.last-ago);
+                style: Type.body-small;
+                color: Palette.text-muted;
+                horizontal-alignment: right;
+            }
+        }
+    }
+}
+
+// Fila de la lista (InstanceRow).
+component InstanceRow inherits Rectangle {
+    in property <InstanceItem> item;
+    callback open;
+    callback play;
+    height: 64px;
+    border-radius: Theme.radius-card;
+    background: Palette.card(ta.has-hover ? Palette.surface2 : Palette.surface1);
+    border-width: 1px;
+    border-color: Palette.border;
+    animate background { duration: Theme.fast; }
+    clip: true;
+    accessible-role: list-item;
+    accessible-id: "row";
+    accessible-label: item.name;
+    accessible-action-default => { open(); }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        spacing: 0;
+        InstanceIcon { item: root.item; size: 40px; accessible-id: "row-icon"; }
+        Rectangle { width: 16px; }
+        VerticalLayout {
+            // Expanded(flex: 3): reparte el ancho entero, no el sobrante.
+            preferred-width: 0;
+            min-width: 0;
+            horizontal-stretch: 3;
+            alignment: center;
+            Txt { text: root.item.name; style: Type.title-small; }
+            Rectangle { height: 2px; }
+            Txt {
+                text: Fmt.version-line(root.item.mc, root.item.loader);
+                style: Type.body-small;
+                color: Palette.text-secondary;
+            }
+        }
+        VerticalLayout {
+            // Expanded(flex: 2): reparte el ancho entero, no el sobrante.
+            preferred-width: 0;
+            min-width: 0;
+            horizontal-stretch: 2;
+            alignment: center;
+            Txt { text: @tr("instancePlaytime"); style: Type.body-small; color: Palette.text-muted; }
+            Txt { text: Fmt.playtime(root.item.playtime); style: Type.body-medium; }
+        }
+        VerticalLayout {
+            // Expanded(flex: 2): reparte el ancho entero, no el sobrante.
+            preferred-width: 0;
+            min-width: 0;
+            horizontal-stretch: 2;
+            alignment: center;
+            Txt { text: @tr("instanceLastPlayed"); style: Type.body-small; color: Palette.text-muted; }
+            Txt { text: Fmt.relative(root.item.last-ago); style: Type.body-medium; }
+        }
+        VerticalLayout {
+            alignment: center;
+            PlayButton {
+                state: root.item.launch;
+                label: Fmt.launch-label(root.item.launch);
+                accessible-id: "row-play";
+                clicked => { root.play(); }
+            }
+        }
+    }
+}
+
+export component InstancesPage inherits Rectangle {
+    property <LoadState> state: InstancesState.state;
+    property <[InstanceItem]> items: InstancesState.items;
+    property <int> total: InstancesState.total;
+
+    // Cabecera: columna de título (31,2 + 4 + 20,25) alineada abajo con los
+    // controles de 48.
+    // Altos redondeados como Flutter: 31 + 4 + 20.
+    property <length> header-h: 31px + 4px + 20px;
+    property <length> pad: 32px;
+    property <length> top: 4px;
+    property <length> body-y: top + header-h + 24px;
+    property <length> avail: root.width - 2 * pad;
+    // SliverGridDelegateWithMaxCrossAxisExtent(300, 232, 16, 16).
+    property <int> cols: max(1, ceil(avail / (300px + 16px)));
+    property <length> card-w: (avail - (cols - 1) * 16px) / cols;
+
+    title := Txt {
+        x: root.pad;
+        y: root.top;
+        text: @tr("instancesTitle");
+        style: Type.headline-medium;
+        accessible-id: "txt-title";
+    }
+    Txt {
+        x: root.pad;
+        y: root.top + 31px + 4px;
+        text: Fmt.instances-count(root.total);
+        style: Type.body-medium;
+        color: Palette.text-secondary;
+        accessible-id: "txt-count";
+    }
+    HorizontalLayout {
+        x: root.width - root.pad - self.width;
+        y: root.top + root.header-h - 48px;
+        width: self.preferred-width;
+        height: 48px;
+        spacing: 12px;
+        search := TextField {
+            width: 300px;
+            placeholder: @tr("instancesSearch");
+            prefix-icon: Icons.search;
+            clearable: true;
+            text <=> InstancesState.query;
+            accessible-id: "search";
+            edited(q) => { InstancesState.search(q); }
+        }
+        VerticalLayout {
+          alignment: end;
+          SegmentedIcons {
+            first-icon: Icons.grid-view;
+            second-icon: Icons.view-agenda;
+            first-label: @tr("viewGrid");
+            second-label: @tr("viewList");
+            first <=> InstancesState.grid;
+            accessible-id: "view-toggle";
+            changed(v) => { InstancesState.grid-changed(v); }
+          }
+        }
+        OutlinedIconButton {
+            icon: Icons.delete;
+            tooltip: @tr("trashTitle");
+            accessible-id: "trash";
+            clicked => { InstancesState.show-trash(); }
+        }
+        VerticalLayout {
+            alignment: end;
+            FilledButton {
+                text: @tr("instancesNew");
+                icon: Icons.add;
+                accessible-id: "new";
+                clicked => { InstancesState.new-instance(); }
+            }
+        }
+    }
+
+    // Cuerpo.
+    Rectangle {
+        y: root.body-y;
+        height: root.height - root.body-y;
+        if root.state == LoadState.loading: Spinner { accessible-id: "loading"; }
+        if root.state == LoadState.failed: HorizontalLayout {
+            alignment: center;
+            VerticalLayout {
+                alignment: center;
+                ErrorNote {
+                    width: min(560px, root.avail);
+                    message: InstancesState.error-message;
+                    detail: InstancesState.error-detail;
+                    details-label: @tr("details");
+                    accessible-id: "error";
+                }
+            }
+        }
+        if root.state == LoadState.ready && root.total == 0: EmptyState {
+            x: root.pad;
+            width: root.avail;
+            icon: Icons.deployed-code;
+            title: @tr("instancesEmptyTitle");
+            body: @tr("instancesEmptyBody");
+            action: @tr("instancesNew");
+            action-icon: Icons.add;
+            accessible-id: "empty";
+            act => { InstancesState.new-instance(); }
+        }
+        if root.state == LoadState.ready && root.total > 0 && root.items.length == 0: Text {
+            x: root.pad;
+            width: root.avail;
+            text: @tr("instancesNoResults", InstancesState.query);
+            font-family: "Inter";
+            font-size: Type.body-large.size;
+            color: Palette.text-secondary;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            accessible-id: "no-results";
+        }
+        if root.state == LoadState.ready && root.items.length > 0 && InstancesState.grid: Flickable {
+            x: root.pad;
+            width: root.avail;
+            content-height: ceil(root.items.length / root.cols) * (232px + 16px) - 16px + 32px;
+            for it[i] in root.items: InstanceCard {
+                x: mod(i, root.cols) * (root.card-w + 16px);
+                y: floor(i / root.cols) * (232px + 16px);
+                width: root.card-w;
+                item: it;
+                open => { InstancesState.open(it.id); }
+                play => { InstancesState.play(it.id); }
+            }
+        }
+        if root.state == LoadState.ready && root.items.length > 0 && !InstancesState.grid: Flickable {
+            x: root.pad;
+            width: root.avail;
+            content-height: root.items.length * (64px + 8px) - 8px + 32px;
+            for it[i] in root.items: InstanceRow {
+                y: i * (64px + 8px);
+                width: root.avail;
+                item: it;
+                open => { InstancesState.open(it.id); }
+                play => { InstancesState.play(it.id); }
+            }
+        }
+    }
+}
