@@ -119,6 +119,11 @@ pub struct Model {
     pub busy: bool,
     /// Capa que se está aplicando (`""` = quitar capa).
     pub cape_busy: Option<String>,
+    /// Sube con cada textura que llega (para la huella del visor).
+    pub tex_seq: u64,
+    /// Turno de la última lectura del perfil pedida. Un resultado de
+    /// aplicar/restablecer/capa lo sube: las lecturas pedidas antes ya no valen.
+    pub profile_seq: u64,
 }
 
 impl Model {
@@ -198,8 +203,8 @@ impl Model {
 /// Lo que la pantalla pide fuera de la UI. Cada método entrega su resultado
 /// con [`post`].
 pub trait SkinActions {
-    /// → [`Skins::set_profile`].
-    fn load_profile(&self, account: &str);
+    /// → [`Skins::set_profile`] con el mismo `seq`.
+    fn load_profile(&self, account: &str, seq: u64);
     /// → [`Skins::texture_loaded`].
     fn load_texture(&self, url: &str);
     /// Diálogo de archivo → [`Skins::file_picked`].
@@ -240,7 +245,6 @@ pub struct Skins {
     accounts: Rc<Accounts>,
     actions: Box<dyn SkinActions>,
     pub model: RefCell<Model>,
-    revision: std::cell::Cell<i32>,
     renders: RefCell<HashMap<i32, (RenderKey, Image)>>,
     stages: RefCell<HashMap<(u32, u32), Image>>,
     capes: Rc<VecModel<CapeItem>>,
@@ -249,6 +253,18 @@ pub struct Skins {
 
 fn image(p: &Pixels) -> Image {
     Image::from_rgba8(SharedPixelBuffer::clone_from_slice(&p.rgba, p.width, p.height))
+}
+
+/// Huella de lo que pinta el visor (textura a la vista, capa y modelo): si
+/// cambia, Slint vuelve a pedir la imagen.
+fn visual_revision(m: &Model) -> i32 {
+    use std::hash::{Hash, Hasher};
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    m.shown().map(|t| Rc::as_ptr(&t) as usize).hash(&mut h);
+    m.cape_tex().map(|t| Rc::as_ptr(&t) as usize).hash(&mut h);
+    m.slim().hash(&mut h);
+    m.tex_seq.hash(&mut h);
+    h.finish() as i32
 }
 
 /// Fondo de «estudio» (SkinStage): `RadialGradient` centrado en (0, −0,2),
@@ -278,7 +294,6 @@ impl Skins {
             accounts: accounts.clone(),
             actions,
             model: RefCell::default(),
-            revision: Default::default(),
             renders: RefCell::default(),
             stages: RefCell::default(),
             capes: Rc::new(VecModel::default()),
@@ -405,14 +420,27 @@ impl Skins {
     fn load_profile(&self) {
         let account = self.model.borrow().account.clone();
         if let Some(a) = account.filter(|a| a.microsoft) {
-            self.model.borrow_mut().profile = ProfileLoad::Loading;
+            let seq = {
+                let mut m = self.model.borrow_mut();
+                m.profile = ProfileLoad::Loading;
+                m.profile_seq += 1;
+                m.profile_seq
+            };
             self.refresh();
-            self.actions.load_profile(&a.id);
+            self.actions.load_profile(&a.id, seq);
         }
     }
 
-    pub fn set_profile(&self, account: &str, r: Result<Profile, Failure>) {
-        if self.account_id().as_deref() != Some(account) {
+    /// Turno de la última lectura del perfil (tests y escenas).
+    pub fn profile_seq(&self) -> u64 {
+        self.model.borrow().profile_seq
+    }
+
+    /// Perfil leído. Solo vale la última lectura pedida para la cuenta activa:
+    /// una lectura vieja (otra cuenta, o anterior a un cambio que ya llegó) no
+    /// pisa lo nuevo.
+    pub fn set_profile(&self, account: &str, seq: u64, r: Result<Profile, Failure>) {
+        if self.account_id().as_deref() != Some(account) || seq != self.model.borrow().profile_seq {
             return;
         }
         match r {
@@ -440,12 +468,15 @@ impl Skins {
         for u in &want {
             self.actions.load_texture(u);
         }
-        self.bump();
+        self.refresh();
     }
 
     pub fn texture_loaded(&self, url: &str, tex: Option<SkinTexture>) {
-        self.model.borrow_mut().textures.insert(url.to_owned(), tex.map_or(Tex::Missing, |t| Tex::Ready(Rc::new(t))));
-        self.bump();
+        let mut m = self.model.borrow_mut();
+        m.tex_seq += 1;
+        m.textures.insert(url.to_owned(), tex.map_or(Tex::Missing, |t| Tex::Ready(Rc::new(t))));
+        drop(m);
+        self.refresh();
     }
 
     pub fn file_picked(&self, path: Option<String>) {
@@ -465,9 +496,10 @@ impl Skins {
             if m.file.as_deref() != Some(path) {
                 return;
             }
+            m.tex_seq += 1;
             m.local = Some(tex.map_or(Tex::Missing, |t| Tex::Ready(Rc::new(t))));
         }
-        self.bump();
+        self.refresh();
     }
 
     fn apply(&self) {
@@ -489,6 +521,10 @@ impl Skins {
     pub fn changed(&self, account: &str, reset: bool, r: Result<Profile, Failure>) {
         if self.account_id().as_deref() != Some(account) {
             return;
+        }
+        if r.is_ok() {
+            // Este perfil es más nuevo que cualquier lectura en curso.
+            self.model.borrow_mut().profile_seq += 1;
         }
         self.model.borrow_mut().busy = false;
         match r {
@@ -529,6 +565,10 @@ impl Skins {
         if self.account_id().as_deref() != Some(account) {
             return;
         }
+        if r.is_ok() {
+            // Este perfil es más nuevo que cualquier lectura en curso.
+            self.model.borrow_mut().profile_seq += 1;
+        }
         self.model.borrow_mut().cape_busy = None;
         match r {
             Ok(p) => self.use_profile(p),
@@ -539,11 +579,6 @@ impl Skins {
         }
     }
 
-    /// Cambió lo que pinta el visor.
-    fn bump(&self) {
-        self.revision.set(self.revision.get().wrapping_add(1));
-        self.refresh();
-    }
 
     fn scale(&self) -> f64 {
         self.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0) as f64
@@ -564,7 +599,7 @@ impl Skins {
             (h as f64 * scale * 4.0) as u32,
             (cam.yaw * 1e6) as i64,
             (cam.pitch * 1e6) as i64,
-            self.revision.get(),
+            visual_revision(&m),
         );
         if let Some((k, img)) = self.renders.borrow().get(&slot)
             && *k == key
@@ -646,7 +681,7 @@ impl Skins {
         st.set_busy(m.busy);
         st.set_can_apply(m.can_apply());
         st.set_cape_busy(m.cape_busy.is_some());
-        st.set_revision(self.revision.get());
+        st.set_revision(visual_revision(&m));
         let capes = m.profile().map(|p| p.capes.clone()).unwrap_or_default();
         st.set_capes_count(capes.len() as i32);
         let mut rows = vec![CapeItem {

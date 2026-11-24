@@ -87,6 +87,21 @@ fn type_text(ui: &MainWindow, text: &str) {
     settle();
 }
 
+/// Píxeles del visor principal (sin el resto de la pantalla).
+fn stage_pixels(ui: &MainWindow) -> Vec<u8> {
+    let snap = ui.window().take_snapshot().unwrap();
+    let e = &by_id(ui, "stage")[0];
+    let (p, sz) = (e.absolute_position(), e.size());
+    let w = snap.width() as usize;
+    let mut out = Vec::new();
+    // Sin la etiqueta del modelo (arriba) ni la ayuda (abajo).
+    for y in (p.y + 60.0) as usize..(p.y + sz.height - 40.0) as usize {
+        let row = &snap.as_bytes()[(y * w + p.x as usize) * 4..(y * w + (p.x + sz.width) as usize) * 4];
+        out.extend_from_slice(row);
+    }
+    out
+}
+
 fn toast(ui: &MainWindow) -> String {
     ui.get_toast_message().to_string()
 }
@@ -156,6 +171,22 @@ fn alta_offline_valida_el_nombre() {
     assert!(a.ui.global::<AccountsState>().get_offline_open());
     assert!(!by_label(&a.ui, "Disk error").is_empty());
 
+    // Un alta que termina con el diálogo ya cerrado (y otro abierto sin
+    // enviar) no lo toca: solo refresca la lista.
+    click(&by_label(&a.ui, "Add")[0]);
+    a.rec.take();
+    click(&by_label(&a.ui, "Cancel")[0]);
+    a.ui.global::<AccountsState>().invoke_add_offline();
+    settle();
+    a.acc.offline_added(Ok("abc_9".into()));
+    assert!(a.ui.global::<AccountsState>().get_offline_open());
+    assert_eq!(a.rec.take(), ["load"]);
+    a.ui.global::<AccountsState>().set_offline_open(false);
+    a.ui.global::<AccountsState>().invoke_add_offline();
+    settle();
+    type_text(&a.ui, "abc_9");
+    click(&by_label(&a.ui, "Add")[0]);
+    assert_eq!(a.rec.take(), ["offline abc_9"]);
     a.acc.offline_added(Ok("abc_9".into()));
     settle();
     assert!(!a.ui.global::<AccountsState>().get_offline_open());
@@ -279,7 +310,7 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     a.ui.set_route(Route::Skins);
     settle();
     let st = a.ui.global::<SkinsState>();
-    a.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    a.skins.set_profile("a1", a.skins.profile_seq(), Ok(fixtures::sample_profile()));
     let mut asked = a.rec.take();
     asked.sort();
     assert_eq!(asked, [format!("texture {}", fixtures::CAPE_1_URL), format!("texture {}", fixtures::CAPE_2_URL), format!("texture {}", fixtures::SKIN_URL)]);
@@ -292,6 +323,11 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     assert!(!st.get_can_apply());
     assert_eq!(by_id(&a.ui, "stage").len(), 3);
 
+    // Cambiar a «Clásica» repinta el visor con brazos de 4 y deja aplicar.
+    let before = stage_pixels(&a.ui);
+    click(&by_label(&a.ui, "Clásica")[0]);
+    assert_ne!(before, stage_pixels(&a.ui), "el visor no cambió de modelo");
+    click(&by_label(&a.ui, "Delgada")[0]);
     // Cambiar a «Clásica» deja aplicar: misma textura, otros brazos.
     click(&by_label(&a.ui, "Clásica")[0]);
     assert!(!st.get_slim() && st.get_can_apply());
@@ -391,10 +427,10 @@ fn skins_resultados_viejos_y_reintentos() {
     a.ui.set_route(Route::Skins);
     let st = a.ui.global::<SkinsState>();
     // Una textura que no se pudo bajar se vuelve a pedir con el perfil.
-    a.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    a.skins.set_profile("a1", a.skins.profile_seq(), Ok(fixtures::sample_profile()));
     a.rec.take();
     a.skins.texture_loaded(fixtures::SKIN_URL, None);
-    a.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    a.skins.set_profile("a1", a.skins.profile_seq(), Ok(fixtures::sample_profile()));
     assert_eq!(a.rec.take(), [format!("texture {}", fixtures::SKIN_URL)]);
     a.skins.texture_loaded(fixtures::SKIN_URL, Some(fixtures::sample_texture(fixtures::SKIN_URL)));
     settle();
@@ -418,6 +454,20 @@ fn skins_resultados_viejos_y_reintentos() {
     assert_eq!(st.get_state(), shard_ui::LoadState::Loading);
     assert_eq!(toast(&a.ui), "");
     assert!(a.rec.take().is_empty());
+
+    // A → B → A con una capa en camino: la lectura de A pedida al volver
+    // llega después del resultado de la capa y no lo pisa.
+    a.acc.set_accounts(Ok(fixtures::sample_accounts()));
+    assert_eq!(a.rec.take(), ["profile a1"]);
+    let stale = a.skins.profile_seq();
+    let mut newer = fixtures::sample_profile();
+    newer.capes[0].active = false;
+    newer.capes[1].active = true;
+    a.skins.cape_done("a1", Ok(newer));
+    a.skins.set_profile("a1", stale, Ok(fixtures::sample_profile()));
+    settle();
+    let capes = st.get_capes();
+    assert!(capes.row_data(2).unwrap().selected, "manda el resultado de la capa, no la lectura vieja");
 }
 
 fn skins_sin_cuenta_y_offline() {

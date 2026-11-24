@@ -367,6 +367,14 @@ impl Accounts {
     pub fn offline_added(&self, r: Result<String, Failure>) {
         let Some(ui) = self.ui.upgrade() else { return };
         let st = ui.global::<AccountsState>();
+        // El diálogo que la pidió ya se cerró (o se abrió otro sin enviar):
+        // como Flutter, sin aviso; si se guardó, solo se refresca la lista.
+        if !(st.get_offline_open() && st.get_offline_busy()) {
+            if r.is_ok() {
+                self.actions.load();
+            }
+            return;
+        }
         st.set_offline_busy(false);
         match r {
             Ok(name) => {
