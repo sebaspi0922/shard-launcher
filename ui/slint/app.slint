@@ -9,8 +9,11 @@ import { FilledButton, OutlinedButton, TextButton, Checkbox, LaunchState, Launch
 import { EmptyState, AppDialog, Snackbar } from "components/feedback.slint";
 import { Atmosphere, NavRail, TitleBar, Route, AccountChip, Activity } from "components/shell.slint";
 import { InstancesPage, InstancesState, InstanceItem, LoadState } from "screens/instances.slint";
+import { AccountsLayer, AccountsState, AccountItem, LoginPhase } from "screens/accounts.slint";
+import { SkinsPage, SkinsLayer, SkinsState, CapeItem, SkinView } from "screens/skins.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase }
+export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
 
 export component MainWindow inherits Window {
     title: "Shard";
@@ -60,7 +63,10 @@ export component MainWindow inherits Window {
             root.route = r;
             root.route-changed(r);
         }
-        account-clicked => { root.account-clicked(); }
+        account-clicked => {
+            AccountsState.panel-open = true;
+            root.account-clicked();
+        }
         toggle-max => { root.toggle-max(); }
     }
     Rectangle {
@@ -83,8 +89,9 @@ export component MainWindow inherits Window {
             y: 44px;
             height: parent.height - 44px;
             if root.route == Route.instances: InstancesPage { }
+            if root.route == Route.skins: SkinsPage { }
             // Pantallas de fases siguientes: solo su título por ahora.
-            if root.route != Route.instances: EmptyState {
+            if root.route != Route.instances && root.route != Route.skins: EmptyState {
                 icon: root.route == Route.home ? Icons.home
                     : root.route == Route.content ? Icons.extension
                     : root.route == Route.servers ? Icons.dns
@@ -97,6 +104,8 @@ export component MainWindow inherits Window {
             }
         }
     }
+    AccountsLayer { }
+    SkinsLayer { }
     Snackbar {
         x: (parent.width - self.width) / 2;
         y: parent.height - self.height - 24px;

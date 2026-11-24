@@ -11,7 +11,10 @@ use std::path::PathBuf;
 use std::time::Instant;
 
 use lcore::{Core, Options};
+use shard_ui::accounts::Accounts;
+use shard_ui::accounts_backend::{CoreAccounts, CoreSkins};
 use shard_ui::backend::{self, Backend, CoreActions};
+use shard_ui::skins::Skins;
 use shard_ui::controller::Controller;
 use shard_ui::window::Shell;
 use shard_ui::{MainWindow, i18n, prefs};
@@ -100,6 +103,14 @@ fn main() {
     let now = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
     let ctl = Controller::new(&ui, lang, Box::new(now), actions);
     backend::install(ctl.clone());
+    // Cuentas y skins (sin núcleo no hay cuentas: listas vacías).
+    let (acc_actions, skin_actions): (Box<dyn shard_ui::accounts::AccountActions>, Box<dyn shard_ui::skins::SkinActions>) = match &backend {
+        Some(b) => (Box::new(CoreAccounts::new(b.clone(), lang)), Box::new(CoreSkins { backend: b.clone(), lang: lang.to_owned() })),
+        None => (Box::new(NoCore), Box::new(NoCore)),
+    };
+    let clock = Instant::now();
+    let accounts = Accounts::new(&ui, ctl.clone(), acc_actions, Box::new(move || clock.elapsed().as_millis() as u64));
+    let _skins = Skins::new(&ui, ctl.clone(), accounts.clone(), skin_actions);
     let shell = Shell::new(&ui, settings.close_behavior, backend.clone());
     {
         let shell = shell.clone();
@@ -134,6 +145,29 @@ impl shard_ui::controller::Actions for NoCore {
     fn play(&self, _: &str) {}
     fn new_instance(&self) {}
     fn show_trash(&self) {}
+}
+
+impl shard_ui::accounts::AccountActions for NoCore {
+    fn load(&self) {
+        shard_ui::accounts::post(|a| a.set_accounts(Ok(Vec::new())));
+    }
+    fn set_active(&self, _: &str) {}
+    fn remove(&self, _: &str, _: &str) {}
+    fn add_offline(&self, _: &str) {}
+    fn begin_login(&self, _: u64) {}
+    fn cancel_login(&self) {}
+    fn open_url(&self, _: &str) {}
+    fn load_face(&self, _: &str) {}
+}
+
+impl shard_ui::skins::SkinActions for NoCore {
+    fn load_profile(&self, _: &str) {}
+    fn load_texture(&self, _: &str) {}
+    fn pick_file(&self, _: &str) {}
+    fn load_local(&self, _: &str) {}
+    fn apply(&self, _: &str, _: &shard_ui::skins::Apply) {}
+    fn reset(&self, _: &str) {}
+    fn cape(&self, _: &str, _: Option<&str>) {}
 }
 
 /// `SHARD_FIRST_FRAME unix_ms=…` tras pintar el primer fotograma (el

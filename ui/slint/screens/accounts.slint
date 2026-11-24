@@ -1,0 +1,427 @@
+// Cuentas (accounts/account_panel.dart, account_dialogs.dart): panel que se
+// abre desde el avatar del raíl, login de Microsoft con código de
+// dispositivo, alta de cuenta offline y confirmación para quitar una cuenta.
+// Rust (`accounts.rs`) rellena `AccountsState` y atiende sus callbacks.
+
+import "../../fonts/JetBrainsMono-Medium.ttf";
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Para, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedButton, TextButton } from "../components/buttons.slint";
+import { FormDialog, DialogActions, ConfirmDialog, ErrorNote } from "../components/feedback.slint";
+import { LabeledField } from "../components/inputs.slint";
+import { PlayerAvatar, AccountChip } from "../components/shell.slint";
+
+export struct AccountItem {
+    id: string,
+    name: string,
+    microsoft: bool,
+    active: bool,
+    // Cara (de la skin o generada).
+    chip: AccountChip,
+}
+
+// Momento del login de Microsoft.
+export enum LoginPhase { requesting, code, expired, failed }
+
+export global AccountsState {
+    in property <[AccountItem]> items;
+    in property <bool> loading;
+    in-out property <bool> panel-open;
+
+    // Login de Microsoft.
+    in-out property <bool> login-open;
+    in property <LoginPhase> login-phase;
+    in property <string> user-code;
+    // URL completa (para abrir) y sin esquema (para mostrar).
+    in property <string> verification-uri;
+    in property <string> verification-label;
+    in property <string> expires-label;
+    // Tiempo que queda (1 = todo).
+    in property <float> login-left: 1;
+    in property <string> login-error;
+    in property <string> login-error-detail;
+
+    // Cuenta offline.
+    in-out property <bool> offline-open;
+    in property <bool> offline-busy;
+    in property <string> offline-error;
+    in property <string> offline-error-detail;
+
+    // Cuenta pendiente de confirmar para quitarla ("" = ninguna).
+    in-out property <string> remove-id;
+    in-out property <string> remove-name;
+
+    callback select(string);
+    callback remove(string);
+    callback add-microsoft;
+    callback add-offline;
+    callback login-cancel;
+    callback login-retry;
+    callback open-browser;
+    callback copied;
+    callback offline-submit(string);
+    // Nombre offline válido (3–16 letras, dígitos o _).
+    pure callback offline-valid(string) -> bool;
+}
+
+// Fila de una cuenta (_AccountTile): 56 de alto + 2 debajo.
+component AccountTile inherits Rectangle {
+    in property <AccountItem> account;
+    height: 58px;
+    accessible-role: button;
+    accessible-label: account.name;
+    accessible-item-selected: account.active;
+    accessible-id: "account";
+    accessible-action-default => { if !root.account.active { AccountsState.select(root.account.id); } }
+    Rectangle {
+        y: 0;
+        height: 56px;
+        border-radius: Theme.radius-control + 2px;
+        background: root.account.active ? Palette.accent-container.with-alpha(0.55) : ta.has-hover ? Palette.surface1 : transparent;
+        ta := TouchArea {
+            mouse-cursor: root.account.active ? default : pointer;
+            clicked => { if !root.account.active { AccountsState.select(root.account.id); } }
+        }
+        HorizontalLayout {
+            padding: 8px;
+            spacing: 0;
+            PlayerAvatar { account: root.account.chip; size: 36px; y: (parent.height - self.height) / 2; }
+            Rectangle { width: 12px; }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                Txt { text: root.account.name; style: Type.title-small; }
+                Rectangle { height: 2px; }
+                HorizontalLayout {
+                    spacing: 4px;
+                    Icon {
+                        glyph: root.account.microsoft ? Icons.verified : Icons.wifi-off;
+                        size: 13px;
+                        y: (parent.height - self.height) / 2;
+                        color: root.account.microsoft ? Palette.info : Palette.text-muted;
+                    }
+                    Txt {
+                        text: root.account.microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
+                        style: Type.body-small;
+                        color: Palette.text-secondary;
+                        horizontal-stretch: 1;
+                    }
+                }
+            }
+            if root.account.active: HorizontalLayout {
+                padding-right: 4px;
+                Icon { glyph: Icons.check-circle; filled: true; size: 20px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+            }
+            // IconButton compacto (40 × 40, icono 18).
+            Rectangle {
+                width: 40px;
+                accessible-role: button;
+                accessible-label: @tr("remove");
+                accessible-id: "account-remove";
+                accessible-action-default => { root.ask-remove(); }
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: Theme.radius-control;
+                    background: del.has-hover ? Palette.surface2 : transparent;
+                }
+                Icon { glyph: Icons.delete; size: 18px; color: Palette.text-secondary; }
+                del := TouchArea { mouse-cursor: pointer; clicked => { root.ask-remove(); } }
+            }
+        }
+    }
+    function ask-remove() {
+        AccountsState.remove-name = root.account.name;
+        AccountsState.remove-id = root.account.id;
+    }
+}
+
+// Acción al pie del panel (_ActionTile).
+component ActionTile inherits Rectangle {
+    in property <string> glyph;
+    in property <string> text;
+    callback clicked;
+    height: 40px;
+    border-radius: Theme.radius-control;
+    background: ta.has-hover ? Palette.surface1 : transparent;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-id: "action";
+    accessible-action-default => { root.clicked(); }
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 12px;
+        Icon { glyph: root.glyph; size: 20px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.body-medium; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Panel de cuentas (showAccountPanel): velo suave y panel de 340 anclado
+// abajo a la izquierda, junto al raíl.
+export component AccountPanel inherits Rectangle {
+    background: #00000040;
+    accessible-role: none;
+    // Fundido y algo de desplazamiento al abrir (Motion.medium).
+    property <bool> shown;
+    init => { shown = true; }
+    TouchArea { clicked => { AccountsState.panel-open = false; } }
+    panel := Rectangle {
+        x: 84px + (root.shown ? 0 : -0.04 * self.width);
+        y: root.height - 12px - self.height + (root.shown ? 0 : 0.02 * self.height);
+        width: 340px;
+        height: col.preferred-height;
+        opacity: root.shown ? 1 : 0;
+        animate x, y, opacity { duration: Theme.motion ? Theme.medium : 0ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
+        border-radius: Theme.radius-panel;
+        background: Theme.blend(Palette.surface3, Palette.background);
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        drop-shadow-color: #00000080;
+        drop-shadow-blur: 24px;
+        drop-shadow-offset-y: 8px;
+        accessible-role: groupbox;
+        accessible-label: @tr("accountsTitle");
+        accessible-id: "panel";
+        TouchArea { }
+        col := VerticalLayout {
+            padding: 12px;
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 4px;
+                padding-bottom: 12px;
+                Txt { text: @tr("accountsTitle"); style: Type.title-medium; accessible-id: "txt-panel-title"; }
+            }
+            if AccountsState.loading && AccountsState.items.length == 0: HorizontalLayout {
+                padding: 20px;
+                alignment: center;
+                Spinner { }
+            }
+            if !AccountsState.loading && AccountsState.items.length == 0: HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+                Para { text: @tr("accountsEmpty"); }
+            }
+            for a in AccountsState.items: AccountTile { account: a; }
+            Rectangle { height: 8px; }
+            Rectangle { height: 1px; background: Palette.border; }
+            Rectangle { height: 8px; }
+            ActionTile {
+                glyph: Icons.add-circle;
+                text: @tr("accountsAddMicrosoft");
+                clicked => {
+                    AccountsState.panel-open = false;
+                    AccountsState.add-microsoft();
+                }
+            }
+            ActionTile {
+                glyph: Icons.person-add;
+                text: @tr("accountsAddOffline");
+                clicked => {
+                    AccountsState.panel-open = false;
+                    AccountsState.add-offline();
+                }
+            }
+        }
+    }
+}
+
+// Iniciar sesión con Microsoft (MicrosoftLoginDialog).
+export component MicrosoftLoginDialog inherits FormDialog {
+    title: @tr("msTitle");
+    icon: Icons.account-circle;
+    panel-width: 460px;
+    dismissible: false;
+    accessible-id: "ms-login";
+    if AccountsState.login-phase == LoginPhase.failed: ErrorNote {
+        message: AccountsState.login-error;
+        detail: AccountsState.login-error-detail;
+        details-label: @tr("details");
+    }
+    if AccountsState.login-phase == LoginPhase.expired: HorizontalLayout {
+        spacing: 8px;
+        Icon { glyph: Icons.timer-off; size: 20px; color: Palette.warning; y: (parent.height - self.height) / 2; }
+        Para { text: @tr("msExpired"); color: Palette.text; horizontal-stretch: 1; }
+    }
+    if AccountsState.login-phase == LoginPhase.requesting: HorizontalLayout {
+        padding-top: 24px;
+        padding-bottom: 24px;
+        spacing: 12px;
+        alignment: center;
+        Spinner { size: 18px; stroke: 2px; y: (parent.height - self.height) / 2; }
+        Txt { text: @tr("msRequesting"); y: (parent.height - self.height) / 2; }
+    }
+    if AccountsState.login-phase == LoginPhase.code: VerticalLayout {
+        Txt { text: @tr("msStep"); }
+        Rectangle { height: 16px; }
+        Rectangle {
+            height: 114px;
+            border-radius: Theme.radius-card;
+            background: Palette.background-deep.with-alpha(0.6);
+            border-width: 1px;
+            border-color: Palette.accent.with-alpha(0.35);
+            accessible-role: groupbox;
+            accessible-id: "code";
+            // Texto seleccionable como SelectableText; también sirve para
+            // copiar al portapapeles.
+            // Relleno 20 + el borde.
+            // Flutter cuenta el espaciado tras la última letra al centrar.
+            code := TextInput {
+                x: -2px;
+                y: 21px;
+                // 114 − 2 × 21 − 4 − 17,4 (la URL).
+                height: 50.6px;
+                width: parent.width;
+                text: AccountsState.user-code;
+                read-only: true;
+                font-family: "JetBrains Mono";
+                font-size: 34px;
+                font-weight: 500;
+                letter-spacing: 6px;
+                color: Palette.text;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                selection-background-color: Palette.accent.with-alpha(0.35);
+                accessible-label: AccountsState.user-code;
+            }
+            Txt {
+                y: 21px + 50.6px + 4px;
+                width: parent.width;
+                text: AccountsState.verification-label;
+                style: Type.body-small;
+                color: Palette.text-secondary;
+                horizontal-alignment: center;
+            }
+        }
+        Rectangle { height: 16px; }
+        HorizontalLayout {
+            spacing: 8px;
+            OutlinedButton {
+                width: (parent.width - 8px) / 2;
+                text: @tr("msCopyCode");
+                icon: Icons.content-copy;
+                accessible-id: "outlined";
+                clicked => {
+                    code.select-all();
+                    code.copy();
+                    code.clear-selection();
+                    AccountsState.copied();
+                }
+            }
+            FilledButton {
+                width: (parent.width - 8px) / 2;
+                text: @tr("msOpenBrowser");
+                icon: Icons.open-in-new;
+                icon-size: 18px;
+                accessible-id: "filled";
+                clicked => { AccountsState.open-browser(); }
+            }
+        }
+        Rectangle { height: 20px; }
+        HorizontalLayout {
+            spacing: 8px;
+            Spinner { size: 14px; stroke: 1.8px; y: (parent.height - self.height) / 2; }
+            Txt { text: @tr("msWaiting"); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 1; }
+            Txt { text: @tr("msExpiresIn", AccountsState.expires-label); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 0; }
+        }
+        Rectangle { height: 8px; }
+        Rectangle {
+            height: 3px;
+            border-radius: 2px;
+            clip: true;
+            background: Palette.accent.with-alpha(0.24);
+            accessible-role: progress-indicator;
+            accessible-value: round(AccountsState.login-left * 100) + "%";
+            accessible-id: "progress";
+            Rectangle {
+                x: 0;
+                width: parent.width * AccountsState.login-left;
+                background: Palette.accent;
+            }
+        }
+    }
+    DialogActions {
+        TextButton {
+            text: @tr("cancel");
+            accessible-id: "cancel";
+            clicked => { AccountsState.login-cancel(); }
+        }
+        if AccountsState.login-phase == LoginPhase.failed || AccountsState.login-phase == LoginPhase.expired: FilledButton {
+            text: AccountsState.login-phase == LoginPhase.expired ? @tr("msRequestNew") : @tr("retry");
+            clicked => { AccountsState.login-retry(); }
+        }
+    }
+}
+
+// Cuenta offline (OfflineAccountDialog).
+export component OfflineAccountDialog inherits FormDialog {
+    title: @tr("offlineTitle");
+    icon: Icons.person;
+    accessible-id: "offline";
+    property <bool> touched;
+    property <bool> valid: AccountsState.offline-valid(name.text);
+    dismissed => { AccountsState.offline-open = false; }
+    init => { name.focus(); }
+    Para { text: @tr("offlineBody"); color: Palette.text; }
+    Rectangle { height: 16px; }
+    name := LabeledField {
+        label: @tr("offlineNameLabel");
+        helper: @tr("offlineNameHint");
+        error: root.touched && !root.valid ? @tr("offlineNameInvalid") : "";
+        prefix-icon: Icons.badge;
+        accessible-id: "field";
+        accepted => { root.submit(); }
+    }
+    if AccountsState.offline-error != "": VerticalLayout {
+        Rectangle { height: 12px; }
+        ErrorNote {
+            message: AccountsState.offline-error;
+            detail: AccountsState.offline-error-detail;
+            details-label: @tr("details");
+        }
+    }
+    DialogActions {
+        TextButton {
+            text: @tr("cancel");
+            accessible-id: "cancel";
+            clicked => { AccountsState.offline-open = false; }
+        }
+        FilledButton {
+            text: @tr("add");
+            enabled: !AccountsState.offline-busy;
+            accessible-id: "filled";
+            clicked => { root.submit(); }
+        }
+    }
+    function submit() {
+        root.touched = true;
+        if root.valid && !AccountsState.offline-busy {
+            AccountsState.offline-submit(name.text);
+        }
+    }
+}
+
+// Todo lo de cuentas que va encima de la pantalla (MainWindow lo incluye).
+export component AccountsLayer inherits Rectangle {
+    if AccountsState.panel-open: AccountPanel { }
+    if AccountsState.login-open: MicrosoftLoginDialog { }
+    if AccountsState.offline-open: OfflineAccountDialog { }
+    if AccountsState.remove-id != "": ConfirmDialog {
+        title: @tr("accountRemoveTitle", AccountsState.remove-name);
+        body: @tr("accountRemoveBody", "Shard");
+        action: @tr("remove");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-remove";
+        dismissed => { AccountsState.remove-id = ""; }
+        accepted => {
+            AccountsState.remove(AccountsState.remove-id);
+            AccountsState.remove-id = "";
+        }
+    }
+}

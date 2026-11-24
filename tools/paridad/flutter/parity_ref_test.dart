@@ -14,9 +14,14 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shard/app.dart';
+import 'package:shard/core/bridge.dart';
 import 'package:shard/core/launch.dart';
+import 'package:shard/ui/accounts/account_dialogs.dart';
+import 'package:shard/ui/accounts/account_panel.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/shell/title_bar.dart';
+import 'package:shard/ui/skins/skin_viewer.dart';
+import 'package:shard/ui/skins/skins_page.dart';
 import 'package:shard/ui/widgets/art.dart';
 import 'package:shard/ui/widgets/common.dart';
 import 'package:shard/ui/widgets/play_button.dart';
@@ -66,6 +71,63 @@ Map<String, Rect> _instancesBoxes(WidgetTester tester, {required String title, r
       final play = find.descendant(of: item, matching: find.byType(PlayButton));
       if (play.evaluate().isNotEmpty) boxes['$kind-$i-play'] = tester.getRect(play);
     }
+  }
+  return boxes;
+}
+
+/// Pone en `boxes` la caja del primer elemento de `f` (si existe y no está vacía).
+void _put(WidgetTester tester, Map<String, Rect> boxes, String name, Finder f) {
+  if (f.evaluate().isEmpty) return;
+  final r = tester.getRect(f.first);
+  if (!r.isEmpty) boxes[name] = r;
+}
+
+/// Cajas de un diálogo `AppDialog` (common.dart) de tipo `T`: panel, título y
+/// botones por tipo.
+Map<String, Rect> _dialogBoxes<T>(WidgetTester tester, {required String title}) {
+  final boxes = <String, Rect>{};
+  final dialog = find.byType(T);
+  Finder inDialog(Finder f) => find.descendant(of: dialog, matching: f);
+  _put(tester, boxes, 'rail', _named('_NavRail'));
+  _put(tester, boxes, 'dialog', inDialog(find.byType(Material)));
+  _put(tester, boxes, 'txt-dialog-title', inDialog(find.text(title)));
+  _put(tester, boxes, 'field', inDialog(find.byType(TextField)));
+  _put(tester, boxes, 'code', inDialog(find.byWidgetPredicate(
+      (w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).border != null)));
+  _put(tester, boxes, 'outlined', inDialog(find.byType(OutlinedButton)));
+  _put(tester, boxes, 'filled', inDialog(find.byType(FilledButton)));
+  _put(tester, boxes, 'cancel', inDialog(find.byType(TextButton)));
+  _put(tester, boxes, 'progress', inDialog(find.byType(LinearProgressIndicator)));
+  return boxes;
+}
+
+/// Cajas de la pantalla Skins.
+Map<String, Rect> _skinsBoxes(WidgetTester tester, {required String title, required String account, String? reset}) {
+  final boxes = <String, Rect>{};
+  Finder inPage(Finder f) => find.descendant(of: find.byType(SkinsPage), matching: f);
+  void put(String name, Finder f) => _put(tester, boxes, name, f);
+  put('rail', _named('_NavRail'));
+  put('txt-title', inPage(find.text(title)));
+  put('chip', find.ancestor(of: inPage(find.text(account)), matching: find.byType(InkWell)));
+  put('empty', inPage(find.byType(EmptyState)));
+  put('empty-action', find.descendant(of: inPage(find.byType(EmptyState)), matching: find.byType(FilledButton)));
+  put('viewer', inPage(_named('_ViewerPanel')));
+  final stages = inPage(find.byType(SkinStage));
+  for (var i = 0; i < stages.evaluate().length; i++) {
+    put('stage-$i', stages.at(i));
+  }
+  put('change', inPage(_named('_ChangeSkinCard')));
+  put('source', inPage(_named('SegmentedButton<_Source>')));
+  final models = inPage(_named('_ModelOption'));
+  for (var i = 0; i < models.evaluate().length; i++) {
+    put('model-$i', models.at(i));
+  }
+  if (reset != null) put('reset', find.ancestor(of: inPage(find.text(reset)), matching: find.byType(TextButton)));
+  put('apply', find.descendant(of: inPage(_named('_ChangeSkinCard')), matching: find.byType(FilledButton)));
+  put('capes', inPage(_named('_CapesCard')));
+  final capes = inPage(_named('_CapeTile'));
+  for (var i = 0; i < capes.evaluate().length; i++) {
+    put('cape-$i', capes.at(i));
   }
   return boxes;
 }
@@ -142,5 +204,63 @@ void main() {
     await settle(tester);
     await _capture(tester, 'instances_noresults_es',
         _instancesBoxes(tester, title: 'Instancias', count: '5 instancias'));
+  });
+
+  // Fase 2: cuentas y skins. Los goldens de cuentas abren el panel y los
+  // diálogos sobre Inicio; aquí van sobre Instancias para no depender de la
+  // pantalla de Inicio (fase 1). Mismo panel y diálogos.
+  testWidgets('accounts_panel_es', (tester) async {
+    await pumpApp(tester, location: '/instances');
+    showAccountPanel(pageContext(tester));
+    await settle(tester);
+    final boxes = <String, Rect>{};
+    void put(String name, Finder f) => _put(tester, boxes, name, f);
+    put('rail', _named('_NavRail'));
+    put('panel', find.byType(AccountPanel));
+    put('txt-panel-title', find.descendant(of: find.byType(AccountPanel), matching: find.text('Cuentas')));
+    final tiles = _named('_AccountTile');
+    for (var i = 0; i < tiles.evaluate().length; i++) {
+      put('account-$i', tiles.at(i));
+    }
+    final actions = _named('_ActionTile');
+    for (var i = 0; i < actions.evaluate().length; i++) {
+      put('action-$i', actions.at(i));
+    }
+    await _capture(tester, 'accounts_panel_es', boxes);
+  });
+
+  testWidgets('ms_login_es', (tester) async {
+    await pumpApp(tester, location: '/instances');
+    showMicrosoftLogin(pageContext(tester));
+    await settle(tester);
+    await _capture(tester, 'ms_login_es',
+        _dialogBoxes<MicrosoftLoginDialog>(tester, title: 'Iniciar sesión con Microsoft'));
+  });
+
+  testWidgets('offline_account_en', (tester) async {
+    await pumpApp(tester, location: '/instances', bridge: FakeBridge(language: 'en'));
+    showOfflineAccount(pageContext(tester));
+    await settle(tester);
+    await _capture(tester, 'offline_account_en',
+        _dialogBoxes<OfflineAccountDialog>(tester, title: 'Offline account'));
+  });
+
+  testWidgets('skins_es', (tester) async {
+    await pumpApp(tester, location: '/skins');
+    await _capture(tester, 'skins_es', _skinsBoxes(tester, title: 'Skins', account: 'NadiaK', reset: 'Restablecer'));
+  });
+
+  testWidgets('skins_offline_en', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/skins',
+      bridge: FakeBridge(
+        language: 'en',
+        accounts: const [
+          AccountView(id: 'o1', name: 'Pruebas_01', microsoft: false, active: true),
+        ],
+      ),
+    );
+    await _capture(tester, 'skins_offline_en', _skinsBoxes(tester, title: 'Skins', account: 'Pruebas_01'));
   });
 }

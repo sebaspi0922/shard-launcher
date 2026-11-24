@@ -10,18 +10,26 @@ export component FilledButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
     in property <bool> enabled: true;
+    // Acción destructiva (confirm con `danger`): rojo con texto oscuro.
+    in property <bool> danger;
+    // Ruedita en lugar del icono (acción en curso).
+    in property <bool> busy;
     callback clicked;
     height: 48px;
-    width: max(64px, lay.preferred-width);
+    // Sin ancho mínimo (minimumSize: Size(0, 40) en app_theme.dart).
+    preferred-width: lay.preferred-width;
+    min-width: lay.min-width;
     accessible-role: button;
     accessible-label: text;
     accessible-enabled: enabled;
     accessible-action-default => { clicked(); }
+    in property <length> icon-size: 20px;
+    property <color> fg: !enabled ? Palette.text-muted : danger ? #2B0A0A : Palette.on-accent;
     Rectangle {
         y: 2px;
         height: 44px;
         border-radius: Theme.radius-control;
-        background: !root.enabled ? Palette.surface2 : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
+        background: !root.enabled ? Palette.surface2 : root.danger ? Palette.danger : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
         animate background { duration: Theme.fast; }
     }
     lay := HorizontalLayout {
@@ -29,16 +37,17 @@ export component FilledButton inherits Rectangle {
         padding-right: 16px;
         spacing: 8px;
         alignment: center;
-        if icon != "": Icon {
+        if icon != "" && !busy: Icon {
             glyph: icon;
-            size: 20px;
+            size: root.icon-size;
             y: (parent.height - self.height) / 2;
-            color: enabled ? Palette.on-accent : Palette.text-muted;
+            color: root.fg;
         }
+        if busy: Spinner { size: 16px; stroke: 2px; tint: root.fg; y: (parent.height - self.height) / 2; }
         Txt {
             text: root.text;
             style: Type.label-large;
-            color: enabled ? Palette.on-accent : Palette.text-muted;
+            color: root.fg;
             y: (parent.height - self.height) / 2;
         }
     }
@@ -50,20 +59,27 @@ export component FilledButton inherits Rectangle {
 }
 
 // OutlinedButton: superficie 1 y borde fuerte.
+// Como FilledButton: 44 visibles en un área de toque de 48.
 export component OutlinedButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
     callback clicked;
-    height: 40px;
-    border-radius: Theme.radius-control;
-    border-width: 1px;
-    border-color: Palette.border-strong;
-    background: ta.has-hover ? Palette.surface2 : Palette.surface1;
-    animate background { duration: Theme.fast; }
+    height: 48px;
+    preferred-width: lay.preferred-width;
+    min-width: lay.min-width;
     accessible-role: button;
     accessible-label: text;
     accessible-action-default => { clicked(); }
-    HorizontalLayout {
+    Rectangle {
+        y: 2px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        background: ta.has-hover ? Palette.surface2 : Palette.surface1;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
         padding-left: 16px;
         padding-right: 16px;
         spacing: 8px;
@@ -75,21 +91,43 @@ export component OutlinedButton inherits Rectangle {
 }
 
 // TextButton: solo texto secundario.
+// TextButton(.icon): solo texto secundario; 48 de área de toque.
 export component TextButton inherits Rectangle {
     in property <string> text;
+    in property <string> icon;
+    in property <bool> enabled: true;
     callback clicked;
-    height: 36px;
-    border-radius: Theme.radius-control;
-    background: ta.has-hover ? Palette.surface1 : transparent;
+    height: 48px;
+    preferred-width: lay.preferred-width;
+    min-width: lay.min-width;
     accessible-role: button;
     accessible-label: text;
+    accessible-enabled: enabled;
     accessible-action-default => { clicked(); }
-    HorizontalLayout {
+    Rectangle {
+        y: 4px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover && root.enabled ? Palette.surface1 : transparent;
+    }
+    lay := HorizontalLayout {
         padding-left: 12px;
         padding-right: 12px;
-        Txt { text: root.text; style: Type.label-large; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
+        spacing: 8px;
+        if root.icon != "": Icon {
+            glyph: root.icon;
+            size: 18px;
+            y: (parent.height - self.height) / 2;
+            color: root.enabled ? Palette.text-secondary : Palette.text-muted;
+        }
+        Txt {
+            text: root.text;
+            style: Type.label-large;
+            color: root.enabled ? Palette.text-secondary : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
     }
-    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
 // IconButton.outlined: 40 × 40 visible dentro de un área de toque de 48.
