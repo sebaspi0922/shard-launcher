@@ -94,6 +94,9 @@ export component LabeledField inherits VerticalLayout {
     // No vacío = en rojo en lugar de la ayuda.
     in property <string> error;
     in property <string> prefix-icon;
+    // Texto oculto (contraseña).
+    in property <bool> password;
+    in property <bool> enabled: true;
     // Color de lo que hay detrás (hueco de la etiqueta sobre el borde).
     in property <color> backdrop: Theme.blend(Palette.surface2, Palette.background);
     out property <bool> has-focus: input.has-focus;
@@ -112,7 +115,8 @@ export component LabeledField inherits VerticalLayout {
     property <color> edge: root.error != "" ? Palette.danger : input.has-focus ? Palette.accent : Palette.border;
     property <length> lead: root.prefix-icon != "" ? 48px : 14px;
     box := Rectangle {
-        height: 48px;
+        // Denso: 47; el icono delante pide 48 (BoxConstraints del prefijo).
+        height: root.prefix-icon != "" ? 48px : 47px;
         border-radius: Theme.radius-control;
         background: Palette.surface1;
         border-width: input.has-focus ? 1.5px : 1px;
@@ -132,10 +136,11 @@ export component LabeledField inherits VerticalLayout {
         }
         lab := Txt {
             x: root.floating ? 18px : root.lead + 4px;
-            y: root.floating ? 0.75px - self.height / 2 : (parent.height - self.height) / 2;
+            // Arriba, la etiqueta flotante se encoge al 75 % (Material).
+            y: root.floating ? 0.75px - self.height / 2 : (parent.height - self.height) / 2 - 2.5px;
             width: self.preferred-width;
             text: root.label;
-            style: root.floating ? Type.body-small : Type.body-medium;
+            style: root.floating ? { size: Type.body-small.size * 0.75, weight: Type.body-small.weight, line-height: Type.body-small.line-height, letter-spacing: 0 } : Type.body-medium;
             color: root.error != "" ? Palette.danger : root.floating ? Palette.accent : Palette.text-secondary;
             accessible-role: none;
         }
@@ -161,6 +166,8 @@ export component LabeledField inherits VerticalLayout {
             selection-foreground-color: Palette.text;
             vertical-alignment: center;
             single-line: true;
+            input-type: root.password ? InputType.password : InputType.text;
+            enabled: root.enabled;
             accessible-role: none;
             edited => { root.edited(self.text); }
             accepted => { root.accepted(self.text); }

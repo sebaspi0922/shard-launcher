@@ -88,7 +88,7 @@ use crate::skin::{SAMPLE_CAPE_1, SAMPLE_CAPE_2, SkinTexture, sample_cape, sample
 use crate::skins::{Apply, CapeRef, Profile, SkinActions, SkinRef};
 
 fn account(id: &str, name: &str, microsoft: bool, active: bool) -> Account {
-    Account { id: id.into(), name: name.into(), microsoft, skin_url: None, active }
+    Account { id: id.into(), name: name.into(), microsoft, shard: false, skin_url: None, active }
 }
 
 /// `sampleAccounts()`: NadiaK (Microsoft, activa) y Pruebas_01 (offline).
@@ -161,6 +161,10 @@ impl AccountActions for Recorder {
     }
     fn add_offline(&self, name: &str) {
         self.push(format!("offline {name}"));
+    }
+    fn add_shard(&self, username: &str, password: &str) {
+        // Solo el largo: una contraseña no se apunta.
+        self.push(format!("shard {username} ({} caracteres)", password.chars().count()));
     }
     fn begin_login(&self, attempt: u64) {
         self.push(format!("login {attempt}"));

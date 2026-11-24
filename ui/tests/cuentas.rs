@@ -163,6 +163,56 @@ fn alta_offline_valida_el_nombre() {
     assert_eq!(a.rec.take(), ["load"]);
 }
 
+fn alta_shard_con_usuario_y_contrasena() {
+    let a = app("es");
+    let st = a.ui.global::<AccountsState>();
+    click(&by_label(&a.ui, "NadiaK")[0]);
+    click(&by_label(&a.ui, "Cuenta Shard")[0]);
+    assert!(st.get_offline_open() && st.get_credentials_shard());
+    // Sin contraseña no se puede enviar.
+    type_text(&a.ui, "prueba_ui");
+    assert_eq!(by_id(&a.ui, "filled")[0].accessible_enabled(), Some(false));
+    // Intro en el usuario pasa a la contraseña.
+    type_text(&a.ui, "\n");
+    assert!(a.rec.take().is_empty());
+    type_text(&a.ui, "s3creta!");
+    assert_eq!(by_id(&a.ui, "filled")[0].accessible_enabled(), Some(true));
+    type_text(&a.ui, "\n");
+    assert_eq!(a.rec.take(), ["shard prueba_ui (8 caracteres)"]);
+    // Mientras inicia sesión no se puede cancelar ni reenviar.
+    assert!(st.get_offline_busy());
+    assert_eq!(by_id(&a.ui, "cancel")[0].accessible_enabled(), Some(false));
+
+    // Credenciales malas: el texto de errors.dart y el diálogo sigue abierto.
+    let bad = lcore::Error::from(lcore::auth::AuthError::InvalidCredentials);
+    a.acc.offline_added(Err(Failure::new("es", &bad)));
+    settle();
+    assert!(st.get_offline_open() && !st.get_offline_busy());
+    assert!(!by_label(&a.ui, "Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).").is_empty());
+
+    click(&by_id(&a.ui, "filled")[0]);
+    assert_eq!(a.rec.take(), ["shard prueba_ui (8 caracteres)"]);
+    a.acc.offline_added(Ok("prueba_ui".into()));
+    settle();
+    assert!(!st.get_offline_open());
+    assert_eq!(toast(&a.ui), "Cuenta «prueba_ui» añadida");
+    assert_eq!(a.rec.take(), ["load"], "refresca la lista al terminar");
+
+    // En la lista sale como «Cuenta Shard» y Skins explica dónde cambiarla.
+    let mut list = fixtures::sample_accounts();
+    list[0].active = false;
+    list.push(shard_ui::accounts::Account { id: "shard1".into(), name: "prueba_ui".into(), microsoft: false, shard: true, skin_url: None, active: true });
+    a.acc.set_accounts(Ok(list));
+    a.ui.set_route(Route::Skins);
+    settle();
+    assert!(a.rec.take().is_empty(), "sin perfil de Microsoft que pedir");
+    assert!(a.ui.global::<SkinsState>().get_shard());
+    assert!(!by_label(&a.ui, "Gestiona las skins y capas desde el sitio donde registraste tu cuenta Shard.").is_empty());
+    click(&by_id(&a.ui, "chip")[0]);
+    let items = st.get_items();
+    assert!(items.row_data(2).unwrap().shard);
+}
+
 fn login_de_microsoft_con_codigo_y_caducidad() {
     let a = app("es");
     let st = a.ui.global::<AccountsState>();
@@ -368,6 +418,7 @@ fn cuentas_y_skins() {
     .unwrap();
     panel_cambia_de_cuenta_y_quita_con_confirmacion();
     alta_offline_valida_el_nombre();
+    alta_shard_con_usuario_y_contrasena();
     login_de_microsoft_con_codigo_y_caducidad();
     skins_cambiar_modelo_capa_y_restablecer();
     skins_sin_cuenta_y_offline();

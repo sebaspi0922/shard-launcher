@@ -387,8 +387,9 @@ marcha, carga/error/vacío, raíl, diálogo de cierre, sin bandeja).
 
 ## 8. Resultados de la fase 2
 
-Cuentas (panel, login de Microsoft con código, alta offline, quitar con
-confirmación, cuenta activa en el raíl con la cara de su skin) y Skins (visor
+Cuentas (panel, login de Microsoft con código, alta offline, alta Shard con
+usuario y contraseña contra `add_shard_account`, quitar con confirmación,
+cuenta activa en el raíl con la cara de su skin) y Skins (visor
 3D girable con frente y espalda, cambiar skin por PNG o URL, clásica o
 delgada, restablecer, capas), con el núcleo real (`accounts_backend.rs`).
 
@@ -398,9 +399,10 @@ sobre Inicio como los goldens, para no depender de la fase 1.
 
 | escena | SSIM | cajas ±2 px |
 |---|---|---|
-| accounts_panel_es | 0,9773 | 7/7 |
+| accounts_panel_es | 0,9764 | 8/8 |
 | ms_login_es | 0,9706 | 8/8 |
-| offline_account_en | 0,9741 | 6/6 |
+| offline_account_en | 0,9745 | 6/6 |
+| shard_account_es (nueva, sin golden) | 0,9734 | 7/7 |
 | skins_es | 0,9746 | 17/17 |
 | skins_offline_en | 0,9768 | 5/5 |
 
@@ -415,8 +417,13 @@ mismo número de cuadriláteros y ≤ 0,033 % de píxeles distintos en 4 casos.
 cuenta, alta offline con validación e Intro, login con cuenta atrás,
 caducidad, reintento y cancelación, skins: modelo, URL, PNG válido e
 inválido, capas, restablecer, arrastrar y doble clic en el visor, estados
-sin cuenta y offline) y `tests/nucleo_cuentas.rs` (lo mismo contra `lcore`
-real en una carpeta temporal: `accounts.json` cambia como debe).
+sin cuenta y offline; alta Shard: Intro pasa a la contraseña, no se cancela
+mientras inicia sesión, `auth_invalid_credentials`, refresco al terminar,
+Skins con cuenta Shard) y `tests/nucleo_cuentas.rs` (lo mismo contra `lcore`
+real en una carpeta temporal: `accounts.json` cambia como debe; Shard sin red
+da error y no guarda nada). `login_shard_real` (ignorado) hace el login real
+contra `auth.sebaspi.com` con `prueba_ui`; la contraseña va por
+`SHARD_PRUEBA_PASSWORD_FILE`, nunca en el repo.
 
 **Piezas compartidas nuevas** (para las fases siguientes):
 - `components/panels.slint`: `Panel`, `SectionTitle`, `Tag`, `ColorBadge`.
@@ -433,6 +440,5 @@ real en una carpeta temporal: `accounts.json` cambia como debe).
 - Lección de paridad: en Flutter el borde de un `Container` también empuja al
   hijo (relleno + 1); el visor mide 444 × 549, no 446 × 551.
 
-**Pendiente:** cuenta Shard (Yggdrasil): el núcleo aún no la tiene en `main`
-(PR #4 abierto) y Flutter tampoco tiene UI para ella; login de Microsoft real
-completo, a mano (necesita a Sebas); sensación del arrastre del visor a mano.
+**Pendiente:** login de Microsoft real completo, a mano (necesita a Sebas);
+sensación del arrastre del visor a mano.

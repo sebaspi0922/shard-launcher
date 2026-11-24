@@ -92,6 +92,8 @@ Map<String, Rect> _dialogBoxes<T>(WidgetTester tester, {required String title}) 
   _put(tester, boxes, 'dialog', inDialog(find.byType(Material)));
   _put(tester, boxes, 'txt-dialog-title', inDialog(find.text(title)));
   _put(tester, boxes, 'field', inDialog(find.byType(TextField)));
+  final fields = inDialog(find.byType(TextField));
+  if (fields.evaluate().length > 1) _put(tester, boxes, 'field-2', fields.at(1));
   _put(tester, boxes, 'code', inDialog(find.byWidgetPredicate(
       (w) => w is Container && w.decoration is BoxDecoration && (w.decoration! as BoxDecoration).border != null)));
   _put(tester, boxes, 'outlined', inDialog(find.byType(OutlinedButton)));
@@ -243,6 +245,14 @@ void main() {
     await settle(tester);
     await _capture(tester, 'offline_account_en',
         _dialogBoxes<OfflineAccountDialog>(tester, title: 'Offline account'));
+  });
+
+  testWidgets('shard_account_es', (tester) async {
+    await pumpApp(tester, location: '/instances');
+    showShardAccount(pageContext(tester));
+    await settle(tester);
+    await _capture(tester, 'shard_account_es',
+        _dialogBoxes<AccountCredentialsDialog>(tester, title: 'Cuenta Shard'));
   });
 
   testWidgets('skins_es', (tester) async {

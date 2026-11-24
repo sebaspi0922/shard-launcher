@@ -119,6 +119,14 @@ const SCENES: &[Scene] = &[
         },
     },
     Scene {
+        name: "shard_account_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ui.global::<AccountsState>().invoke_add_shard();
+        },
+    },
+    Scene {
         name: "skins_es",
         lang: "es",
         setup: |c| {
@@ -172,7 +180,7 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
     for name in [
         "rail", "titlebar", "pill", "txt-title", "txt-count", "search", "view-toggle", "trash", "new", "empty",
         // Fase 2.
-        "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "code", "outlined", "filled", "cancel",
+        "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "field-2", "code", "outlined", "filled", "cancel",
         "progress", "chip", "empty-action", "viewer", "change", "source", "reset", "apply", "capes",
     ] {
         if let Some(e) = by_id(ui, name).first() {
