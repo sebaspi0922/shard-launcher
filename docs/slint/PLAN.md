@@ -348,4 +348,36 @@ decisión.
 
 ## 7. Resultados de la fase 0
 
-Ver la sección de evidencias del PR (se completa con la medición final).
+**Paridad** (`tools/paridad.sh all`, informe en `docs/slint/paridad-f0/`):
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| instances_grid_es (= golden, byte a byte) | 0,9781 | 24/24 |
+| instances_list_en (= golden) | 0,9798 | 23/23 |
+| instances_empty_es | 0,9786 | 9/9 |
+| instances_search_es | 0,9885 | 11/11 |
+| instances_noresults_es | 0,9908 | 8/8 |
+
+Lo que queda de diferencia es casi todo el borde de los glifos (Skia frente
+al rasterizador de Slint) y el truncado de 13,5 px a 13 px (riesgos).
+
+**Rendimiento** (`tools/medir.sh --runs 3`, mediana; datos en
+`docs/slint/medicion-f0/`). Equipo de Bash: i5-12450H, sin GPU accesible:
+weston headless + Xwayland, **las dos apps pintan por software**. Con GPU
+real Flutter baja mucho (en el PC de Sebas: 188 MB); la tabla vale como
+comparación relativa en el mismo equipo. Hay que repetirla en el PC de Sebas
+y en Windows.
+
+| métrica (fondo animado) | Flutter | Slint | Slint/Flutter |
+|---|---|---|---|
+| arranque hasta ventana visible | 288 ms | 92 ms | 32 % |
+| PSS a 10 s | 283,6 MB | 32,4 MB | 11 % |
+| PSS tras 30 s de uso | 291,0 MB | 33,6 MB | 12 % |
+| CPU en reposo | 654,8 % | 31,7 % | 5 % |
+| CPU en reposo, fondo quieto | 0,5 % | 0,1 % | — |
+| bandeja (menú + «Salir», 6/6) | sí | sí | |
+| binario / bundle (tar.zst -19) | 17,3 MB | 12,0 MB | 69 % |
+
+**Pruebas:** 16 de unidad, 1 de escenas de paridad, 1 de interacción con 8
+casos (búsqueda con acentos, lista/rejilla, Jugar y abrir, partida en
+marcha, carga/error/vacío, raíl, diálogo de cierre, sin bandeja).
