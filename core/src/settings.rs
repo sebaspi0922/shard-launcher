@@ -5,6 +5,9 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+/// Dominio de la comunidad pendiente de confirmar.
+pub const DEFAULT_YGGDRASIL_BASE_URL: &str = "https://auth.sebaspi.com/authlib-injector";
+
 pub const SETTINGS_SCHEMA: u32 = 1;
 
 /// Variable de entorno que fija el client ID de Azure sin tocar los ajustes.
@@ -30,6 +33,8 @@ pub struct Settings {
     pub language: Option<String>,
     /// Client ID de Azure; tiene prioridad sobre el valor compilado.
     pub msa_client_id: Option<String>,
+    /// Base de Yggdrasil para las nuevas cuentas Shard.
+    pub yggdrasil_base_url: Option<String>,
     pub close_behavior: CloseBehavior,
     pub allow_multiple_games: bool,
     pub default_memory_mb: u32,
@@ -48,6 +53,7 @@ impl Default for Settings {
             schema: SETTINGS_SCHEMA,
             language: None,
             msa_client_id: None,
+            yggdrasil_base_url: None,
             close_behavior: CloseBehavior::default(),
             allow_multiple_games: false,
             default_memory_mb: 4096,

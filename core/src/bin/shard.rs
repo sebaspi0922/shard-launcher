@@ -611,6 +611,10 @@ enum AccountCmd {
     AddOffline {
         name: String,
     },
+    /// Añade una cuenta Shard (Yggdrasil de la comunidad); la contraseña va en SHARD_TEST_PASSWORD.
+    AddShard {
+        username: String,
+    },
     /// Cambia la cuenta activa.
     Use {
         account: String,
@@ -1721,6 +1725,15 @@ async fn account(core: &Core, out: &Out, cmd: AccountCmd) -> Result<()> {
                 println!("Cuenta offline {} añadida ({}).", a.name, a.id)
             });
         }
+        AccountCmd::AddShard { username } => {
+            let password = std::env::var("SHARD_TEST_PASSWORD").map_err(|_| {
+                Error::InvalidInput("define SHARD_TEST_PASSWORD en el entorno".into())
+            })?;
+            let a = core.add_shard_account(&username, &password).await?;
+            out.value(&a, || {
+                println!("Cuenta Shard {} añadida ({}).", a.name, a.id)
+            });
+        }
         AccountCmd::Use { account } => {
             let a = core.find_account(&account).await?;
             core.set_active_account(&a.id).await?;
@@ -2062,6 +2075,7 @@ fn kind(a: &Account) -> &'static str {
     match a.kind {
         AccountKind::Msa => "microsoft",
         AccountKind::Offline => "offline",
+        AccountKind::Shard => "shard",
     }
 }
 

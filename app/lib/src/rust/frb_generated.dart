@@ -83,7 +83,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1804354046;
+  int get rustContentHash => 1894013879;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -96,6 +96,11 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<AccountView> crateApiAccountsAddOfflineAccount({required String name});
+
+  Future<AccountView> crateApiAccountsAddShardAccount({
+    required String username,
+    required String password,
+  });
 
   Future<ServerView> crateApiServersAddServer({
     required String name,
@@ -477,6 +482,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiAccountsAddOfflineAccountConstMeta =>
       const TaskConstMeta(debugName: "add_offline_account", argNames: ["name"]);
+
+  @override
+  Future<AccountView> crateApiAccountsAddShardAccount({
+    required String username,
+    required String password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(username, serializer);
+          sse_encode_String(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 90,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_account_view,
+          decodeErrorData: sse_decode_bridge_error,
+        ),
+        constMeta: kCrateApiAccountsAddShardAccountConstMeta,
+        argValues: [username, '***'],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAccountsAddShardAccountConstMeta =>
+      const TaskConstMeta(
+        debugName: 'add_shard_account',
+        argNames: ['username', 'password'],
+      );
 
   @override
   Future<ServerView> crateApiServersAddServer({
@@ -3292,14 +3332,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AccountView dco_decode_account_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return AccountView(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
       microsoft: dco_decode_bool(arr[2]),
-      skinUrl: dco_decode_opt_String(arr[3]),
-      active: dco_decode_bool(arr[4]),
+      shard: dco_decode_bool(arr[3]),
+      skinUrl: dco_decode_opt_String(arr[4]),
+      active: dco_decode_bool(arr[5]),
     );
   }
 
@@ -4315,12 +4356,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_id = sse_decode_String(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_microsoft = sse_decode_bool(deserializer);
+    var var_shard = sse_decode_bool(deserializer);
     var var_skinUrl = sse_decode_opt_String(deserializer);
     var var_active = sse_decode_bool(deserializer);
     return AccountView(
       id: var_id,
       name: var_name,
       microsoft: var_microsoft,
+      shard: var_shard,
       skinUrl: var_skinUrl,
       active: var_active,
     );
@@ -5698,6 +5741,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_bool(self.microsoft, serializer);
+    sse_encode_bool(self.shard, serializer);
     sse_encode_opt_String(self.skinUrl, serializer);
     sse_encode_bool(self.active, serializer);
   }

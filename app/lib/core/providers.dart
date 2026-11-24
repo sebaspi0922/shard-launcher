@@ -53,6 +53,12 @@ class AccountsController extends AsyncNotifier<List<AccountView>> {
     return a;
   }
 
+  Future<AccountView> addShard(String username, String password) async {
+    final account = await _bridge.addShardAccount(username, password);
+    await refresh();
+    return account;
+  }
+
   Future<void> setActive(String id) async {
     await _bridge.setActiveAccount(id);
     await refresh();

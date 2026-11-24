@@ -168,7 +168,11 @@ class _ServerDialogState extends ConsumerState<ServerDialog> {
                 SelectOption(
                   a.id,
                   a.name,
-                  subtitle: a.microsoft ? l.accountMicrosoft : l.accountOffline,
+                  subtitle: a.shard
+                      ? l.accountShard
+                      : a.microsoft
+                      ? l.accountMicrosoft
+                      : l.accountOffline,
                   leading: PlayerAvatar(account: a, size: 22),
                 ),
             ],
