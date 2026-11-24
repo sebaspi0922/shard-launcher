@@ -1,0 +1,295 @@
+// Botones con el tema de app_theme.dart: relleno, contorno, texto, icono con
+// contorno, segmentado y «Jugar» (play_button.dart).
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon, Spinner } from "base.slint";
+
+// FilledButton(.icon): acento, alto 44 (12 + 20 + 12), radio de control.
+// Área de toque de 48 (MaterialTapTargetSize.padded) con 44 visibles.
+export component FilledButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 48px;
+    width: max(64px, lay.preferred-width);
+    accessible-role: button;
+    accessible-label: text;
+    accessible-enabled: enabled;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        y: 2px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        background: !root.enabled ? Palette.surface2 : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        alignment: center;
+        if icon != "": Icon {
+            glyph: icon;
+            size: 20px;
+            y: (parent.height - self.height) / 2;
+            color: enabled ? Palette.on-accent : Palette.text-muted;
+        }
+        Txt {
+            text: root.text;
+            style: Type.label-large;
+            color: enabled ? Palette.on-accent : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// OutlinedButton: superficie 1 y borde fuerte.
+export component OutlinedButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    callback clicked;
+    height: 40px;
+    border-radius: Theme.radius-control;
+    border-width: 1px;
+    border-color: Palette.border-strong;
+    background: ta.has-hover ? Palette.surface2 : Palette.surface1;
+    animate background { duration: Theme.fast; }
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { clicked(); }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        alignment: center;
+        if icon != "": Icon { glyph: icon; size: 18px; y: (parent.height - self.height) / 2; color: Palette.text; }
+        Txt { text: root.text; style: Type.label-large; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// TextButton: solo texto secundario.
+export component TextButton inherits Rectangle {
+    in property <string> text;
+    callback clicked;
+    height: 36px;
+    border-radius: Theme.radius-control;
+    background: ta.has-hover ? Palette.surface1 : transparent;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { clicked(); }
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        Txt { text: root.text; style: Type.label-large; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// IconButton.outlined: 40 × 40 visible dentro de un área de toque de 48.
+export component OutlinedIconButton inherits Rectangle {
+    in property <string> icon;
+    in property <string> tooltip;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        background: ta.has-hover ? Palette.surface2 : transparent;
+        animate background { duration: Theme.fast; }
+        Icon { glyph: icon; size: 20px; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// SegmentedButton de dos iconos (densidad compacta: 32 de alto, en 48).
+export component SegmentedIcons inherits Rectangle {
+    in property <string> first-icon;
+    in property <string> second-icon;
+    in property <string> first-label;
+    in property <string> second-label;
+    // `true` = primer segmento elegido.
+    in-out property <bool> first: true;
+    callback changed(bool);
+    property <length> seg: 56px;
+    width: 2 * seg;
+    accessible-role: groupbox;
+    height: 40px;
+    Rectangle {
+        y: 4px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+        a := Rectangle {
+            x: 0;
+            width: root.seg;
+            background: root.first ? Palette.accent-container : Palette.surface1;
+            animate background { duration: Theme.fast; }
+            accessible-role: button;
+            accessible-label: root.first-label;
+            accessible-checkable: true;
+            accessible-checked: root.first;
+            accessible-action-default => { root.pick(true); }
+            Icon { glyph: root.first-icon; size: 18px; color: root.first ? Palette.on-accent-container : Palette.text-secondary; }
+            TouchArea { mouse-cursor: pointer; clicked => { root.pick(true); } }
+        }
+        Rectangle { x: root.seg - 0.5px; width: 1px; background: Palette.border; }
+        b := Rectangle {
+            x: root.seg;
+            width: root.seg;
+            background: !root.first ? Palette.accent-container : Palette.surface1;
+            animate background { duration: Theme.fast; }
+            accessible-role: button;
+            accessible-label: root.second-label;
+            accessible-checkable: true;
+            accessible-checked: !root.first;
+            accessible-action-default => { root.pick(false); }
+            Icon { glyph: root.second-icon; size: 18px; color: !root.first ? Palette.on-accent-container : Palette.text-secondary; }
+            TouchArea { mouse-cursor: pointer; clicked => { root.pick(false); } }
+        }
+    }
+    function pick(v: bool) {
+        if first != v {
+            first = v;
+            changed(v);
+        }
+    }
+}
+
+// Fases del lanzamiento (core/launch.dart LaunchPhase).
+export enum LaunchPhase { idle, preparing, downloading, starting, running, error }
+
+export struct LaunchState {
+    phase: LaunchPhase,
+    done: int,
+    total: int,
+    // 0..1; < 0 = sin progreso conocido.
+    progress: float,
+}
+
+// Botón «Jugar» pequeño (PlayButtonSize.small: 34 de alto, mínimo 96).
+export component PlayButton inherits Rectangle {
+    in property <LaunchState> state;
+    in property <string> label;
+    callback clicked;
+    property <bool> idle: state.phase == LaunchPhase.idle;
+    property <bool> running: state.phase == LaunchPhase.running;
+    property <bool> failed: state.phase == LaunchPhase.error;
+    property <color> fg: idle ? Palette.on-accent : running ? Palette.success : failed ? Palette.danger : Palette.on-accent-container;
+    height: 34px;
+    width: max(96px, lay.preferred-width);
+    border-radius: Theme.radius-control;
+    background: idle ? (ta.has-hover ? Palette.accent-hover : Palette.accent)
+        : running ? Palette.success.with-alpha(0.14)
+        : failed ? Palette.danger.with-alpha(0.12) : Palette.accent-container;
+    border-width: 1px;
+    border-color: idle ? transparent : running ? Palette.success.with-alpha(0.4)
+        : failed ? Palette.danger.with-alpha(0.45) : Palette.accent.with-alpha(0.35);
+    animate background, border-color { duration: Theme.medium; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
+    accessible-role: button;
+    accessible-label: label;
+    accessible-enabled: idle || failed;
+    accessible-action-default => { clicked(); }
+    clip: true;
+    if state.phase == LaunchPhase.downloading && state.progress >= 0: Rectangle {
+        x: 0;
+        width: parent.width * state.progress;
+        background: Palette.accent.with-alpha(0.28);
+    }
+    lay := HorizontalLayout {
+        padding-left: 15.3px;
+        padding-right: 15.3px;
+        spacing: 6.8px;
+        alignment: center;
+        // El hueco mide lo que lo que va dentro: icono 18, punto 7,56, círculo 14,4.
+        Rectangle {
+            width: running ? 7.56px : (state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.starting) ? 14.4px : 18px;
+            if idle: Icon { glyph: "\u{e037}"; filled: true; size: 18px; color: root.fg; }
+            if failed: Icon { glyph: "\u{e5d5}"; size: 18px; color: root.fg; }
+            if state.phase == LaunchPhase.downloading: Icon { glyph: "\u{f090}"; size: 18px; color: root.fg; }
+            if running: Rectangle {
+                width: 7.56px;
+                height: 7.56px;
+                border-radius: self.width / 2;
+                background: root.fg;
+                drop-shadow-color: root.fg.with-alpha(0.6);
+                drop-shadow-blur: 8px;
+            }
+            if state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.starting: Spinner {
+                size: 14.4px;
+                stroke: 2.2px;
+                tint: root.fg;
+            }
+        }
+        Txt {
+            text: root.label;
+            // Sin alto de línea propio (TextStyle sin height): el natural.
+            style: { size: 13px, weight: 700, line-height: 1.20996, letter-spacing: 0 };
+            color: root.fg;
+        }
+    }
+    ta := TouchArea {
+        enabled: idle || failed;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Checkbox (checkboxTheme): 18 × 18, borde fuerte, relleno de acento.
+export component Checkbox inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> text;
+    callback toggled(bool);
+    height: 40px;
+    min-width: row.preferred-width;
+    accessible-role: checkbox;
+    accessible-label: text;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-action-default => { toggle(); }
+    row := HorizontalLayout {
+        spacing: 4px;
+        alignment: start;
+        Rectangle {
+            width: 40px;
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border-width: root.checked ? 0 : 1.5px;
+                border-color: Palette.border-strong;
+                background: root.checked ? Palette.accent : transparent;
+                if root.checked: Path {
+                    width: 12px;
+                    height: 12px;
+                    viewbox-width: 24;
+                    viewbox-height: 24;
+                    stroke: Palette.on-accent;
+                    stroke-width: 2.5px;
+                    MoveTo { x: 4; y: 12.5; } LineTo { x: 9.5; y: 18; } LineTo { x: 20; y: 6.5; }
+                }
+            }
+        }
+        Txt { text: root.text; style: Type.body-medium; y: (40px - self.height) / 2; }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { root.toggle(); } }
+    function toggle() {
+        checked = !checked;
+        toggled(checked);
+    }
+}

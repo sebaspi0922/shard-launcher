@@ -1,0 +1,159 @@
+// Ventana principal de Shard: marco (fondo, raíl, barra de título), rutas,
+// diálogo de cierre, avisos y bandeja.
+
+import { Palette, Theme, Type } from "theme.slint";
+import { Icons } from "icons.slint";
+import { Fmt } from "fmt.slint";
+import { Txt, Para } from "components/base.slint";
+import { FilledButton, OutlinedButton, TextButton, Checkbox, LaunchState, LaunchPhase } from "components/buttons.slint";
+import { EmptyState, AppDialog, Snackbar } from "components/feedback.slint";
+import { Atmosphere, NavRail, TitleBar, Route, AccountChip, Activity } from "components/shell.slint";
+import { InstancesPage, InstancesState, InstanceItem, LoadState } from "screens/instances.slint";
+
+export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase }
+
+export component MainWindow inherits Window {
+    title: "Shard";
+    icon: @image-url("../img/shard-512.png");
+    no-frame: true;
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 960px;
+    min-height: 600px;
+    default-font-family: "Inter";
+    background: Palette.background;
+
+    in-out property <Route> route: Route.instances;
+    in property <AccountChip> account;
+    in property <Activity> activity;
+    in property <bool> is-maximized;
+    // Fondo: animado o quieto en un instante dado (modo rendimiento, capturas).
+    in property <bool> animate-background: true;
+    in property <duration> background-still-at: 0ms;
+    // Diálogo «¿Cerrar Shard?» (close_behavior = preguntar).
+    in-out property <bool> close-dialog-open;
+    // Aviso breve.
+    in property <string> toast-message;
+    in property <bool> toast-error;
+    in property <bool> toast-shown;
+
+    callback minimize;
+    callback toggle-max;
+    callback close-requested;
+    // quit = salir; si no, segundo plano. remember = guardar la elección.
+    callback close-chosen(bool, bool);
+    callback account-clicked;
+    callback activity-clicked(string);
+    callback route-changed(Route);
+
+    Atmosphere {
+        animate: root.animate-background;
+        still-at: root.background-still-at;
+    }
+    NavRail {
+        x: 0;
+        height: parent.height;
+        route: root.route;
+        account: root.account;
+        accessible-id: "rail";
+        navigate(r) => {
+            root.route = r;
+            root.route-changed(r);
+        }
+        account-clicked => { root.account-clicked(); }
+        toggle-max => { root.toggle-max(); }
+    }
+    Rectangle {
+        x: 76px;
+        width: parent.width - 76px;
+        TitleBar {
+            y: 0;
+            maximized: root.is-maximized;
+            activity: root.activity;
+            activity-label: root.activity.phase == LaunchPhase.preparing ? @tr("launchPreparing")
+                : root.activity.phase == LaunchPhase.downloading ? @tr("launchDownloading", root.activity.done, root.activity.total)
+                : root.activity.phase == LaunchPhase.starting ? @tr("launchStarting") : @tr("launchRunning");
+            accessible-id: "titlebar";
+            minimize => { root.minimize(); }
+            toggle-max => { root.toggle-max(); }
+            close => { root.close-requested(); }
+            activity-clicked => { root.activity-clicked(root.activity.instance-id); }
+        }
+        Rectangle {
+            y: 44px;
+            height: parent.height - 44px;
+            if root.route == Route.instances: InstancesPage { }
+            // Pantallas de fases siguientes: solo su título por ahora.
+            if root.route != Route.instances: EmptyState {
+                icon: root.route == Route.home ? Icons.home
+                    : root.route == Route.content ? Icons.extension
+                    : root.route == Route.servers ? Icons.dns
+                    : root.route == Route.skins ? Icons.checkroom : Icons.settings;
+                title: root.route == Route.home ? @tr("navHome")
+                    : root.route == Route.content ? @tr("navContent")
+                    : root.route == Route.servers ? @tr("navServers")
+                    : root.route == Route.skins ? @tr("navSkins") : @tr("navSettings");
+                body: "";
+            }
+        }
+    }
+    Snackbar {
+        x: (parent.width - self.width) / 2;
+        y: parent.height - self.height - 24px;
+        message: root.toast-message;
+        error: root.toast-error;
+        shown: root.toast-shown;
+        accessible-id: "toast";
+    }
+    if root.close-dialog-open: AppDialog {
+        title: @tr("closeDialogTitle", "Shard");
+        accessible-id: "close-dialog";
+        dismissed => { root.close-dialog-open = false; }
+        Para { text: @tr("closeDialogBody"); }
+        remember := Checkbox { text: @tr("closeDialogRemember"); }
+        HorizontalLayout {
+            alignment: end;
+            spacing: 8px;
+            padding-top: 8px;
+            TextButton {
+                text: @tr("cancel");
+                clicked => { root.close-dialog-open = false; }
+            }
+            OutlinedButton {
+                text: @tr("closeDialogMinimize");
+                clicked => {
+                    root.close-dialog-open = false;
+                    root.close-chosen(false, remember.checked);
+                }
+            }
+            FilledButton {
+                text: @tr("closeDialogQuit");
+                clicked => {
+                    root.close-dialog-open = false;
+                    root.close-chosen(true, remember.checked);
+                }
+            }
+        }
+    }
+}
+
+// Icono de la bandeja (tray_controller.dart): abrir, jugar la última
+// instancia y salir.
+export component ShardTray inherits SystemTrayIcon {
+    icon: @image-url("../img/shard-512.png");
+    tooltip: "Shard";
+    // Nombre de la última instancia; vacío = sin «Jugar».
+    in property <string> last-instance;
+    callback open;
+    callback play-last;
+    callback quit;
+    clicked => { open(); }
+    Menu {
+        MenuItem { title: @tr("trayOpen", "Shard"); activated => { root.open(); } }
+        if root.last-instance != "": MenuItem {
+            title: @tr("trayPlay", root.last-instance);
+            activated => { root.play-last(); }
+        }
+        MenuItem { title: @tr("trayQuit"); activated => { root.quit(); } }
+    }
+}

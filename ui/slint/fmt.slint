@@ -1,0 +1,92 @@
+// Formato de textos (app/lib/core/format.dart) con los ARB como fuente.
+
+import { LaunchState, LaunchPhase } from "components/buttons.slint";
+
+export global Fmt {
+    // formatPlaytime: segundos → «86 h 12 min».
+    public pure function playtime(seconds: int) -> string {
+        let h = floor(seconds / 3600);
+        let m = floor(mod(seconds, 3600) / 60);
+        if h == 0 && m == 0 {
+            return @tr("playtimeNone");
+        }
+        if h == 0 {
+            return @tr("playtimeMinutes", m);
+        }
+        if m == 0 || h >= 100 {
+            return @tr("playtimeHours", h);
+        }
+        return @tr("playtimeHoursMinutes", h, m);
+    }
+
+    // formatRelative: segundos transcurridos (< 0 = nunca) → «hace 3 días».
+    public pure function relative(ago: int) -> string {
+        if ago < 0 {
+            return @tr("lastPlayedNever");
+        }
+        let minutes = floor(ago / 60);
+        let hours = floor(ago / 3600);
+        let days = floor(ago / 86400);
+        if minutes < 1 {
+            return @tr("relJustNow");
+        }
+        if hours < 1 {
+            return @tr("relMinutes" | "relMinutes" % minutes);
+        }
+        if days < 1 {
+            return @tr("relHours" | "relHours" % hours);
+        }
+        if days < 30 {
+            return @tr("relDays" | "relDays" % days);
+        }
+        if days < 365 {
+            return @tr("relMonths" | "relMonths" % floor(days / 30));
+        }
+        return @tr("relYears" | "relYears" % floor(days / 365));
+    }
+
+    // loaderName.
+    public pure function loader(id: string) -> string {
+        if id == "vanilla" { return @tr("loaderVanilla"); }
+        if id == "fabric" { return "Fabric"; }
+        if id == "quilt" { return "Quilt"; }
+        if id == "forge" { return "Forge"; }
+        if id == "neoforge" { return "NeoForge"; }
+        if id == "labymod" { return "LabyMod"; }
+        return @tr("loaderCustom");
+    }
+
+    // versionLine: «1.21.1 · Fabric».
+    public pure function version-line(mc: string, loader-id: string) -> string {
+        return mc + " · " + loader(loader-id);
+    }
+
+    // Color del punto del loader (loaderColor en format.dart).
+    public pure function loader-color(id: string) -> color {
+        if id == "vanilla" { return #6CCB5F; }
+        if id == "fabric" { return #DBC59C; }
+        if id == "quilt" { return #B28CF5; }
+        if id == "forge" { return #8FA6C9; }
+        if id == "neoforge" { return #F0954A; }
+        if id == "labymod" { return #5BB0F0; }
+        return #A0A0A0;
+    }
+
+    // `instancesCount` (con su caso «=0»).
+    public pure function instances-count(n: int) -> string {
+        if n == 0 {
+            return @tr("instancesCount.zero");
+        }
+        return @tr("instancesCount" | "instancesCount" % n);
+    }
+
+    // Texto del botón «Jugar» según la fase (play_button.dart).
+    public pure function launch-label(s: LaunchState) -> string {
+        if s.phase == LaunchPhase.preparing { return @tr("launchPreparing"); }
+        if s.phase == LaunchPhase.downloading { return @tr("launchDownloading", s.done, s.total); }
+        if s.phase == LaunchPhase.starting { return @tr("launchStarting"); }
+        if s.phase == LaunchPhase.running { return @tr("launchRunning"); }
+        if s.phase == LaunchPhase.error { return @tr("retry"); }
+        return @tr("play");
+    }
+}

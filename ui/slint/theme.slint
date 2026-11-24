@@ -1,0 +1,113 @@
+// Tokens del sistema visual, copiados de app/lib/ui/theme/{tokens,app_theme,
+// styles}.dart. Valores por defecto = estilo «Grafito» (el de los goldens);
+// Rust cambia `Palette` cuando el usuario elige otro estilo o acento.
+
+import "../fonts/Inter-Regular.ttf";
+import "../fonts/Inter-Medium.ttf";
+import "../fonts/Inter-SemiBold.ttf";
+import "../fonts/Inter-Bold.ttf";
+import "../fonts/ShardIcons.ttf";
+import "../fonts/ShardIconsFill.ttf";
+
+// AppColors (tokens.dart). `panel-base` transparente = superficies de cristal.
+export global Palette {
+    in-out property <color> background: #212121;
+    in-out property <color> background-deep: #171717;
+    in-out property <color> surface1: #FFFFFF0D;
+    in-out property <color> surface2: #FFFFFF14;
+    in-out property <color> surface3: #FFFFFF1C;
+    in-out property <color> border: #FFFFFF1F;
+    in-out property <color> border-strong: #FFFFFF33;
+    in-out property <color> text: #ECECEC;
+    in-out property <color> text-secondary: #B4B4B4;
+    in-out property <color> text-muted: #8F8F8F;
+    in-out property <color> accent: #FFFFFF;
+    in-out property <color> accent-hover: #E6E6E6;
+    in-out property <color> on-accent: #0D0D0D;
+    in-out property <color> accent-container: #FFFFFF29;
+    in-out property <color> on-accent-container: #FFFFFF;
+    in-out property <color> glow: #AEBCFF;
+    in-out property <color> success: #10A37F;
+    in-out property <color> warning: #E0B04A;
+    in-out property <color> danger: #F87171;
+    in-out property <color> info: #8FD4FF;
+    in-out property <color> panel-base: #212121EB;
+    // Tonos de la marca (HCT del acento a 88/72/56/42).
+    in-out property <[color]> brand: [#DEDEDE, #B1B1B1, #878787, #636363];
+
+    // `AppColors.card`: superficie sobre la base casi opaca.
+    public pure function card(surface: color) -> color {
+        return panel-base.alpha == 0 ? surface : Theme.blend(surface, panel-base);
+    }
+}
+
+// Espaciado, radios, movimiento y tipografía.
+export global Theme {
+    // Space (múltiplos de 4).
+    out property <length> x1: 4px;
+    out property <length> x2: 8px;
+    out property <length> x3: 12px;
+    out property <length> x4: 16px;
+    out property <length> x5: 20px;
+    out property <length> x6: 24px;
+    out property <length> x8: 32px;
+    out property <length> x10: 40px;
+
+    // Radii del estilo activo (Grafito: 8 / 8 / 10).
+    in-out property <length> radius-control: 8px;
+    in-out property <length> radius-card: 8px;
+    in-out property <length> radius-panel: 10px;
+
+    // Motion.
+    out property <duration> fast: 150ms;
+    out property <duration> medium: 220ms;
+    out property <duration> page: 260ms;
+    // `false` = sin animaciones (modo rendimiento / reducir movimiento).
+    in-out property <bool> motion: true;
+
+    // Escala de UI (ui_scale.dart). La aplica la ventana.
+    in-out property <float> ui-scale: 1;
+
+    // Elevaciones: sombras de las tarjetas, diálogos y menús.
+    out property <color> shadow: #00000059;
+    out property <length> shadow-dialog-blur: 32px;
+    out property <length> shadow-dialog-y: 12px;
+
+    // `Color.alphaBlend(fg, bg)`.
+    public pure function blend(fg: color, bg: color) -> color {
+        let fa = fg.alpha / 255;
+        let ba = bg.alpha / 255;
+        let oa = fa + ba * (1 - fa);
+        if oa == 0 {
+            return transparent;
+        }
+        return rgba(
+            (fg.red * fa + bg.red * ba * (1 - fa)) / oa,
+            (fg.green * fa + bg.green * ba * (1 - fa)) / oa,
+            (fg.blue * fa + bg.blue * ba * (1 - fa)) / oa,
+            oa);
+    }
+}
+
+// TextTheme (app_theme.dart): tamaño, peso, alto de línea y espaciado.
+export struct TextStyle {
+    size: length,
+    weight: int,
+    line-height: float,
+    letter-spacing: length,
+}
+
+export global Type {
+    out property <TextStyle> display-small: { size: 34px, weight: 700, line-height: 1.15, letter-spacing: -0.8px };
+    out property <TextStyle> headline-medium: { size: 26px, weight: 700, line-height: 1.2, letter-spacing: -0.5px };
+    out property <TextStyle> headline-small: { size: 22px, weight: 600, line-height: 1.25, letter-spacing: -0.3px };
+    out property <TextStyle> title-large: { size: 18px, weight: 600, line-height: 1.35, letter-spacing: -0.2px };
+    out property <TextStyle> title-medium: { size: 15px, weight: 600, line-height: 1.35, letter-spacing: -0.1px };
+    out property <TextStyle> title-small: { size: 13px, weight: 600, line-height: 1.35, letter-spacing: 0 };
+    out property <TextStyle> body-large: { size: 15px, weight: 400, line-height: 1.5, letter-spacing: 0 };
+    out property <TextStyle> body-medium: { size: 13.5px, weight: 400, line-height: 1.5, letter-spacing: 0 };
+    out property <TextStyle> body-small: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0 };
+    out property <TextStyle> label-large: { size: 13.5px, weight: 600, line-height: 1.35, letter-spacing: 0 };
+    out property <TextStyle> label-medium: { size: 12px, weight: 500, line-height: 1.35, letter-spacing: 0 };
+    out property <TextStyle> label-small: { size: 11px, weight: 600, line-height: 1.35, letter-spacing: 0.4px };
+}
