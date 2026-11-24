@@ -238,6 +238,8 @@ impl Accounts {
 
     /// Abre el diálogo de alta offline o Shard, limpio.
     fn open_credentials(&self, shard: bool) {
+        // Diálogo nuevo: lo que llegue de envíos anteriores ya no es suyo.
+        self.credentials_attempt.set(self.credentials_attempt.get() + 1);
         let Some(ui) = self.ui.upgrade() else { return };
         let st = ui.global::<AccountsState>();
         st.set_offline_error("".into());
