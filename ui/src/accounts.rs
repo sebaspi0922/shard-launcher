@@ -102,11 +102,11 @@ pub trait AccountActions {
     fn set_active(&self, id: &str);
     /// → [`Accounts::removed`].
     fn remove(&self, id: &str, name: &str);
-    /// → [`Accounts::offline_added`].
-    fn add_offline(&self, name: &str);
+    /// → [`Accounts::offline_added`] con el mismo `attempt`.
+    fn add_offline(&self, name: &str, attempt: u64);
     /// Inicia sesión en Shard (Yggdrasil) y guarda la cuenta → también
     /// [`Accounts::offline_added`] (mismo diálogo).
-    fn add_shard(&self, username: &str, password: &str);
+    fn add_shard(&self, username: &str, password: &str, attempt: u64);
     /// Pide un código y espera al usuario → [`Accounts::login_code`],
     /// [`Accounts::login_done`] o [`Accounts::login_failed`] con `attempt`.
     fn begin_login(&self, attempt: u64);
@@ -147,6 +147,7 @@ pub struct Accounts {
     loaded: Cell<bool>,
     login: RefCell<Login>,
     attempt: Cell<u64>,
+    credentials_attempt: Cell<u64>,
     /// Caras de skin por URL (`None` = no se pudo: cara generada).
     faces: RefCell<HashMap<String, Option<Image>>>,
     tick: slint::Timer,
@@ -170,6 +171,7 @@ impl Accounts {
             loaded: Cell::new(false),
             login: RefCell::new(Login::Closed),
             attempt: Cell::new(0),
+            credentials_attempt: Cell::new(0),
             faces: RefCell::default(),
             tick: slint::Timer::default(),
             items: Rc::new(VecModel::default()),
@@ -206,10 +208,7 @@ impl Accounts {
                 && !user.trim().is_empty()
                 && !password.is_empty()
             {
-                if let Some(ui) = a.ui.upgrade() {
-                    ui.global::<AccountsState>().set_offline_busy(true);
-                }
-                a.actions.add_shard(user.trim(), &password);
+                a.actions.add_shard(user.trim(), &password, a.submit_credentials());
             }
         });
         let weak = Rc::downgrade(&me);
@@ -217,10 +216,7 @@ impl Accounts {
             if let Some(a) = weak.upgrade()
                 && valid_offline_name(&name)
             {
-                if let Some(ui) = a.ui.upgrade() {
-                    ui.global::<AccountsState>().set_offline_busy(true);
-                }
-                a.actions.add_offline(name.trim());
+                a.actions.add_offline(name.trim(), a.submit_credentials());
             }
         });
         let weak = Rc::downgrade(&me);
@@ -364,12 +360,29 @@ impl Accounts {
         }
     }
 
-    pub fn offline_added(&self, r: Result<String, Failure>) {
+    /// Nuevo envío del diálogo de alta: los resultados de envíos anteriores ya
+    /// no lo tocan.
+    fn submit_credentials(&self) -> u64 {
+        let attempt = self.credentials_attempt.get() + 1;
+        self.credentials_attempt.set(attempt);
+        if let Some(ui) = self.ui.upgrade() {
+            ui.global::<AccountsState>().set_offline_busy(true);
+        }
+        attempt
+    }
+
+    /// Intento vigente del diálogo de alta (tests).
+    pub fn credentials_attempt(&self) -> u64 {
+        self.credentials_attempt.get()
+    }
+
+    /// Resultado de un alta offline o Shard.
+    pub fn offline_added(&self, attempt: u64, r: Result<String, Failure>) {
         let Some(ui) = self.ui.upgrade() else { return };
         let st = ui.global::<AccountsState>();
-        // El diálogo que la pidió ya se cerró (o se abrió otro sin enviar):
-        // como Flutter, sin aviso; si se guardó, solo se refresca la lista.
-        if !(st.get_offline_open() && st.get_offline_busy()) {
+        // Es de un envío anterior o el diálogo ya se cerró: como Flutter, sin
+        // aviso; si se guardó, solo se refresca la lista.
+        if attempt != self.credentials_attempt.get() || !st.get_offline_open() {
             if r.is_ok() {
                 self.actions.load();
             }

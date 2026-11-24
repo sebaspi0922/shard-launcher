@@ -68,19 +68,19 @@ impl AccountActions for CoreAccounts {
         });
     }
 
-    fn add_offline(&self, name: &str) {
+    fn add_offline(&self, name: &str, attempt: u64) {
         let (core, lang, name) = (self.backend.core.clone(), self.lang.clone(), name.to_owned());
         self.backend.rt.spawn(async move {
             let r = core.add_offline_account(&name).await.map(|a| a.name).map_err(|e| fail(&lang, &e));
-            accounts::post(move |a| a.offline_added(r));
+            accounts::post(move |a| a.offline_added(attempt, r));
         });
     }
 
-    fn add_shard(&self, username: &str, password: &str) {
+    fn add_shard(&self, username: &str, password: &str, attempt: u64) {
         let (core, lang, user, password) = (self.backend.core.clone(), self.lang.clone(), username.to_owned(), password.to_owned());
         self.backend.rt.spawn(async move {
             let r = core.add_shard_account(&user, &password).await.map(|a| a.name).map_err(|e| fail(&lang, &e));
-            accounts::post(move |a| a.offline_added(r));
+            accounts::post(move |a| a.offline_added(attempt, r));
         });
     }
 

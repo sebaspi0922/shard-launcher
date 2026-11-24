@@ -159,10 +159,10 @@ impl AccountActions for Recorder {
     fn remove(&self, id: &str, name: &str) {
         self.push(format!("remove {id} {name}"));
     }
-    fn add_offline(&self, name: &str) {
+    fn add_offline(&self, name: &str, _: u64) {
         self.push(format!("offline {name}"));
     }
-    fn add_shard(&self, username: &str, password: &str) {
+    fn add_shard(&self, username: &str, password: &str, _: u64) {
         // Solo el largo: una contraseña no se apunta.
         self.push(format!("shard {username} ({} caracteres)", password.chars().count()));
     }
