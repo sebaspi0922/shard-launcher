@@ -1,10 +1,11 @@
 //! Autenticación: Microsoft (device code) → Xbox Live → XSTS → Minecraft
-//! Services, y cuentas offline. Referencia: research/05 §2 y docs/guia-azure.md.
+//! Services, cuentas offline y cuentas Shard (Yggdrasil).
 
 pub mod mc;
 pub mod msa;
 pub mod offline;
 pub mod xbox;
+pub(crate) mod yggdrasil;
 
 use serde::{Deserialize, Serialize};
 
@@ -66,8 +67,11 @@ pub enum AuthError {
     #[error("Microsoft respondió {code}: {description}")]
     Msa { code: String, description: String },
 
-    #[error("la sesión de Microsoft caducó o se revocó; inicia sesión de nuevo")]
+    #[error("la sesión caducó o se revocó; inicia sesión de nuevo")]
     SessionExpired,
+
+    #[error("las credenciales de la cuenta Shard no son válidas")]
+    InvalidCredentials,
 
     #[error("Xbox Live: {message} (XErr {xerr})")]
     Xbox { xerr: u64, message: String },
@@ -109,6 +113,7 @@ impl AuthError {
             AuthError::DeviceCodeDeclined => "auth_declined",
             AuthError::Msa { .. } => "auth_msa",
             AuthError::SessionExpired => "auth_session_expired",
+            AuthError::InvalidCredentials => "auth_invalid_credentials",
             AuthError::Xbox { .. } => "auth_xbox",
             AuthError::AppNotApproved => "auth_app_not_approved",
             AuthError::NotEntitled => "auth_not_entitled",
@@ -126,12 +131,13 @@ impl AuthError {
 pub enum AccountKind {
     Msa,
     Offline,
+    Shard,
 }
 
 /// Datos públicos de una cuenta (`accounts.json`). Sin tokens.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Account {
-    /// UUID de Minecraft en forma simple (32 hex).
+    /// Identificador local. Para Microsoft y offline coincide con el UUID de Minecraft.
     pub id: String,
     pub name: String,
     pub kind: AccountKind,
@@ -145,6 +151,7 @@ pub struct Account {
 pub enum UserType {
     Msa,
     Legacy,
+    Mojang,
 }
 
 impl UserType {
@@ -153,6 +160,7 @@ impl UserType {
         match self {
             UserType::Msa => "msa",
             UserType::Legacy => "legacy",
+            UserType::Mojang => "mojang",
         }
     }
 }

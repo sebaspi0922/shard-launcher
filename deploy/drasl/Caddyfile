@@ -1,0 +1,3 @@
+{$SHARD_AUTH_DOMAIN} {
+	reverse_proxy drasl:25585
+}

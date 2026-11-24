@@ -304,7 +304,7 @@ impl Core {
     ) -> Result<(Instance, LaunchCommand)> {
         let instance = self.get_instance(instance_id).await?;
         let settings = self.settings().await;
-        let session = self.session(opts.account.as_deref()).await?;
+        let (session, yggdrasil_base) = self.session_with_base(opts.account.as_deref()).await?;
         let version_id = self.prepare_loader(&instance.game).await?;
         let verify = if opts.verify_files {
             Verify::Full
@@ -327,11 +327,19 @@ impl Core {
         };
 
         let server = opts.server.as_deref().map(parse_server).transpose()?;
-        let jvm_args = instance
+        let mut jvm_args = instance
             .java
             .jvm_args
             .clone()
             .unwrap_or_else(|| settings.default_jvm_args.clone());
+        if let Some(base) = yggdrasil_base {
+            let cache = self
+                .paths()
+                .http_cache_dir()
+                .with_file_name("authlib-injector");
+            let injector = crate::auth::yggdrasil::launch_args(self.http(), &base, &cache).await?;
+            jvm_args.extend(injector);
+        }
         let platform = Platform::current();
         let libraries_dir = self.paths().libraries_dir();
         let args = build_args(&ArgsInput {
@@ -744,6 +752,42 @@ mod tests {
         assert!(!joined.contains("--demo"));
         assert!(!joined.contains("${"), "{joined}");
         assert!(joined.contains("--accessToken TOKEN_SECRETO"));
+    }
+
+    #[test]
+    fn shard_jvm_args_precede_main_class_and_use_yggdrasil_session() {
+        let installed = installed(load("mojang/1.8.9.json"), false);
+        let mut session = session(false);
+        session.user_type = UserType::Mojang;
+        let agent = "-javaagent:/d/cache with spaces/authlib-injector.jar=https://auth.example.org";
+        let prefetched = "-Dauthlibinjector.yggdrasil.prefetched=e30=";
+        let args = build_args(&ArgsInput {
+            installed: &installed,
+            instance: &instance(),
+            session: &session,
+            game_dir: Path::new("/d/game"),
+            libraries_dir: Path::new("/d/libraries"),
+            memory_mb: 8192,
+            jvm_args: vec![agent.into(), prefetched.into()],
+            server: None,
+            platform: &Platform::new(Os::Linux, Arch::X86_64),
+        });
+        let main = args
+            .iter()
+            .position(|arg| arg == "net.minecraft.client.main.Main")
+            .unwrap();
+        assert_eq!(&args[main - 2..main], [agent, prefetched]);
+        for (flag, value) in [
+            ("--uuid", session.uuid.as_str()),
+            ("--accessToken", session.access_token.expose()),
+            ("--userType", "mojang"),
+        ] {
+            assert!(
+                args[main + 1..]
+                    .windows(2)
+                    .any(|pair| pair[0] == flag && pair[1] == value)
+            );
+        }
     }
 
     #[test]
