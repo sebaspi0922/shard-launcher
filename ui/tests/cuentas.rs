@@ -166,28 +166,29 @@ fn alta_offline_valida_el_nombre() {
     assert!(a.ui.global::<AccountsState>().get_offline_busy());
 
     // Error del núcleo: se queda abierto y lo muestra.
-    a.acc.offline_added(Err(Failure { kind: "io".into(), message: "Disk error".into(), detail: "io: denied".into() }));
+    a.acc.offline_added(a.acc.credentials_attempt(), Err(Failure { kind: "io".into(), message: "Disk error".into(), detail: "io: denied".into() }));
     settle();
     assert!(a.ui.global::<AccountsState>().get_offline_open());
     assert!(!by_label(&a.ui, "Disk error").is_empty());
 
-    // Un alta que termina con el diálogo ya cerrado (y otro abierto sin
-    // enviar) no lo toca: solo refresca la lista.
+    // Cancelar mientras guarda y enviar otra: el resultado del primer envío
+    // no toca el diálogo nuevo (si se guardó, solo refresca la lista).
     click(&by_label(&a.ui, "Add")[0]);
     a.rec.take();
+    let first = a.acc.credentials_attempt();
     click(&by_label(&a.ui, "Cancel")[0]);
-    a.ui.global::<AccountsState>().invoke_add_offline();
-    settle();
-    a.acc.offline_added(Ok("abc_9".into()));
-    assert!(a.ui.global::<AccountsState>().get_offline_open());
-    assert_eq!(a.rec.take(), ["load"]);
-    a.ui.global::<AccountsState>().set_offline_open(false);
     a.ui.global::<AccountsState>().invoke_add_offline();
     settle();
     type_text(&a.ui, "abc_9");
     click(&by_label(&a.ui, "Add")[0]);
     assert_eq!(a.rec.take(), ["offline abc_9"]);
-    a.acc.offline_added(Ok("abc_9".into()));
+    a.acc.offline_added(first, Err(Failure { kind: "io".into(), message: "Viejo".into(), detail: String::new() }));
+    a.acc.offline_added(first, Ok("abc_9".into()));
+    settle();
+    assert!(a.ui.global::<AccountsState>().get_offline_open() && a.ui.global::<AccountsState>().get_offline_busy());
+    assert!(by_label(&a.ui, "Viejo").is_empty());
+    assert_eq!(a.rec.take(), ["load"]);
+    a.acc.offline_added(a.acc.credentials_attempt(), Ok("abc_9".into()));
     settle();
     assert!(!a.ui.global::<AccountsState>().get_offline_open());
     assert_eq!(toast(&a.ui), "Account “abc_9” added");
@@ -216,14 +217,14 @@ fn alta_shard_con_usuario_y_contrasena() {
 
     // Credenciales malas: el texto de errors.dart y el diálogo sigue abierto.
     let bad = lcore::Error::from(lcore::auth::AuthError::InvalidCredentials);
-    a.acc.offline_added(Err(Failure::new("es", &bad)));
+    a.acc.offline_added(a.acc.credentials_attempt(), Err(Failure::new("es", &bad)));
     settle();
     assert!(st.get_offline_open() && !st.get_offline_busy());
     assert!(!by_label(&a.ui, "Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).").is_empty());
 
     click(&by_id(&a.ui, "filled")[0]);
     assert_eq!(a.rec.take(), ["shard prueba_ui (8 caracteres)"]);
-    a.acc.offline_added(Ok("prueba_ui".into()));
+    a.acc.offline_added(a.acc.credentials_attempt(), Ok("prueba_ui".into()));
     settle();
     assert!(!st.get_offline_open());
     assert_eq!(toast(&a.ui), "Cuenta «prueba_ui» añadida");
