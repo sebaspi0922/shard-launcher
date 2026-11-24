@@ -2,6 +2,7 @@
 // app. Todo procedural (sin imágenes de terceros).
 
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_color_utilities/material_color_utilities.dart';
 import 'package:material_ui/material_ui.dart';
@@ -25,17 +26,94 @@ Color _tone(double hue, double chroma, double tone) =>
     Color(Hct.from(hue, chroma, tone).toInt());
 
 /// Paisaje de colinas escalonadas como bloques, con cielo y astro.
-class BlockLandscape extends StatelessWidget {
+class BlockLandscape extends LeafRenderObjectWidget {
   const BlockLandscape({super.key, required this.seed, this.block = 14});
 
   final String seed;
   final double block;
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-        painter: _LandscapePainter(seed, block),
-        child: const SizedBox.expand(),
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderLandscape(seed, block, MediaQuery.devicePixelRatioOf(context));
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) =>
+      (renderObject as _RenderLandscape)
+        ..seed = seed
+        ..block = block
+        ..dpr = MediaQuery.devicePixelRatioOf(context);
+}
+
+/// Pinta el paisaje una vez a una imagen y después solo dibuja la imagen.
+/// Impeller no guarda el raster de lo que no cambia: sin esto, los cientos de
+/// rectángulos se rasterizaban de nuevo en cada fotograma del fondo animado.
+class _RenderLandscape extends RenderBox {
+  _RenderLandscape(this._seed, this._block, this._dpr);
+
+  String _seed;
+  set seed(String v) {
+    if (v == _seed) return;
+    _seed = v;
+    _drop();
+  }
+
+  double _block;
+  set block(double v) {
+    if (v == _block) return;
+    _block = v;
+    _drop();
+  }
+
+  double _dpr;
+  set dpr(double v) {
+    if (v == _dpr) return;
+    _dpr = v;
+    _drop();
+  }
+
+  ui.Image? _image;
+  Size? _imageSize;
+
+  void _drop() {
+    _image?.dispose();
+    _image = null;
+    markNeedsPaint();
+  }
+
+  @override
+  bool get sizedByParent => true;
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    if (size.isEmpty) return;
+    if (_image == null || _imageSize != size) {
+      _image?.dispose();
+      final recorder = ui.PictureRecorder();
+      _LandscapePainter(_seed, _block).paint(Canvas(recorder)..scale(_dpr), size);
+      final picture = recorder.endRecording();
+      _image = picture.toImageSync(
+        (size.width * _dpr).ceil(),
+        (size.height * _dpr).ceil(),
       );
+      picture.dispose();
+      _imageSize = size;
+    }
+    context.canvas.drawImageRect(
+      _image!,
+      Offset.zero & size * _dpr,
+      offset & size,
+      Paint(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
 }
 
 /// Bioma del paisaje: matiz, croma y tono de la tierra y de su capa superior.
@@ -56,13 +134,12 @@ const _biomes = <_Biome>[
   (hue: 150, chroma: 28, tone: 22, topHue: 145, topChroma: 40, topTone: 36),
 ];
 
-class _LandscapePainter extends CustomPainter {
+class _LandscapePainter {
   _LandscapePainter(this.seed, this.block);
 
   final String seed;
   final double block;
 
-  @override
   void paint(Canvas canvas, Size size) {
     final h = stableHash(seed);
     final skyHue = (h % 360).toDouble();
@@ -154,10 +231,6 @@ class _LandscapePainter extends CustomPainter {
         ).createShader(rect),
     );
   }
-
-  @override
-  bool shouldRepaint(_LandscapePainter old) =>
-      old.seed != seed || old.block != block;
 }
 
 /// Icono cuadrado de instancia: degradado propio con sus iniciales.
