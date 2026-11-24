@@ -241,7 +241,7 @@ fn login_de_microsoft_con_codigo_y_caducidad() {
     a.clock.set(900_000);
     i_slint_backend_testing::testing_backend::mock_elapsed_time(1000);
     assert_eq!(st.get_login_phase(), LoginPhase::Expired);
-    assert_eq!(a.rec.take(), ["cancel-login"]);
+    assert!(a.rec.take().is_empty(), "caducar no aborta: el núcleo puede estar terminando");
 
     // «Pedir otro código» empieza otro intento; un resultado del viejo no cuenta.
     click(&by_label(&a.ui, "Pedir otro código")[0]);
@@ -298,7 +298,7 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     click(&by_id(&a.ui, "apply")[0]);
     assert_eq!(a.rec.take(), [format!("apply a1 {:?}", Apply::Model { url: fixtures::SKIN_URL.into(), slim: false })]);
     assert!(st.get_busy());
-    a.skins.changed(false, Ok(fixtures::sample_profile()));
+    a.skins.changed("a1", false, Ok(fixtures::sample_profile()));
     settle();
     assert_eq!(toast(&a.ui), "Skin actualizada");
     assert!(st.get_slim(), "vuelve al modelo de la skin actual");
@@ -312,7 +312,7 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     assert!(st.get_can_apply());
     click(&by_id(&a.ui, "apply")[0]);
     assert_eq!(a.rec.take(), [format!("apply a1 {:?}", Apply::Url { url: "https://x.y/s.png".into(), slim: true })]);
-    a.skins.changed(false, Err(Failure { kind: "network".into(), message: "Sin red".into(), detail: String::new() }));
+    a.skins.changed("a1", false, Err(Failure { kind: "network".into(), message: "Sin red".into(), detail: String::new() }));
     settle();
     assert_eq!(toast(&a.ui), "Sin red");
     assert!(a.ui.get_toast_error());
@@ -330,18 +330,18 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     let mut p = fixtures::sample_profile();
     p.capes[0].active = false;
     p.capes[1].active = true;
-    a.skins.cape_done(Ok(p));
+    a.skins.cape_done("a1", Ok(p));
     settle();
     click(&by_label(&a.ui, "Sin capa")[0]);
     assert_eq!(a.rec.take(), ["cape a1 -"]);
-    a.skins.cape_done(Ok(fixtures::sample_profile()));
+    a.skins.cape_done("a1", Ok(fixtures::sample_profile()));
 
     // Restablecer pide confirmación.
     click(&by_id(&a.ui, "reset")[0]);
     assert_eq!(by_id(&a.ui, "confirm-reset").len(), 1);
     click(&by_label(&a.ui, "Restablecer").last().unwrap().clone());
     assert_eq!(a.rec.take(), ["reset a1"]);
-    a.skins.changed(true, Ok(fixtures::sample_profile()));
+    a.skins.changed("a1", true, Ok(fixtures::sample_profile()));
     settle();
     assert_eq!(toast(&a.ui), "Skin restablecida");
     assert_eq!(a.rec.take(), ["load"]);
@@ -386,6 +386,40 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     assert_eq!(a.rec.take(), [format!("apply a1 {:?}", Apply::Upload { path: "/tmp/buena.png".into(), slim: true })]);
 }
 
+fn skins_resultados_viejos_y_reintentos() {
+    let a = app("es");
+    a.ui.set_route(Route::Skins);
+    let st = a.ui.global::<SkinsState>();
+    // Una textura que no se pudo bajar se vuelve a pedir con el perfil.
+    a.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    a.rec.take();
+    a.skins.texture_loaded(fixtures::SKIN_URL, None);
+    a.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    assert_eq!(a.rec.take(), [format!("texture {}", fixtures::SKIN_URL)]);
+    a.skins.texture_loaded(fixtures::SKIN_URL, Some(fixtures::sample_texture(fixtures::SKIN_URL)));
+    settle();
+
+    // Aplicar en a1 y cambiar de cuenta antes de que conteste.
+    click(&by_label(&a.ui, "Clásica")[0]);
+    click(&by_id(&a.ui, "apply")[0]);
+    a.rec.take();
+    let other = shard_ui::accounts::Account { id: "a3".into(), name: "Otra".into(), microsoft: true, shard: false, skin_url: None, active: true };
+    let mut list = fixtures::sample_accounts();
+    list[0].active = false;
+    list.push(other);
+    a.acc.set_accounts(Ok(list));
+    assert_eq!(a.rec.take(), ["profile a3"]);
+    assert!(!st.get_busy());
+    a.ui.set_toast_message("".into());
+    a.skins.changed("a1", false, Ok(fixtures::sample_profile()));
+    a.skins.cape_done("a1", Ok(fixtures::sample_profile()));
+    settle();
+    // Lo de a1 no pisa a a3 (sigue cargando su perfil) ni avisa.
+    assert_eq!(st.get_state(), shard_ui::LoadState::Loading);
+    assert_eq!(toast(&a.ui), "");
+    assert!(a.rec.take().is_empty());
+}
+
 fn skins_sin_cuenta_y_offline() {
     let a = app("en");
     a.ui.set_route(Route::Skins);
@@ -421,5 +455,6 @@ fn cuentas_y_skins() {
     alta_shard_con_usuario_y_contrasena();
     login_de_microsoft_con_codigo_y_caducidad();
     skins_cambiar_modelo_capa_y_restablecer();
+    skins_resultados_viejos_y_reintentos();
     skins_sin_cuenta_y_offline();
 }

@@ -390,6 +390,9 @@ impl Skins {
                 m.url.clear();
                 m.slim = None;
                 m.from_url = false;
+                // Lo que estaba en marcha era de la otra cuenta.
+                m.busy = false;
+                m.cape_busy = None;
             }
             changed
         };
@@ -428,7 +431,8 @@ impl Skins {
         {
             let mut m = self.model.borrow_mut();
             m.profile = ProfileLoad::Ready(p);
-            want.retain(|u| !m.textures.contains_key(u));
+            // Pide lo que falta y vuelve a pedir lo que falló (sin red, etc.).
+            want.retain(|u| matches!(m.textures.get(u), None | Some(Tex::Missing)));
             for u in &want {
                 m.textures.insert(u.clone(), Tex::Loading);
             }
@@ -480,8 +484,12 @@ impl Skins {
         }
     }
 
-    /// Resultado de aplicar o restablecer la skin.
-    pub fn changed(&self, reset: bool, r: Result<Profile, Failure>) {
+    /// Resultado de aplicar o restablecer la skin en `account`. Si entretanto
+    /// se cambió de cuenta, no es de esta pantalla: se descarta.
+    pub fn changed(&self, account: &str, reset: bool, r: Result<Profile, Failure>) {
+        if self.account_id().as_deref() != Some(account) {
+            return;
+        }
         self.model.borrow_mut().busy = false;
         match r {
             Ok(p) => {
@@ -517,7 +525,10 @@ impl Skins {
         self.actions.cape(&account, (!id.is_empty()).then_some(id));
     }
 
-    pub fn cape_done(&self, r: Result<Profile, Failure>) {
+    pub fn cape_done(&self, account: &str, r: Result<Profile, Failure>) {
+        if self.account_id().as_deref() != Some(account) {
+            return;
+        }
         self.model.borrow_mut().cape_busy = None;
         match r {
             Ok(p) => self.use_profile(p),

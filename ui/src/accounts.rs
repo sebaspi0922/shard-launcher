@@ -421,8 +421,9 @@ impl Accounts {
     fn on_tick(&self) {
         let left = self.login.borrow().left((self.now_ms)());
         if left == 0 && matches!(*self.login.borrow(), Login::Code { .. }) {
+            // Como Flutter: se muestra caducado, pero no se aborta (si
+            // Microsoft ya aceptó, el núcleo puede estar terminando con Xbox).
             self.tick.stop();
-            self.actions.cancel_login();
             *self.login.borrow_mut() = Login::Expired;
         }
         self.show_login();
