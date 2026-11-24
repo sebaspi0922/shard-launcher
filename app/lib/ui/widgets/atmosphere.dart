@@ -2,6 +2,8 @@
 // prisa, cada uno con su propio factor (parallax). Va y vuelve en 18 s de forma
 // lineal y se mueve desde el primer fotograma.
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 /// Una forma: posición base (fracción del tamaño + píxeles) más la deriva.
@@ -77,8 +79,20 @@ class Atmosphere extends StatefulWidget {
 }
 
 class _AtmosphereState extends State<Atmosphere>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+  /// Sin foco más de esto, el fondo se para. Oculta o minimizada no hace
+  /// falta: Flutter ya no pide fotogramas.
+  static const _idleAfter = Duration(seconds: 30);
+
   late final _clock = AnimationController(vsync: this, duration: _period);
+  Timer? _idle;
+  bool _away = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void didChangeDependencies() {
@@ -92,9 +106,25 @@ class _AtmosphereState extends State<Atmosphere>
     _sync();
   }
 
-  /// Con «reducir movimiento» o en modo rendimiento las formas se quedan quietas.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _idle?.cancel();
+    if (state == AppLifecycleState.inactive) {
+      _idle = Timer(_idleAfter, () {
+        _away = true;
+        _sync();
+      });
+    } else if (state == AppLifecycleState.resumed && _away) {
+      _away = false;
+      _sync();
+    }
+  }
+
+  /// Con «reducir movimiento», en modo rendimiento o tras un rato sin foco las
+  /// formas se quedan quietas.
   void _sync() {
-    final run = widget.animate && !MediaQuery.disableAnimationsOf(context);
+    final run =
+        widget.animate && !_away && !MediaQuery.disableAnimationsOf(context);
     if (!run) {
       _clock.stop();
     } else if (!_clock.isAnimating) {
@@ -104,6 +134,8 @@ class _AtmosphereState extends State<Atmosphere>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _idle?.cancel();
     _clock.dispose();
     super.dispose();
   }
