@@ -2,8 +2,6 @@
 //! búsqueda y estado de lanzamiento por instancia. Rust es la fuente de
 //! verdad; `controller` copia el resultado a los modelos de Slint.
 
-use std::collections::HashMap;
-
 /// Lo que la pantalla necesita de una instancia del núcleo.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Record {
@@ -92,7 +90,7 @@ pub struct Model {
     pub all: Vec<Record>,
     pub query: String,
     pub grid: bool,
-    pub launches: HashMap<String, Phase>,
+    pub launches: crate::launch::Launches,
 }
 
 impl Model {
@@ -107,15 +105,18 @@ impl Model {
     }
 
     pub fn phase(&self, id: &str) -> Phase {
-        self.launches.get(id).copied().unwrap_or_default()
+        self.launches.phase(id)
     }
 
-    /// La primera instancia con un lanzamiento en marcha (píldora del título).
+    pub fn by_id(&self, id: &str) -> Option<&Record> {
+        self.all.iter().find(|r| r.id == id)
+    }
+
+    /// Lanzamiento más relevante para la píldora del título
+    /// (`activeLaunchProvider`): el primero ocupado o, si no, uno en juego.
     pub fn active(&self) -> Option<(&Record, Phase)> {
-        self.all.iter().find_map(|r| match self.phase(&r.id) {
-            Phase::Idle | Phase::Error => None,
-            p => Some((r, p)),
-        })
+        let (id, p) = self.launches.active(self.all.iter().map(|r| r.id.as_str()))?;
+        Some((self.by_id(id)?, p))
     }
 }
 
@@ -158,8 +159,10 @@ mod tests {
         let mut m = Model::default();
         m.set_all(vec![rec("a", "A", Some(2), 0), rec("b", "B", Some(1), 0)]);
         assert_eq!(m.active(), None);
-        m.launches.insert("b".into(), Phase::Running);
-        m.launches.insert("a".into(), Phase::Error);
+        m.launches.force("b", Phase::Running, None);
+        m.launches.force("a", Phase::Error, None);
         assert_eq!(m.active().map(|(r, p)| (r.id.as_str(), p)), Some(("b", Phase::Running)));
+        m.launches.force("a", Phase::Preparing, None);
+        assert_eq!(m.active().map(|(r, p)| (r.id.as_str(), p)), Some(("a", Phase::Preparing)));
     }
 }
