@@ -182,7 +182,7 @@ impl SkinActions for CoreSkins {
                 Apply::InvalidPng | Apply::Nothing => return,
             };
             let r = r.map(|p| Profile::from_core(&p)).map_err(|e| fail(&lang, &e));
-            skins::post(move |s| s.changed(false, r));
+            skins::post(move |s| s.changed(&account, false, r));
         });
     }
 
@@ -190,7 +190,7 @@ impl SkinActions for CoreSkins {
         let (core, lang, account) = (self.backend.core.clone(), self.lang.clone(), account.to_owned());
         self.backend.rt.spawn(async move {
             let r = core.reset_skin(Some(&account)).await.map(|p| Profile::from_core(&p)).map_err(|e| fail(&lang, &e));
-            skins::post(move |s| s.changed(true, r));
+            skins::post(move |s| s.changed(&account, true, r));
         });
     }
 
@@ -202,7 +202,7 @@ impl SkinActions for CoreSkins {
                 None => core.hide_cape(Some(&account)).await,
             };
             let r = r.map(|p| Profile::from_core(&p)).map_err(|e| fail(&lang, &e));
-            skins::post(move |s| s.cape_done(r));
+            skins::post(move |s| s.cape_done(&account, r));
         });
     }
 }
