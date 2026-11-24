@@ -4,34 +4,42 @@
 import { Palette, Theme, Type } from "../theme.slint";
 import { Txt, Icon, Spinner } from "base.slint";
 
-// FilledButton(.icon): acento, alto 44 (12 + 20 + 12), radio de control.
-// Área de toque de 48 (MaterialTapTargetSize.padded) con 44 visibles.
+// FilledButton(.icon): acento, alto 12 + contenido + 12 (44 con el icono de
+// 20 de serie), radio de control. Área de toque de 48 (MaterialTapTargetSize
+// .padded). `pad` = relleno horizontal; `pad-v` y `min-visible`, el vertical
+// y el alto mínimo visible.
 export component FilledButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
+    in property <length> icon-size: 20px;
+    in property <length> pad: 16px;
+    // Relleno vertical y alto mínimo visible (minimumSize del estilo).
+    in property <length> pad-v: 12px;
+    in property <length> min-visible: 40px;
     in property <bool> enabled: true;
     callback clicked;
-    height: 48px;
+    property <length> visible-height: max(root.min-visible, 2 * root.pad-v + max(root.icon != "" ? root.icon-size : 0px, 18px));
+    height: max(48px, visible-height);
     width: max(64px, lay.preferred-width);
     accessible-role: button;
     accessible-label: text;
     accessible-enabled: enabled;
     accessible-action-default => { clicked(); }
     Rectangle {
-        y: 2px;
-        height: 44px;
+        y: (parent.height - root.visible-height) / 2;
+        height: root.visible-height;
         border-radius: Theme.radius-control;
         background: !root.enabled ? Palette.surface2 : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
         animate background { duration: Theme.fast; }
     }
     lay := HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
+        padding-left: root.pad;
+        padding-right: root.pad;
         spacing: 8px;
         alignment: center;
         if icon != "": Icon {
             glyph: icon;
-            size: 20px;
+            size: root.icon-size;
             y: (parent.height - self.height) / 2;
             color: enabled ? Palette.on-accent : Palette.text-muted;
         }
@@ -74,20 +82,29 @@ export component OutlinedButton inherits Rectangle {
     ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
-// TextButton: solo texto secundario.
+// TextButton: solo texto secundario. `icon` y `tint` (color) opcionales; `pad`
+// = relleno horizontal (12 por defecto).
 export component TextButton inherits Rectangle {
     in property <string> text;
+    in property <string> icon;
+    in property <color> tint: Palette.text-secondary;
+    in property <length> pad: 12px;
+    in property <length> icon-size: 18px;
     callback clicked;
     height: 36px;
+    width: lay.preferred-width;
     border-radius: Theme.radius-control;
     background: ta.has-hover ? Palette.surface1 : transparent;
     accessible-role: button;
     accessible-label: text;
     accessible-action-default => { clicked(); }
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        Txt { text: root.text; style: Type.label-large; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
+    lay := HorizontalLayout {
+        padding-left: root.pad;
+        padding-right: root.pad;
+        spacing: 8px;
+        alignment: center;
+        if root.icon != "": Icon { glyph: root.icon; size: root.icon-size; color: root.tint; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.label-large; color: root.tint; y: (parent.height - self.height) / 2; }
     }
     ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
@@ -182,56 +199,66 @@ export struct LaunchState {
     progress: float,
 }
 
-// Botón «Jugar» pequeño (PlayButtonSize.small: 34 de alto, mínimo 96).
+// Botón «Jugar» (play_button.dart). Pequeño (34 de alto, mínimo 96) o
+// grande (`large`: 56, mínimo 220, con sombra del acento en reposo).
 export component PlayButton inherits Rectangle {
     in property <LaunchState> state;
     in property <string> label;
+    in property <bool> large;
     callback clicked;
     property <bool> idle: state.phase == LaunchPhase.idle;
     property <bool> running: state.phase == LaunchPhase.running;
     property <bool> failed: state.phase == LaunchPhase.error;
     property <color> fg: idle ? Palette.on-accent : running ? Palette.success : failed ? Palette.danger : Palette.on-accent-container;
-    height: 34px;
-    width: max(96px, lay.preferred-width);
-    border-radius: Theme.radius-control;
+    property <length> h: large ? 56px : 34px;
+    property <length> icon: large ? 24px : 18px;
+    height: h;
+    width: max(large ? 220px : 96px, lay.preferred-width);
+    border-radius: large ? 14px : Theme.radius-control;
     background: idle ? (ta.has-hover ? Palette.accent-hover : Palette.accent)
         : running ? Palette.success.with-alpha(0.14)
         : failed ? Palette.danger.with-alpha(0.12) : Palette.accent-container;
     border-width: 1px;
     border-color: idle ? transparent : running ? Palette.success.with-alpha(0.4)
         : failed ? Palette.danger.with-alpha(0.45) : Palette.accent.with-alpha(0.35);
+    drop-shadow-color: idle && large ? Palette.accent.with-alpha(0.35) : transparent;
+    drop-shadow-blur: 24px;
+    drop-shadow-offset-y: 6px;
     animate background, border-color { duration: Theme.medium; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
     accessible-role: button;
     accessible-label: label;
     accessible-enabled: idle || failed;
     accessible-action-default => { clicked(); }
-    clip: true;
-    if state.phase == LaunchPhase.downloading && state.progress >= 0: Rectangle {
-        x: 0;
-        width: parent.width * state.progress;
-        background: Palette.accent.with-alpha(0.28);
+    Rectangle {
+        clip: true;
+        border-radius: root.border-radius;
+        if state.phase == LaunchPhase.downloading && state.progress >= 0: Rectangle {
+            x: 0;
+            width: parent.width * state.progress;
+            background: Palette.accent.with-alpha(0.28);
+        }
     }
     lay := HorizontalLayout {
-        padding-left: 15.3px;
-        padding-right: 15.3px;
-        spacing: 6.8px;
+        padding-left: root.h * 0.45;
+        padding-right: root.h * 0.45;
+        spacing: root.h * 0.2;
         alignment: center;
-        // El hueco mide lo que lo que va dentro: icono 18, punto 7,56, círculo 14,4.
+        // El hueco mide lo que lo que va dentro: icono, punto (0,42) o círculo (0,8).
         Rectangle {
-            width: running ? 7.56px : (state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.starting) ? 14.4px : 18px;
-            if idle: Icon { glyph: "\u{e037}"; filled: true; size: 18px; color: root.fg; }
-            if failed: Icon { glyph: "\u{e5d5}"; size: 18px; color: root.fg; }
-            if state.phase == LaunchPhase.downloading: Icon { glyph: "\u{f090}"; size: 18px; color: root.fg; }
+            width: running ? root.icon * 0.42 : (state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.starting) ? root.icon * 0.8 : root.icon;
+            if idle: Icon { glyph: "\u{e037}"; filled: true; size: root.icon; color: root.fg; }
+            if failed: Icon { glyph: "\u{e5d5}"; size: root.icon; color: root.fg; }
+            if state.phase == LaunchPhase.downloading: Icon { glyph: "\u{f090}"; size: root.icon; color: root.fg; }
             if running: Rectangle {
-                width: 7.56px;
-                height: 7.56px;
+                width: root.icon * 0.42;
+                height: root.icon * 0.42;
                 border-radius: self.width / 2;
                 background: root.fg;
                 drop-shadow-color: root.fg.with-alpha(0.6);
                 drop-shadow-blur: 8px;
             }
             if state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.starting: Spinner {
-                size: 14.4px;
+                size: root.icon * 0.8;
                 stroke: 2.2px;
                 tint: root.fg;
             }
@@ -239,8 +266,10 @@ export component PlayButton inherits Rectangle {
         Txt {
             text: root.label;
             // Sin alto de línea propio (TextStyle sin height): el natural.
-            style: { size: 13px, weight: 700, line-height: 1.20996, letter-spacing: 0 };
+            style: { size: root.large ? 17px : 13px, weight: 700, line-height: 1.20996, letter-spacing: root.large ? 0.2px : 0 };
+            family: "Inter Tnum";
             color: root.fg;
+            y: (parent.height - self.height) / 2;
         }
     }
     ta := TouchArea {
