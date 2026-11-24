@@ -195,6 +195,8 @@ fn navegar_por_el_rail() {
 }
 
 fn cerrar_pregunta_y_recuerda() {
+    // SAFETY: un solo hilo de test.
+    unsafe { std::env::set_var("SHARD_TRAY", "1") };
     let a = app("es");
     let shell = Shell::new(&a.ui, CloseBehavior::Ask, None);
     click(&by_label(&a.ui, "Cerrar"));
@@ -218,6 +220,17 @@ fn cerrar_pregunta_y_recuerda() {
     drop(shell);
 }
 
+fn sin_bandeja_minimiza_en_vez_de_ocultar() {
+    // SAFETY: un solo hilo de test.
+    unsafe { std::env::set_var("SHARD_TRAY", "0") };
+    let a = app("es");
+    let shell = Shell::new(&a.ui, CloseBehavior::Tray, None);
+    click(&by_label(&a.ui, "Cerrar"));
+    assert!(a.ui.window().is_visible(), "sin bandeja la ventana no puede quedar oculta");
+    assert!(a.ui.window().is_minimized());
+    drop(shell);
+}
+
 #[test]
 fn interacciones() {
     slint::platform::set_platform(Box::new(i_slint_backend_testing::TestingBackend::new(
@@ -235,4 +248,5 @@ fn interacciones() {
     estados_de_carga_error_y_vacio();
     navegar_por_el_rail();
     cerrar_pregunta_y_recuerda();
+    sin_bandeja_minimiza_en_vez_de_ocultar();
 }

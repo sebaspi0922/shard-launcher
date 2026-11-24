@@ -88,12 +88,18 @@ impl Shell {
         if quit_app { quit() } else { self.to_background() }
     }
 
-    /// Oculta la ventana dejando el icono en la bandeja.
+    /// Oculta la ventana dejando el icono en la bandeja. Sin bandeja en el
+    /// sistema solo minimiza, como Flutter (`toBackground`): si no, la
+    /// ventana quedaría oculta sin forma de volver.
     pub fn to_background(&self) {
+        let Some(u) = self.ui.upgrade() else { return };
+        if !tray_host_available() {
+            tracing::info!("sin bandeja en el sistema: se minimiza");
+            u.window().set_minimized(true);
+            return;
+        }
         self.ensure_tray();
-        if let Some(u) = self.ui.upgrade()
-            && let Err(e) = u.hide()
-        {
+        if let Err(e) = u.hide() {
             tracing::warn!(error = %e, "no se pudo ocultar la ventana");
         }
     }
@@ -133,6 +139,32 @@ impl Shell {
             t.set_last_instance(name.into());
         }
     }
+}
+
+/// ¿Hay quien pinte el icono de la bandeja? En Linux, un
+/// `StatusNotifierWatcher` en el bus de sesión (waybar, Noctalia, KDE,
+/// GNOME con AppIndicator…). Windows y macOS siempre tienen bandeja.
+/// `SHARD_TRAY=0|1` lo fuerza (tests, entornos raros).
+pub fn tray_host_available() -> bool {
+    match std::env::var("SHARD_TRAY").as_deref() {
+        Ok("0") => return false,
+        Ok("1") => return true,
+        _ => {}
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let has_watcher = || -> zbus::Result<bool> {
+            let conn = zbus::blocking::Connection::session()?;
+            let dbus = zbus::blocking::fdo::DBusProxy::new(&conn)?;
+            Ok(dbus.name_has_owner("org.kde.StatusNotifierWatcher".try_into()?)?)
+        };
+        has_watcher().unwrap_or_else(|e| {
+            tracing::info!(error = %e, "sin bus de sesión");
+            false
+        })
+    }
+    #[cfg(not(target_os = "linux"))]
+    true
 }
 
 pub fn quit() {
