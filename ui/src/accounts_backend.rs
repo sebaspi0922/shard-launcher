@@ -25,11 +25,14 @@ pub struct CoreAccounts {
     pub lang: String,
     /// Login en curso (se aborta al cancelar).
     login: Arc<Mutex<Option<AbortHandle>>>,
+    /// Las lecturas de la lista van de una en una: así llegan a la UI en el
+    /// orden en que se leyeron y una vieja no pisa a una nueva.
+    loads: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl CoreAccounts {
     pub fn new(backend: Backend, lang: &str) -> Self {
-        Self { backend, lang: lang.to_owned(), login: Arc::default() }
+        Self { backend, lang: lang.to_owned(), login: Arc::default(), loads: Arc::default() }
     }
 }
 
@@ -37,7 +40,9 @@ impl AccountActions for CoreAccounts {
     fn load(&self) {
         let core = self.backend.core.clone();
         let lang = self.lang.clone();
+        let loads = self.loads.clone();
         self.backend.rt.spawn(async move {
+            let _turn = loads.lock().await;
             let r = core.accounts().await.map(|f| {
                 let active = f.active.as_deref();
                 f.accounts.iter().map(|a| Account::from_core(a, active)).collect()
@@ -139,11 +144,11 @@ fn variant(slim: bool) -> SkinVariant {
 const MAX_LOCAL: u64 = 2 * 1024 * 1024;
 
 impl SkinActions for CoreSkins {
-    fn load_profile(&self, account: &str) {
+    fn load_profile(&self, account: &str, seq: u64) {
         let (core, lang, account) = (self.backend.core.clone(), self.lang.clone(), account.to_owned());
         self.backend.rt.spawn(async move {
             let r = core.profile(Some(&account)).await.map(|p| Profile::from_core(&p)).map_err(|e| fail(&lang, &e));
-            skins::post(move |s| s.set_profile(&account, r));
+            skins::post(move |s| s.set_profile(&account, seq, r));
         });
     }
 

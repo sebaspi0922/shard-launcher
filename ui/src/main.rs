@@ -162,7 +162,7 @@ impl shard_ui::accounts::AccountActions for NoCore {
 }
 
 impl shard_ui::skins::SkinActions for NoCore {
-    fn load_profile(&self, _: &str) {}
+    fn load_profile(&self, _: &str, _: u64) {}
     fn load_texture(&self, _: &str) {}
     fn pick_file(&self, _: &str) {}
     fn load_local(&self, _: &str) {}

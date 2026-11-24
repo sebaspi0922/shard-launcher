@@ -181,7 +181,7 @@ impl AccountActions for Recorder {
 }
 
 impl SkinActions for Recorder {
-    fn load_profile(&self, account: &str) {
+    fn load_profile(&self, account: &str, _: u64) {
         self.push(format!("profile {account}"));
     }
     fn load_texture(&self, url: &str) {

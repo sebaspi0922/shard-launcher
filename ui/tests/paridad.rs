@@ -51,7 +51,7 @@ struct Scene {
 
 /// Perfil de ejemplo con sus texturas ya descargadas.
 fn sample_skins(c: &Ctx) {
-    c.skins.set_profile("a1", Ok(fixtures::sample_profile()));
+    c.skins.set_profile("a1", c.skins.profile_seq(), Ok(fixtures::sample_profile()));
     for url in [fixtures::SKIN_URL, fixtures::CAPE_1_URL, fixtures::CAPE_2_URL] {
         c.skins.texture_loaded(url, Some(fixtures::sample_texture(url)));
     }
