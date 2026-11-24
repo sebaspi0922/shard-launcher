@@ -58,6 +58,42 @@ mod tests {
         assert_eq!(resolve(None, None), "es");
     }
 
+    /// Claves de `@tr("…")` en todos los .slint (las de plural aparecen dos
+    /// veces con la misma clave).
+    fn tr_keys(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
+        for e in std::fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() {
+                tr_keys(&p, out);
+            } else if p.extension().is_some_and(|x| x == "slint") {
+                let src = std::fs::read_to_string(&p).unwrap();
+                for (i, _) in src.match_indices("@tr(\"") {
+                    let rest = &src[i + 5..];
+                    let key = &rest[..rest.find('"').unwrap()];
+                    out.push((p.display().to_string(), key.to_owned()));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn toda_clave_de_la_ui_existe_en_los_dos_arb() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("slint");
+        let mut keys = Vec::new();
+        tr_keys(&dir, &mut keys);
+        assert!(keys.len() > 30, "solo {} claves: ¿cambió la ruta?", keys.len());
+        for lang in LANGS {
+            for (file, key) in &keys {
+                // `<clave>.zero` sale del caso `=0` de un plural.
+                let base = key.strip_suffix(".zero").unwrap_or(key);
+                assert!(table(lang).contains_key(base), "{file}: «{key}» no está en app_{lang}.arb");
+                if key.ends_with(".zero") {
+                    assert!(table(lang)[base].contains("=0{"), "{file}: «{base}» no tiene caso =0");
+                }
+            }
+        }
+    }
+
     #[test]
     fn textos_de_rust() {
         assert_eq!(text("es", "loaderCustom"), "Personalizado");
