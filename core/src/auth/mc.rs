@@ -6,24 +6,10 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::xbox::XboxToken;
-use super::{AuthError, Endpoints, join};
+use super::{Endpoints, join};
 use crate::net::{Http, check_status};
 use crate::secrets::Secret;
 use crate::{Error, Result};
-
-#[derive(Debug, Clone)]
-pub struct McToken {
-    pub access_token: Secret,
-    pub expires_in: u64,
-}
-
-#[derive(Deserialize)]
-struct LoginResponse {
-    access_token: String,
-    #[serde(default)]
-    expires_in: u64,
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Profile {
@@ -80,38 +66,6 @@ impl SkinVariant {
             SkinVariant::Slim => "slim",
         }
     }
-}
-
-pub async fn login_with_xbox(http: &Http, ep: &Endpoints, xsts: &XboxToken) -> Result<McToken> {
-    let url = join(&ep.minecraft, "authentication/login_with_xbox");
-    let body = json!({
-        "identityToken": format!("XBL3.0 x={};{}", xsts.uhs, xsts.token.expose()),
-    });
-    let resp = http.send(|c| c.post(&url).json(&body)).await?;
-    if resp.status() == StatusCode::FORBIDDEN {
-        return Err(AuthError::AppNotApproved.into());
-    }
-    let resp = check_status(resp)?;
-    let parsed: LoginResponse = resp.json().await?;
-    Ok(McToken {
-        access_token: Secret::new(parsed.access_token),
-        expires_in: parsed.expires_in,
-    })
-}
-
-/// `true` si la cuenta tiene alguna licencia del juego.
-pub async fn owns_game(http: &Http, ep: &Endpoints, token: &Secret) -> Result<bool> {
-    #[derive(Deserialize)]
-    struct Entitlements {
-        #[serde(default)]
-        items: Vec<serde_json::Value>,
-    }
-    let url = join(&ep.minecraft, "entitlements/mcstore");
-    let resp = http
-        .send(|c| c.get(&url).bearer_auth(token.expose()))
-        .await?;
-    let parsed: Entitlements = check_status(resp)?.json().await?;
-    Ok(!parsed.items.is_empty())
 }
 
 /// Perfil del jugador; `None` si la cuenta aún no tiene perfil.
