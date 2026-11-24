@@ -72,6 +72,7 @@
   "errAuthDeclined": "The sign-in was declined on the Microsoft page.",
   "errAuthExpired": "The code expired before finishing. Request a new one.",
   "errAuthSessionExpired": "This account’s session expired. Sign in again.",
+  "errAuthInvalidCredentials": "Invalid username or password for the Shard (Yggdrasil) account.",
   "errAuthGeneric": "Couldn’t sign in with Microsoft.",
   "errNetwork": "No connection, or the server is not responding.",
   "errOffline": "Offline, and what’s needed isn’t cached.",

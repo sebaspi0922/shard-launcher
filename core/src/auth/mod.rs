@@ -67,8 +67,11 @@ pub enum AuthError {
     #[error("Microsoft respondió {code}: {description}")]
     Msa { code: String, description: String },
 
-    #[error("la sesión de Microsoft caducó o se revocó; inicia sesión de nuevo")]
+    #[error("la sesión caducó o se revocó; inicia sesión de nuevo")]
     SessionExpired,
+
+    #[error("las credenciales de la cuenta Shard no son válidas")]
+    InvalidCredentials,
 
     #[error("Xbox Live: {message} (XErr {xerr})")]
     Xbox { xerr: u64, message: String },
@@ -110,6 +113,7 @@ impl AuthError {
             AuthError::DeviceCodeDeclined => "auth_declined",
             AuthError::Msa { .. } => "auth_msa",
             AuthError::SessionExpired => "auth_session_expired",
+            AuthError::InvalidCredentials => "auth_invalid_credentials",
             AuthError::Xbox { .. } => "auth_xbox",
             AuthError::AppNotApproved => "auth_app_not_approved",
             AuthError::NotEntitled => "auth_not_entitled",

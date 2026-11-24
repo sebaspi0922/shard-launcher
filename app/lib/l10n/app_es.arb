@@ -107,6 +107,7 @@
   "errAuthDeclined": "Se rechazó el inicio de sesión en la página de Microsoft.",
   "errAuthExpired": "El código caducó antes de terminar. Pide otro.",
   "errAuthSessionExpired": "La sesión de esta cuenta caducó. Vuelve a iniciar sesión.",
+  "errAuthInvalidCredentials": "Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).",
   "errAuthGeneric": "No se pudo iniciar sesión con Microsoft.",
   "errNetwork": "No hay conexión o el servidor no responde.",
   "errOffline": "Sin conexión y sin copia guardada de lo que hace falta.",

@@ -251,6 +251,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This account’s session expired. Sign in again.';
 
   @override
+  String get errAuthInvalidCredentials =>
+      'Invalid username or password for the Shard (Yggdrasil) account.';
+
+  @override
   String get errAuthGeneric => 'Couldn’t sign in with Microsoft.';
 
   @override

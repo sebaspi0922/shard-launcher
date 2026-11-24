@@ -512,6 +512,12 @@ abstract class AppLocalizations {
   /// **'La sesión de esta cuenta caducó. Vuelve a iniciar sesión.'**
   String get errAuthSessionExpired;
 
+  /// No description provided for @errAuthInvalidCredentials.
+  ///
+  /// In es, this message translates to:
+  /// **'Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).'**
+  String get errAuthInvalidCredentials;
+
   /// No description provided for @errAuthGeneric.
   ///
   /// In es, this message translates to:
