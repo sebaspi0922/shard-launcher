@@ -557,5 +557,16 @@ debe; Contenido contesta la primera búsqueda, con o sin red).
 - Lección de paridad: en filas de alto impar, Flutter manda el medio píxel
   del centrado hacia abajo (`ceil`).
 
+**Pendiente para F3** (en `main` aún no hay detalle de instancia; al rebasar
+F3 sobre F4):
+- `InstContent::go_browse(id, kind)` →
+  `crate::content::with(|c| c.open_for(id, Some(kind), None))` (con el mundo
+  en los datapacks); `open_for` ya fija versión, loader, tipo y la ruta.
+- `content.rs`: «Volver a la instancia» (`back_to_instance`) →
+  `self.shell.open_instance(&id, Some(InstanceTab::Content))`, y «Abrir
+  instancia» tras un modpack (`modpack_open_instance`) →
+  `self.shell.open_instance(&id, None)`. Hoy llaman a
+  `Actions::open_instance`, que en `main` solo deja un log.
+
 **Pendiente:** probar a mano una instalación real de mod y de modpack con
 red; el arrastre de servidores a mano (sensación).
