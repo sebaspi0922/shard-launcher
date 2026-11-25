@@ -46,7 +46,11 @@ fn wait(what: &str, cond: impl Fn() -> bool + 'static) {
             let _ = slint::quit_event_loop();
         }
     });
-    slint::run_event_loop().unwrap();
+    // Una salida pendiente de un tick anterior puede cortar el bucle antes
+    // de tiempo: se vuelve a entrar mientras quede plazo.
+    while !ok.get() && start.elapsed() <= Duration::from_secs(10) {
+        slint::run_event_loop().unwrap();
+    }
     assert!(ok.get(), "no llegó: {what}");
 }
 
