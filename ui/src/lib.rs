@@ -12,6 +12,7 @@ pub mod art;
 pub mod backdrop;
 pub mod backend;
 pub mod controller;
+pub mod curseforge;
 pub mod errors;
 pub mod face;
 pub mod fixtures;

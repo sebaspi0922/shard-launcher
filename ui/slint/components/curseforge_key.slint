@@ -1,0 +1,55 @@
+// Clave de API de CurseForge (curseforge_key_dialog.dart): diálogo para
+// guardarla en el llavero del sistema. La usan Contenido (estado vacío de
+// CurseForge) y Ajustes → Integraciones. Rust (`content.rs`) la guarda y
+// la borra con el núcleo; la clave nunca vuelve a la UI.
+//
+//   CurseforgeKey.open-dialog()   abre el diálogo
+//   CurseforgeKey.clear()         borra la clave (sin confirmar: quien llama
+//                                 confirma antes)
+//   CurseforgeKey.has-key         hay clave guardada
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { FilledButton, TextButton } from "buttons.slint";
+import { LabeledField } from "inputs.slint";
+import { FormDialog, DialogActions } from "feedback.slint";
+
+export global CurseforgeKey {
+    in property <bool> has-key;
+    in-out property <bool> dialog-open;
+    callback open-dialog();
+    callback save(string);
+    callback clear();
+}
+
+// showTextPrompt de common.dart con `obscure`: campo con etiqueta y ayuda,
+// «Cancelar» y «Guardar» (solo con texto). Intro guarda.
+export component CurseforgeKeyLayer inherits Rectangle {
+    if CurseforgeKey.dialog-open: FormDialog {
+        title: @tr("cfKeyTitle");
+        icon: Icons.key;
+        accessible-id: "cf-key-dialog";
+        dismissed => { CurseforgeKey.dialog-open = false; }
+        field := LabeledField {
+            label: @tr("cfKeyLabel");
+            helper: @tr("cfKeyHelper");
+            password: true;
+            accessible-id: "field";
+            init => { self.focus-input(); }
+            accepted(v) => {
+                if v.is-empty == false {
+                    CurseforgeKey.save(v);
+                }
+            }
+        }
+        DialogActions {
+            TextButton { text: @tr("cancel"); height: 48px; accessible-id: "cancel"; clicked => { CurseforgeKey.dialog-open = false; } }
+            FilledButton {
+                text: @tr("save");
+                enabled: field.text != "";
+                accessible-id: "filled";
+                clicked => { CurseforgeKey.save(field.text); }
+            }
+        }
+    }
+}

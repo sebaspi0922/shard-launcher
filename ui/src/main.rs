@@ -16,6 +16,7 @@ use shard_ui::accounts_backend::{CoreAccounts, CoreSkins};
 use shard_ui::backend::{self, Backend, CoreActions};
 use shard_ui::skins::Skins;
 use shard_ui::controller::Controller;
+use shard_ui::curseforge::{CoreKeys, Keys, NoKeys};
 use shard_ui::window::Shell;
 use shard_ui::{MainWindow, i18n, prefs};
 use slint::ComponentHandle;
@@ -110,6 +111,12 @@ fn main() {
     let clock = Instant::now();
     let accounts = Accounts::new(&ui, ctl.clone(), acc_actions, Box::new(move || clock.elapsed().as_millis() as u64));
     let _skins = Skins::new(&ui, ctl.clone(), accounts.clone(), skin_actions);
+    // Clave de CurseForge (Contenido y Ajustes).
+    let key_actions: Box<dyn shard_ui::curseforge::KeyActions> = match &backend {
+        Some(b) => Box::new(CoreKeys { backend: b.clone(), lang: lang.to_owned() }),
+        None => Box::new(NoKeys),
+    };
+    let _keys = Keys::new(&ui, ctl.clone(), key_actions);
     let shell = Shell::new(&ui, settings.close_behavior, backend.clone());
     {
         let shell = shell.clone();

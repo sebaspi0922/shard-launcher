@@ -16,11 +16,13 @@ import { LaunchFailure } from "components/feedback.slint";
 import { Notices, UpdatePhase, UpdateBanner, CrashBanner } from "components/banners.slint";
 import { TipLayer, Tips } from "components/common.slint";
 import { SelectMenuLayer, SelectMenu, SelectOption } from "components/select.slint";
+import { CurseforgeKey, CurseforgeKeyLayer } from "components/curseforge_key.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase,
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
 export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
 export { SelectMenu, SelectOption }
+export { CurseforgeKey }
 
 // Fondo de la app (backdrop.dart): el del estilo o una imagen propia.
 export enum BackdropKind {
@@ -243,6 +245,7 @@ export component MainWindow inherits Window {
             }
         }
     }
+    CurseforgeKeyLayer { }
     // Menú de un SelectButton abierto (encima de diálogos y paneles).
     SelectMenuLayer { }
     TipLayer { }
