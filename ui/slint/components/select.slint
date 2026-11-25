@@ -1,0 +1,317 @@
+// Desplegable compacto (select_button.dart): botón con contorno y menú.
+//
+// El menú no es hijo del botón: lo pinta `SelectMenuLayer`, al final de
+// `MainWindow`, encima de todo (si fuera hijo lo taparían los elementos que
+// vienen después y lo recortarían los `Flickable`). Un solo menú abierto por
+// ventana, como `MenuAnchor`.
+//
+// Uso:
+//   SelectButton {
+//       options: [{ value: "", label: "Cualquiera" }, { value: "1.21.4", label: "1.21.4" }];
+//       value: "1.21.4";
+//       changed(v) => { … }
+//   }
+// `value` "" sin opción "" = nada elegido: se ve `placeholder` (o «—»).
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon } from "base.slint";
+
+export struct SelectOption {
+    value: string,
+    label: string,
+    // Segunda línea en el menú (versión de la instancia, tipo de cuenta).
+    subtitle: string,
+    // Icono de instancia delante (InstanceIcon de 24): iniciales y degradado.
+    lead-initials: string,
+    lead-from: color,
+    lead-to: color,
+    // O una imagen delante (cara de la cuenta, 22).
+    lead-image: image,
+}
+
+// Icono delante de una opción.
+component Lead inherits Rectangle {
+    in property <SelectOption> option;
+    property <bool> initials: option.lead-initials != "";
+    property <length> size: initials ? 24px : 22px;
+    width: size;
+    height: size;
+    accessible-role: none;
+    if root.initials: Rectangle {
+        border-radius: root.size * 0.26;
+        background: @linear-gradient(135deg, root.option.lead-from 0%, root.option.lead-to 100%);
+        border-width: 1px;
+        border-color: #FFFFFF29;
+        drop-shadow-color: #00000059;
+        drop-shadow-blur: root.size * 0.3;
+        drop-shadow-offset-y: root.size * 0.08;
+        Text {
+            text: root.option.lead-initials;
+            font-family: "Inter";
+            font-size: root.size * 0.36;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #FFFFFFF2;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+    if !root.initials: Rectangle {
+        border-radius: root.size * 0.24;
+        clip: true;
+        Image {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            source: root.option.lead-image;
+            image-rendering: pixelated;
+        }
+        Rectangle { border-radius: parent.border-radius; border-width: 1px; border-color: #FFFFFF24; }
+    }
+}
+
+// Estado del menú abierto (uno por ventana).
+export global SelectMenu {
+    out property <bool> open;
+    // Botón dueño del menú y lo que mostraba al abrirse.
+    out property <int> owner;
+    out property <[SelectOption]> options;
+    out property <string> value;
+    out property <length> min-width;
+    // Caja del botón (coordenadas de la ventana).
+    out property <length> ax;
+    out property <length> ay;
+    out property <length> aw;
+    out property <length> ah;
+    // Última elección: el botón cuyo `owner` coincide la recoge.
+    out property <int> serial;
+    out property <int> picked-owner;
+    out property <string> picked;
+    property <int> next: 0;
+
+    public function new-owner() -> int {
+        self.next += 1;
+        return self.next;
+    }
+
+    public function show(owner: int, options: [SelectOption], value: string, min-width: length, x: length, y: length, w: length, h: length) {
+        if self.open && self.owner == owner {
+            self.open = false;
+            return;
+        }
+        self.owner = owner;
+        self.options = options;
+        self.value = value;
+        self.min-width = min-width;
+        self.ax = x;
+        self.ay = y;
+        self.aw = w;
+        self.ah = h;
+        self.open = true;
+    }
+
+    public function pick(value: string) {
+        self.open = false;
+        self.picked-owner = self.owner;
+        self.picked = value;
+        self.serial += 1;
+    }
+
+    public function close() {
+        self.open = false;
+    }
+}
+
+// OutlinedButton del tema con el valor elegido: icono (o el de la opción),
+// prefijo atenuado, valor y flecha. 40 visibles en un área de toque de 48.
+// Sin ancho fijo mide lo que su contenido; con ancho (p. ej. el de su
+// columna), el valor ocupa lo que sobra.
+export component SelectButton inherits Rectangle {
+    in property <[SelectOption]> options;
+    in-out property <string> value;
+    in property <string> placeholder;
+    in property <string> icon;
+    // Texto antes del valor («Versión  Cualquiera»).
+    in property <string> prefix;
+    in property <bool> enabled: true;
+    // Ancho mínimo de las filas del menú (Flutter: ancho del botón − 60, o 100).
+    in property <length> menu-min-width: 100px;
+    callback changed(string);
+    property <int> owner;
+    // Recoge la elección del menú si es suya.
+    property <int> serial: SelectMenu.serial;
+    changed serial => {
+        if SelectMenu.picked-owner == root.owner && SelectMenu.picked != root.value {
+            root.value = SelectMenu.picked;
+            root.changed(SelectMenu.picked);
+        }
+    }
+    init => { owner = SelectMenu.new-owner(); }
+    height: 48px;
+    preferred-width: lay.preferred-width;
+    min-width: lay.min-width;
+    accessible-role: combobox;
+    accessible-label: prefix;
+    accessible-value: placeholder-txt.text != "" ? placeholder-txt.text : root.value;
+    accessible-enabled: enabled;
+    accessible-expandable: true;
+    accessible-expanded: SelectMenu.open && SelectMenu.owner == root.owner;
+    accessible-action-default => { root.toggle(); }
+    Rectangle {
+        y: 4px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: root.enabled ? Palette.border-strong : Palette.border;
+        background: !root.enabled ? transparent : ta.has-hover ? Palette.surface2 : Palette.surface1;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        // Icono de la opción elegida o, si no tiene, el del botón.
+        for o in root.options: HorizontalLayout {
+            if o.value == root.value && (o.lead-initials != "" || o.lead-image.width > 0): HorizontalLayout {
+                Lead { option: o; y: (parent.height - self.height) / 2; }
+                Rectangle { width: 8px; }
+            }
+        }
+        if root.icon != "" && !root.has-lead: HorizontalLayout {
+            Icon { glyph: root.icon; size: 18px; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
+            Rectangle { width: 8px; }
+        }
+        if root.prefix != "": Txt {
+            text: root.prefix + "  ";
+            style: { size: Type.label-large.size, weight: 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+            color: Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+        // Valor: solo la opción elegida tiene texto.
+        HorizontalLayout {
+            horizontal-stretch: 1;
+            for o in root.options: Txt {
+                text: o.value == root.value ? o.label : "";
+                style: Type.label-large;
+                color: root.enabled ? Palette.text : Palette.text-muted;
+                horizontal-stretch: o.value == root.value ? 1 : 0;
+                y: (parent.height - self.height) / 2;
+            }
+            placeholder-txt := Txt {
+                text: root.value == "" ? (root.placeholder != "" ? root.placeholder : root.has-empty ? "" : "—") : "";
+                style: Type.label-large;
+                color: root.enabled ? Palette.text : Palette.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        Rectangle { width: 4px; }
+        Icon { glyph: "\u{e5cf}"; size: 18px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+    }
+    // ¿Hay icono de opción? ¿Hay una opción ""? (para el respaldo)
+    property <bool> has-lead: lead-probe.preferred-width > 0;
+    property <bool> has-empty: empty-probe.preferred-width > 0;
+    lead-probe := HorizontalLayout {
+        visible: false;
+        for o in root.options: Rectangle {
+            width: o.value == root.value && (o.lead-initials != "" || o.lead-image.width > 0) ? 1px : 0;
+        }
+    }
+    empty-probe := HorizontalLayout {
+        visible: false;
+        for o in root.options: Rectangle { width: o.value == "" ? 1px : 0; }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.toggle(); }
+    }
+    function toggle() {
+        if root.enabled {
+            SelectMenu.show(root.owner, root.options, root.value, max(root.menu-min-width, root.width - 60px),
+                self.absolute-position.x, self.absolute-position.y + 4px, self.width, 40px);
+        }
+    }
+}
+
+// El menú abierto (MenuAnchor + MenuItemButton del tema): superficie 3,
+// borde fuerte, relleno 6, filas de 38 como mínimo, ✓ en la elegida.
+// Va al final de MainWindow.
+export component SelectMenuLayer inherits Rectangle {
+    property <length> row-h: 38px;
+    property <length> pad: 6px;
+    if SelectMenu.open: Rectangle {
+        TouchArea { clicked => { SelectMenu.close(); } }
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if e.text == Key.Escape {
+                    SelectMenu.close();
+                    return accept;
+                }
+                reject
+            }
+        }
+        menu := Rectangle {
+            property <length> want-h: min(360px, list.preferred-height + 2 * root.pad + 2px);
+            // MenuAnchor: 4 por debajo; si no cabe, por encima.
+            x: max(8px, min(root.width - self.width - 8px, SelectMenu.ax));
+            y: SelectMenu.ay + SelectMenu.ah + 4px + self.height <= root.height - 8px
+                ? SelectMenu.ay + SelectMenu.ah + 4px
+                : max(8px, SelectMenu.ay - 4px - self.height);
+            width: min(480px, max(SelectMenu.aw, list.preferred-width + 2 * root.pad + 2px));
+            height: want-h;
+            border-radius: Theme.radius-card;
+            background: Theme.blend(Palette.surface3, Palette.background);
+            border-width: 1px;
+            border-color: Palette.border-strong;
+            drop-shadow-color: Theme.shadow;
+            drop-shadow-blur: 16px;
+            drop-shadow-offset-y: 6px;
+            accessible-role: AccessibleRole.list;
+            accessible-id: "select-menu";
+            TouchArea { }
+            Flickable {
+                x: root.pad + 1px;
+                y: root.pad + 1px;
+                width: parent.width - 2 * root.pad - 2px;
+                height: parent.height - 2 * root.pad - 2px;
+                content-height: list.preferred-height;
+                list := VerticalLayout {
+                    for o in SelectMenu.options: Rectangle {
+                        property <bool> on: o.value == SelectMenu.value;
+                        min-height: root.row-h;
+                        preferred-width: row.preferred-width;
+                        border-radius: Theme.radius-control;
+                        background: item-ta.has-hover ? Palette.surface2 : transparent;
+                        accessible-role: list-item;
+                        accessible-label: o.label;
+                        accessible-checkable: true;
+                        accessible-checked: on;
+                        accessible-id: "select-option";
+                        accessible-action-default => { SelectMenu.pick(o.value); }
+                        row := HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            padding-top: o.subtitle != "" ? 6px : 0;
+                            padding-bottom: o.subtitle != "" ? 6px : 0;
+                            spacing: 12px;
+                            if o.lead-initials != "" || o.lead-image.width > 0: Lead { option: o; y: (parent.height - self.height) / 2; }
+                            VerticalLayout {
+                                min-width: SelectMenu.min-width;
+                                horizontal-stretch: 1;
+                                alignment: center;
+                                Txt { text: o.label; style: Type.body-medium; }
+                                if o.subtitle != "": Txt { text: o.subtitle; style: Type.body-small; color: Palette.text-secondary; }
+                            }
+                            Rectangle {
+                                width: 18px;
+                                if on: Icon { glyph: "\u{e668}"; size: 18px; color: Palette.accent; }
+                            }
+                        }
+                        item-ta := TouchArea { mouse-cursor: pointer; clicked => { SelectMenu.pick(o.value); } }
+                    }
+                }
+            }
+        }
+    }
+}

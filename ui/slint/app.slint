@@ -15,10 +15,12 @@ import { HomePage, HomeState, ServerItem } from "screens/home.slint";
 import { LaunchFailure } from "components/feedback.slint";
 import { Notices, UpdatePhase, UpdateBanner, CrashBanner } from "components/banners.slint";
 import { TipLayer, Tips } from "components/common.slint";
+import { SelectMenuLayer, SelectMenu, SelectOption } from "components/select.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase,
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
 export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
+export { SelectMenu, SelectOption }
 
 // Fondo de la app (backdrop.dart): el del estilo o una imagen propia.
 export enum BackdropKind {
@@ -241,6 +243,8 @@ export component MainWindow inherits Window {
             }
         }
     }
+    // Menú de un SelectButton abierto (encima de diálogos y paneles).
+    SelectMenuLayer { }
     TipLayer { }
     // Bordes para redimensionar (sin marco no los pone el sistema).
     if root.resizable && !root.is-maximized: Rectangle {
