@@ -1,0 +1,217 @@
+// Piezas comunes de common.dart y del tema: panel, etiqueta, título de
+// sección, botón de icono tonal y tooltips (Tooltip y SideTooltip).
+//
+// Tooltips: un solo globo por ventana. Quien quiera uno pone `TipArea`
+// (o llama a `Tips.hover`) y `MainWindow` pinta `TipLayer` encima de todo.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon, Spinner } from "base.slint";
+
+// Panel (common.dart): superficie de tarjeta con borde y radio de tarjeta.
+// El contenido va 1 px dentro (el borde, como Container de Flutter).
+export component Panel inherits Rectangle {
+    in property <int> level: 1;
+    in property <length> radius: Theme.radius-card;
+    border-radius: radius;
+    background: Palette.card(level == 1 ? Palette.surface1 : level == 2 ? Palette.surface2 : Palette.surface3);
+    border-width: 1px;
+    border-color: Palette.border;
+}
+
+// Tag: píldora pequeña con punto de color o icono. `strong` = sobre imagen.
+export component Tag inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <color> dot: transparent;
+    in property <bool> strong;
+    height: 28px;
+    width: row.preferred-width + 2px;
+    border-radius: self.height / 2;
+    background: strong ? #00000059 : Palette.surface2;
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: AccessibleRole.text;
+    accessible-label: root.text;
+    row := HorizontalLayout {
+        x: 1px;
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 0;
+        if root.dot != transparent: HorizontalLayout {
+            Rectangle {
+                width: 7px;
+                height: 7px;
+                y: (parent.height - 7px) / 2;
+                border-radius: 3.5px;
+                background: root.dot;
+            }
+            Rectangle { width: 6px; }
+        }
+        if root.icon != "": HorizontalLayout {
+            Icon { glyph: root.icon; size: 14px; y: (parent.height - 14px) / 2; }
+            Rectangle { width: 5px; }
+        }
+        Txt {
+            text: root.text;
+            style: Type.label-medium;
+            color: root.strong ? Palette.text : Palette.text-secondary;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+}
+
+// Etiqueta de sección en mayúsculas (SESIÓN, EN MARCHA…).
+export component Overline inherits Txt {
+    style: { size: Type.label-small.size, weight: Type.label-small.weight, line-height: Type.label-small.line-height, letter-spacing: 1.2px };
+    color: Palette.text-muted;
+}
+
+// Globo de ayuda: uno por ventana.
+export enum TipSide { below, right }
+
+export global Tips {
+    // Lo que se ve ahora.
+    out property <string> text;
+    out property <bool> shown;
+    out property <TipSide> side;
+    // Caja del elemento que lo pidió (coordenadas de la ventana).
+    out property <length> ax;
+    out property <length> ay;
+    out property <length> aw;
+    out property <length> ah;
+    // Pedido pendiente (se muestra tras la espera de Material, 350 ms).
+    out property <string> pending;
+    out property <bool> waiting;
+    out property <TipSide> pending-side;
+    out property <length> px;
+    out property <length> py;
+    out property <length> pw;
+    out property <length> ph;
+
+    // `hovered` = el puntero entró (true) o salió (false) del elemento.
+    public function hover(hovered: bool, text: string, side: TipSide, x: length, y: length, w: length, h: length) {
+        if hovered && text != "" {
+            self.pending = text;
+            self.pending-side = side;
+            self.px = x;
+            self.py = y;
+            self.pw = w;
+            self.ph = h;
+            self.waiting = true;
+        } else if self.pending == text || self.text == text {
+            self.waiting = false;
+            self.shown = false;
+        }
+    }
+
+    // Lo llama el temporizador de `TipLayer`.
+    public function show-pending() {
+        if self.waiting {
+            self.text = self.pending;
+            self.side = self.pending-side;
+            self.ax = self.px;
+            self.ay = self.py;
+            self.aw = self.pw;
+            self.ah = self.ph;
+            self.waiting = false;
+            self.shown = true;
+        }
+    }
+
+    // Un clic oculta el globo (Listener.onPointerDown de SideTooltip).
+    public function hide() {
+        self.waiting = false;
+        self.shown = false;
+    }
+}
+
+// TouchArea que además pide un globo al pasar el puntero (úsala como el
+// área de toque del componente).
+export component TipArea inherits TouchArea {
+    in property <string> tip;
+    in property <TipSide> side: TipSide.below;
+    changed has-hover => {
+        Tips.hover(self.has-hover, root.tip, root.side, self.absolute-position.x, self.absolute-position.y, self.width, self.height);
+    }
+    pointer-event(e) => {
+        if e.kind == PointerEventKind.down {
+            Tips.hide();
+        }
+    }
+}
+
+// Capa que pinta el globo (va al final de MainWindow, encima de todo).
+export component TipLayer inherits Rectangle {
+    // Tooltip de Material: debajo del elemento, 24 px bajo su centro.
+    property <length> gx: Tips.side == TipSide.right ? Tips.ax + Tips.aw + 8px
+        : max(8px, min(root.width - bubble.width - 8px, Tips.ax + (Tips.aw - bubble.width) / 2));
+    property <length> gy: Tips.side == TipSide.right ? Tips.ay + (Tips.ah - bubble.height) / 2
+        : Tips.ay + Tips.ah / 2 + 24px;
+    accessible-role: none;
+    Timer {
+        interval: 350ms;
+        running: Tips.waiting;
+        triggered => { Tips.show-pending(); }
+    }
+    bubble := Rectangle {
+        x: root.gx;
+        y: root.gy;
+        width: label.preferred-width + 20px + 2px;
+        height: 16px + 12px + 2px;
+        opacity: Tips.shown ? 1 : 0;
+        animate opacity { duration: Theme.fast; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
+        border-radius: Theme.radius-control;
+        background: Theme.blend(Palette.surface3, Palette.background-deep);
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        accessible-role: AccessibleRole.text;
+        accessible-label: Tips.shown ? Tips.text : "";
+        accessible-id: "tooltip";
+        label := Txt {
+            x: 11px;
+            text: Tips.text;
+            style: Type.label-medium;
+        }
+    }
+}
+
+// IconButton.filledTonal: 40 × 40 visibles en un área de 48, radio de
+// control, fondo del contenedor del acento.
+export component TonalIconButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> filled;
+    in property <length> icon-size: 18px;
+    in property <string> tooltip;
+    in property <bool> enabled: true;
+    in property <bool> busy;
+    in property <color> tint: Palette.on-accent-container;
+    in property <color> fill: Palette.accent-container;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        // Deshabilitado: onSurface al 12 % (Material 3).
+        background: !root.enabled ? Palette.text.with-alpha(0.12)
+            : ta.has-hover ? Theme.blend(root.tint.with-alpha(0.08), root.fill) : root.fill;
+        animate background { duration: Theme.fast; }
+        if root.busy: Spinner { size: 16px; stroke: 2px; tint: root.tint; }
+        if !root.busy: Icon {
+            glyph: root.icon;
+            filled: root.filled;
+            size: root.icon-size;
+            color: root.enabled ? root.tint : Palette.text.with-alpha(0.38);
+        }
+    }
+    ta := TipArea {
+        tip: root.tooltip;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { if root.enabled { root.clicked(); } }
+    }
+}

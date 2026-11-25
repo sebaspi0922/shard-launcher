@@ -1,0 +1,184 @@
+// Avisos flotantes de abajo a la derecha (update_banner.dart y
+// doctor/crash_banner.dart): versión nueva y cierre inesperado del juego.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Wrapped, Icon } from "base.slint";
+import { FilledButton, TextButton } from "buttons.slint";
+import { CloseButton } from "feedback.slint";
+
+export enum UpdatePhase { available, installing, ready, failed }
+
+// Estado de los avisos (Rust lo rellena: `notices.rs`).
+export global Notices {
+    // Versión nueva.
+    in property <bool> update-shown;
+    in property <UpdatePhase> update-phase;
+    in property <string> update-version;
+    // Texto bajo el título (novedades, estado o error).
+    in property <string> update-status;
+    in property <bool> update-can-install;
+    in property <bool> update-has-notes;
+    // 0..1; < 0 = sin progreso conocido.
+    in property <float> update-progress: -1;
+    callback update-dismiss;
+    callback update-install;
+    callback update-restart;
+    callback update-download;
+    callback update-notes;
+
+    // Cierre inesperado.
+    in property <bool> crash-shown;
+    // «Create: Aeronáutica · código 1».
+    in property <string> crash-line;
+    in property <bool> crash-has-instance;
+    callback crash-dismiss;
+    callback crash-diagnose;
+    callback crash-logs;
+}
+
+// Caja común: 400 de ancho, tinte del color, borde y sombra; entra
+// deslizándose desde abajo.
+component BannerBox inherits Rectangle {
+    in property <bool> shown;
+    in property <color> tint;
+    in property <float> tint-alpha;
+    in property <float> border-alpha;
+    in property <string> glyph;
+    callback dismissed;
+    width: 400px;
+    height: shown ? lay.preferred-height + 2px : 0px;
+    // AnimatedSlide (0, 1,4) + AnimatedOpacity.
+    opacity: shown ? 1 : 0;
+    animate opacity { duration: Theme.fast; }
+    box := Rectangle {
+        y: root.shown ? 0 : self.height * 1.4;
+        animate y { duration: Theme.medium; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
+        height: lay.preferred-height + 2px;
+        border-radius: Theme.radius-card;
+        background: Theme.blend(root.tint.with-alpha(root.tint-alpha), Theme.blend(Palette.surface3, Palette.background));
+        border-width: 1px;
+        border-color: root.tint.with-alpha(root.border-alpha);
+        drop-shadow-color: #00000073;
+        drop-shadow-blur: 28px;
+        drop-shadow-offset-y: 10px;
+        lay := HorizontalLayout {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            padding-left: 16px;
+            padding-top: 16px;
+            padding-right: 8px;
+            padding-bottom: 12px;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Theme.radius-control;
+                background: root.tint.with-alpha(0.16);
+                Icon { glyph: root.glyph; size: 20px; color: root.tint; }
+            }
+            Rectangle { width: 12px; }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: start;
+                @children
+            }
+            VerticalLayout {
+                alignment: start;
+                CloseButton { clicked => { root.dismissed(); } }
+            }
+        }
+    }
+}
+
+export component UpdateBanner inherits BannerBox {
+    shown: Notices.update-shown;
+    tint: Palette.accent;
+    tint-alpha: 0.08;
+    border-alpha: 0.40;
+    glyph: "\u{e8d7}";
+    accessible-role: groupbox;
+    accessible-label: @tr("updateAvailableTitle", Notices.update-version);
+    dismissed => { Notices.update-dismiss(); }
+    Txt { text: @tr("updateAvailableTitle", Notices.update-version); style: Type.title-small; }
+    Rectangle { height: 2px; }
+    Wrapped {
+        text: Notices.update-status;
+        style: Type.body-small;
+        color: Notices.update-phase == UpdatePhase.failed ? Palette.danger : Palette.text-secondary;
+        max-lines: 3;
+    }
+    Rectangle { height: 12px; }
+    if Notices.update-phase == UpdatePhase.installing: Rectangle {
+        height: 4px;
+        border-radius: 2px;
+        clip: true;
+        background: Palette.surface2;
+        Rectangle {
+            x: 0;
+            width: Notices.update-progress >= 0 ? parent.width * Notices.update-progress : parent.width * 0.3;
+            background: Palette.accent;
+        }
+    }
+    if Notices.update-phase != UpdatePhase.installing: HorizontalLayout {
+        alignment: start;
+        spacing: 8px;
+        if Notices.update-phase == UpdatePhase.ready: FilledButton {
+            text: @tr("updateRestart");
+            icon: "\u{f053}";
+            icon-size: 18px;
+            clicked => { Notices.update-restart(); }
+        }
+        if Notices.update-phase != UpdatePhase.ready && Notices.update-can-install: FilledButton {
+            text: @tr("updateInstall");
+            icon: "\u{f090}";
+            icon-size: 18px;
+            accessible-id: "update-install";
+            clicked => { Notices.update-install(); }
+        }
+        if Notices.update-phase != UpdatePhase.ready && !Notices.update-can-install: FilledButton {
+            text: @tr("updateDownload");
+            icon: "\u{e89e}";
+            icon-size: 18px;
+            clicked => { Notices.update-download(); }
+        }
+        if Notices.update-has-notes: VerticalLayout {
+            alignment: center;
+            TextButton { text: @tr("updateNotes"); clicked => { Notices.update-notes(); } }
+        }
+    }
+}
+
+export component CrashBanner inherits BannerBox {
+    shown: Notices.crash-shown;
+    tint: Palette.danger;
+    tint-alpha: 0.10;
+    border-alpha: 0.45;
+    glyph: "\u{eac2}";
+    accessible-role: groupbox;
+    accessible-label: @tr("crashBannerTitle");
+    dismissed => { Notices.crash-dismiss(); }
+    Txt { text: @tr("crashBannerTitle"); style: Type.title-small; }
+    Rectangle { height: 2px; }
+    Txt { text: Notices.crash-line; style: Type.body-small; color: Palette.text-secondary; }
+    Rectangle { height: 12px; }
+    HorizontalLayout {
+        alignment: start;
+        spacing: 8px;
+        FilledButton {
+            text: @tr("doctorDiagnose");
+            icon: "\u{f805}";
+            icon-size: 18px;
+            // styleFrom(padding: horizontal 14): sin relleno vertical.
+            pad: 14px;
+            pad-v: 0;
+            min-visible: 34px;
+            enabled: Notices.crash-has-instance;
+            accessible-id: "crash-diagnose";
+            clicked => { Notices.crash-diagnose(); }
+        }
+        VerticalLayout {
+            alignment: center;
+            TextButton { text: @tr("launchSeeLogs"); accessible-id: "crash-logs"; clicked => { Notices.crash-logs(); } }
+        }
+    }
+}

@@ -1,6 +1,6 @@
 # Shard → Slint: plan de migración de la UI
 
-Fecha: 2026-11-24 · Rama: `slint/f0` · Estado: fase 0 entregada, pendiente de
+Fecha: 2026-11-24 · Rama: `slint/f1` · Estado: fases 0 y 1 entregadas, pendiente de
 revisión.
 
 Decisión ya tomada por Sebas: toda la UI pasa de Flutter (`app/`) a Slint
@@ -18,6 +18,7 @@ Contenido:
 5. [Licencia de Slint](#5-licencia-de-slint)
 6. [Riesgos y mitigación](#6-riesgos-y-mitigación)
 7. [Resultados de la fase 0](#7-resultados-de-la-fase-0)
+8. [Resultados de la fase 1](#8-resultados-de-la-fase-1)
 
 ---
 
@@ -33,9 +34,9 @@ funciones y un stream de eventos. 46 goldens de 1280 × 800 en
 
 | Ruta Flutter | Archivos | Slint | Goldens (escenas de paridad) | Fase |
 |---|---|---|---|---|
-| marco (`ShellRoute`) | `shell/app_shell.dart`, `title_bar.dart`, `backdrop.dart`, `update_banner.dart`, `ui_scale.dart` | ✅ `MainWindow` + `NavRail` + `TitleBar` + `Atmosphere`; enum `Route` en vez de URL; ⚠️ fondo con imagen + desenfoque, banners, escala de UI | todas | 0 / 1 |
+| marco (`ShellRoute`) | `shell/app_shell.dart`, `title_bar.dart`, `backdrop.dart`, `update_banner.dart`, `ui_scale.dart` | ✅ `MainWindow` + `NavRail` + `TitleBar` + `Atmosphere`; enum `Route` en vez de URL; ✅ (F1) fondo por estilo o imagen + desenfoque + atenuado (`Backdrop`), avisos, escala de UI, fundido entre rutas, tooltips | todas | 0 / 1 |
 | `/instances` | `instances/instances_page.dart` | ✅ `screens/instances.slint` (rejilla, lista, búsqueda, carga, error, vacío, sin resultados) | `instances_grid_es`, `instances_list_en` + 3 escenas nuevas | 0 |
-| `/` Inicio | `home/home_page.dart` (684) | ⚠️ 4 estilos (Grafito, Aurora, Paisaje, SebasPi con esfera ASCII) | `home_es`, `home_empty_en`, `home_error_es`, `home_downloading_es`, `home_style_*` ×4, `web_home_graphite_es` | 1 |
+| `/` Inicio | `home/home_page.dart` (684) | ✅ `screens/home.slint` + `HomeState`; 4 estilos (Grafito, Aurora, Paisaje, SebasPi con esfera ASCII) | `home_es`, `home_empty_en`, `home_error_es`, `home_downloading_es`, `home_style_*` ×4, `web_home_graphite_es` | 1 |
 | `/instances/:id?tab=` | `instance_detail_page.dart` + 6 pestañas (contenido, mundos, capturas, backups, ajustes, registros) | ⚠️ `InstanceView { id, tab }` | `instance_*` ×7 | 3 |
 | `/content` | `content/content_page.dart`, `project_sheet.dart`, `install.dart`, `modpack_dialog.dart` | ⚠️ buscador + ficha lateral | `content_search_es`, `content_curseforge_en`, `content_target_es`, `project_sheet_es`, `modpack_installing_es` | 4 |
 | `/servers` | `servers/*` | ⚠️ lista con ping, reordenar | `servers_es`, `server_dialog_en` | 4 |
@@ -69,18 +70,18 @@ Base: ✅ `AppDialog` (velo, panel con borde fuerte y sombra, `@children`).
 | `tokens.dart`, `app_theme.dart`, `styles.dart` | `theme.slint`: `Palette` (AppColors), `Theme` (espacio, radios, movimiento, sombras, `blend`), `Type` (TextTheme) | ✅ Grafito; ⚠️ los otros 3 estilos y acentos (F1) |
 | Texto (`TextTheme` con `height`) | `Txt`: mismo alto que el párrafo de Flutter y reparto proporcional del interlineado (métricas de Inter) | ✅ |
 | `FilledButton`, `OutlinedButton`, `TextButton`, `IconButton.outlined`, `SegmentedButton` | `buttons.slint` (área de toque de 48 como Material) | ✅ |
-| `PlayButton` (6 fases) | `PlayButton` + `Fmt.launch-label` | ✅ visual; ⚠️ progreso real (F1) |
+| `PlayButton` (6 fases) | `PlayButton` (+ `large`) + `Fmt.launch-label` | ✅ con progreso real (`launch.rs`) |
 | `TextField` (relleno, prefijo, borrar) | `inputs.slint` `TextField` | ✅ |
-| `Checkbox`, `Switch`, `Slider` (`memory_slider`), `Tooltip`/`SideTooltip`, `Tag`, `Panel`, `SettingRow` | ✅ `Checkbox`; ⚠️ el resto | 1–5 |
+| `Checkbox`, `Switch`, `Slider` (`memory_slider`), `Tooltip`/`SideTooltip`, `Tag`, `Panel`, `SettingRow` | ✅ `Checkbox`; ✅ (F1, `components/common.slint`) `Panel`, `Tag`, `Overline`, `TonalIconButton`, tooltips (`TipArea` + `TipLayer`); ⚠️ el resto | 1–5 |
 | `EmptyState`, `ErrorNote` (con «Detalles»), `SnackBar` (`showToast`) | `feedback.slint` | ✅ |
 | `CircularProgressIndicator` | `Spinner` (arco con `Path`) | ✅ |
 | `art.dart`: paisaje de bloques, icono de instancia, marca | ✅ paisaje en Rust (`art.rs`, mismo hash y `Random` que Dart, probado), icono y marca en Slint | ✅ |
 | `atmosphere.dart` (fondo Grafito animado) | `Atmosphere` | ✅ |
 | `avatar.dart` (cara generada / cara de la skin) | `PlayerAvatar` + `face.rs` | ✅ generada; ⚠️ skin descargada (F2) |
-| `ascii_sphere.dart`, `backdrop.dart` (imagen + blur + atenuado) | ⚠️ esfera: `Text` por fotograma; blur: pre-desenfoque en Rust | 1 |
+| `ascii_sphere.dart`, `backdrop.dart` (imagen + blur + atenuado) | ✅ `backdrop.rs`: esfera pintada en CPU a 15 fps con atlas y muestreo bilineal como `drawAtlas`; blur de tres cajas (como Skia) al cambiar tamaño o ajuste | 1 |
 | `smooth_scroll.dart` (rueda suave) | `Flickable` nativo; ⚠️ comparar sensación a mano | 1 |
 | `skin_mesh.dart`, `skin_viewer.dart` | 🔴 ver riesgos | 2 |
-| `launch_feedback.dart`, `crash_banner.dart`, `update_banner.dart` | ⚠️ | 1 |
+| `launch_feedback.dart`, `crash_banner.dart`, `update_banner.dart` | ✅ `LaunchFailureNote` (feedback.slint), `components/banners.slint` + `notices.rs` | 1 |
 | `media.dart` (iconos de mods por URL, caché) | ⚠️ descarga en tokio + `Image::from_rgba8` | 3 |
 | `material_symbols_icons` | ✅ subset de Material Symbols Rounded con los mismos ejes que Flutter (`tools/slint/subset_icons.py`, lee `icons.slint`) | ✅ |
 
@@ -144,7 +145,7 @@ relativas y tiempo jugado: ✅ `fmt.slint` (mismas reglas que `format.dart`).
 | `launch_at_startup` | ⚠️ crate `auto-launch` (registro, LaunchAgent, `.desktop`) | 6 |
 | `file_selector` (modpack, fondo, skin) | ⚠️ `rfd` (portal XDG en Linux) | 1–4 |
 | `url_launcher` (15) | ⚠️ `open` crate / `webbrowser` | 2–5 |
-| `ui_scale.dart` | ⚠️ factor sobre la escala de Slint (`SLINT_SCALE_FACTOR` o propiedad global) | 1 |
+| `ui_scale.dart` | ✅ factor de escala de la ventana = sistema × UI (`appearance.rs`), mínimo 960 × 600 a escala del sistema | 1 |
 
 ### 1.10 Eventos del núcleo
 
@@ -337,7 +338,8 @@ decisión.
 | Accesibilidad | media | bajo-medio | Slint usa AccessKit; F0 ya da rol y etiqueta a botones, pestañas, casillas y campos (los tests los encuentran por etiqueta); F6 con Orca y Narrador |
 | HiDPI | media | medio | escala por pantalla de winit; arte de tarjetas pintado a escala física (✅); F6 a 1,25/1,5/2 y escenas de paridad a 2× |
 | Windows / macOS | media | medio | CI compila y pasa los tests en los dos (F0); a mano en F6: bandeja (Shell_NotifyIcon / NSStatusItem), ventana sin marco, `WindowMoveArea`, autoarranque |
-| Redimensionar una ventana sin marco | alta | medio | winit no pone bordes de redimensionado sin decoraciones: zonas de borde con `drag_resize_window` (winit, feature `unstable-winit-030`) en F1 |
+| Redimensionar una ventana sin marco | alta | medio | winit no pone bordes de redimensionado sin decoraciones: zonas de borde con `drag_resize_window` (winit, feature `unstable-winit-030`) ✅ en F1; falta probar a mano en cada plataforma (F6) |
+| **Línea base del texto** (nuevo, F1): Slint redondea la línea base y trunca el borde del glifo (`glyph.y.truncate()`); Skia no. Según el estilo el glifo queda ~1 px más abajo que en Flutter (bodySmall, labelSmall, bodyMedium) | segura | bajo | el arnés lo absorbe (SSIM 0,970–0,976 en Inicio); medido por estilo con `TextPainter` en Flutter; corregirlo a mano por estilo no se hizo porque a otras escalas el error es otro |
 | Visor 3D de skins | media | alto | Slint no pinta triángulos con textura: geometría de `skin_mesh.dart` portada a Rust puro con tests, rasterizado propio (ortográfica, caras por texel en orden de pintor) a una imagen; F2 empieza por aquí |
 | Desenfoque del fondo | segura | bajo | no hay filtro de blur: imagen desenfocada en Rust al cambiar fondo/sigma (`image`/`fast_image_resize`), en caché |
 | Animaciones implícitas y `Hero` | segura | bajo | `animate` cubre casi todo; `Hero` → fundido + escala; capturar transiciones a 0/50/100 % si hace falta |
@@ -381,3 +383,67 @@ y en Windows.
 **Pruebas:** 16 de unidad, 1 de escenas de paridad, 1 de interacción con 8
 casos (búsqueda con acentos, lista/rejilla, Jugar y abrir, partida en
 marcha, carga/error/vacío, raíl, diálogo de cierre, sin bandeja).
+
+---
+
+## 8. Resultados de la fase 1
+
+**Paridad** (`tools/paridad.sh all`, informe y capturas lado a lado en
+`docs/slint/paridad-f1/`). Referencias nuevas creadas con el método de F0
+(`parity_ref_test.dart`, `--refs`): salen idénticas byte a byte a sus
+goldens, salvo `home_empty_en`, que ya incluye el botón «Cuenta Shard» que
+`main` añadió a Flutter sin regenerar su golden.
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| home_es | 0,9758 | 19/19 |
+| home_downloading_es | 0,9700 | 20/20 |
+| home_error_es | 0,9720 | 20/20 |
+| home_empty_en | 0,9708 | 8/8 |
+| home_style_graphite_es | 0,9757 | 19/19 |
+| home_style_sebaspi_es | 0,9701 | 19/19 |
+| home_style_landscape_es | 0,9731 | 19/19 |
+| home_style_aurora_es | 0,9755 | 19/19 |
+| web_home_graphite_es | 0,9755 | 19/19 |
+| update_banner_es | 0,9727 | 20/20 |
+| crash_banner_es | 0,9738 | 20/20 |
+
+Las de F0 siguen pasando y suben un poco (0,978–0,992) por dos arreglos de
+componentes compartidos (caja del `EmptyState`, píldora de actividad).
+`compare.py` compone ahora lo transparente sobre negro antes de comparar
+(escena web) y tiene la regla `*-btn` (botón anclado a la izquierda: x, y,
+alto). Las dos más justas (0,9700 y 0,9701) lo son por el texto (línea base,
+ver riesgos) y el grano de la esfera.
+
+**Hecho en Rust (puro y probado):** `theme.rs` (paletas de los 4 estilos,
+`AccentSet.fromSeed`, tonos de marca), `prefs.rs` (todo `ui.json`),
+`accent.rs` (acento desde imagen: mismo color que Flutter en 6 imágenes; Wu,
+k-means y escalado de Skia portados porque el crate da otro color),
+`launch.rs` (máquina de `launch.dart`: tareas de progreso por instancia,
+«Iniciando» con línea de listo o 20 s, fallos y cierres), `notices.rs`
+(versión nueva y cierre inesperado), `home.rs` (instancia elegida,
+recientes, ping, números compactos de intl), `backdrop.rs`, `appearance.rs`.
+
+**Lanzamiento real** (`cargo run -p shard-ui --example lanzar_real`): con
+una instancia b1.7.3 y una cuenta offline, un clic en «Jugar» descarga Java 8,
+librerías y assets con progreso (`Descargando 1/10`), pasa a Iniciando y a En
+juego en 12 s (también en «En marcha» y en la píldora); al matar el juego sale
+«Reintentar», la nota de fallo y el aviso de cierre inesperado. Capturas en
+`docs/slint/paridad-f1/lanzamiento-real/`. El clic va por el backend de
+pruebas de Slint: en weston sin pantalla Xwayland se cae con los clics de
+xdotool.
+
+**CPU en reposo** (release, software, Xwayland sin GPU, 10 s): Grafito 35 %,
+SebasPi (esfera a 15 fps) 21 %, Aurora y Paisaje 0 %. PSS en Inicio
+52–65 MB (sin repetir con `medir.sh`).
+
+**Pruebas:** 47 de unidad, 16 escenas de paridad, 18 casos de interacción
+(cambiar instancia, jugar con progreso hasta En juego, temporizador de
+Iniciando, fallo y cerrar la nota, aviso de cierre con Diagnosticar y Ver
+registros, versión nueva con instalar/reiniciar/novedades, entrar a un
+servidor, sin cuenta ni instancias, tooltip del raíl, estilos y escala de UI).
+
+**Pendiente para otras fases:** Diagnosticar (Doctor, F5), Ver registros y
+abrir instancia (F3), panel y alta de cuentas (F2), añadir servidor (F4):
+los botones llaman a `Actions` y hoy solo dejan traza. Fundido entre rutas:
+la sección nueva entra con fundido; la vieja se va sin él (sin golden).

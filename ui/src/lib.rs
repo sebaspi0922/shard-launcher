@@ -3,14 +3,21 @@
 
 slint::include_modules!();
 
+pub mod accent;
+pub mod appearance;
 pub mod arb;
 pub mod art;
+pub mod backdrop;
 pub mod backend;
 pub mod controller;
 pub mod errors;
 pub mod face;
 pub mod fixtures;
+pub mod home;
 pub mod i18n;
 pub mod instances;
+pub mod launch;
+pub mod notices;
 pub mod prefs;
+pub mod theme;
 pub mod window;

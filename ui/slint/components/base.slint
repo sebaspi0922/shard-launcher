@@ -17,6 +17,8 @@ export component Txt {
     in property <string> text;
     in property <TextStyle> style: Type.body-medium;
     in property <color> color: Palette.text;
+    // "Inter Tnum" = cifras tabulares (FontFeature.tabularFigures()).
+    in property <string> family: "Inter";
     in property <TextHorizontalAlignment> horizontal-alignment: left;
     property <length> block: style.size * style.line-height;
     height: round(block / 1px) * 1px;
@@ -28,11 +30,13 @@ export component Txt {
         x: 0;
         width: parent.width;
         // Bloque del párrafo centrado en el alto disponible y glifo dentro
-        // del bloque con el reparto proporcional.
+        // del bloque con el reparto proporcional. (Flutter pone todo el
+        // redondeo encima de la línea base, pero con el rasterizador de Slint
+        // centrarlo queda más cerca: probado con el arnés.)
         y: (parent.height - root.block) / 2 + (root.block - root.style.size * InterMetrics.natural) * InterMetrics.ascent-share;
         height: root.style.size * InterMetrics.natural;
         text: root.text;
-        font-family: "Inter";
+        font-family: root.family;
         font-size: root.style.size;
         font-weight: root.style.weight;
         letter-spacing: root.style.letter-spacing;
@@ -56,6 +60,46 @@ export component Para inherits Text {
     wrap: word-wrap;
 }
 
+// Texto que puede ocupar varias líneas con el alto de línea de Flutter: el
+// bloque mide líneas × tamaño × alto (redondeado) y la primera línea va donde
+// la pone Flutter. Slint no tiene interlineado propio: de la segunda línea en
+// adelante el texto queda un poco más junto (≈ 3 px por línea a 12 px).
+export component Wrapped {
+    in property <string> text;
+    in property <TextStyle> style: Type.body-medium;
+    in property <color> color: Palette.text-secondary;
+    in property <string> font-family: "Inter";
+    // Alto natural de la fuente en em (Inter 1,21; JetBrains Mono 1,32).
+    in property <float> natural: InterMetrics.natural;
+    in property <int> max-lines: 0;
+    in property <TextHorizontalAlignment> horizontal-alignment: left;
+    property <length> line: style.size * natural;
+    property <int> lines: max(1, round(t.preferred-height / line));
+    property <int> shown: max-lines > 0 ? min(lines, max-lines) : lines;
+    property <length> block: style.size * style.line-height;
+    height: round(shown * block / 1px) * 1px;
+    min-width: 0;
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    t := Text {
+        x: 0;
+        y: (root.block - root.line) * InterMetrics.ascent-share;
+        width: parent.width;
+        height: root.shown * root.line;
+        text: root.text;
+        font-family: root.font-family;
+        font-size: root.style.size;
+        font-weight: root.style.weight;
+        letter-spacing: root.style.letter-spacing;
+        color: root.color;
+        wrap: word-wrap;
+        overflow: elide;
+        vertical-alignment: top;
+        horizontal-alignment: root.horizontal-alignment;
+        accessible-role: none;
+    }
+}
+
 // Icono de Material Symbols Rounded (subset en fonts/ShardIcons*.ttf).
 export component Icon inherits Text {
     in property <string> glyph;
@@ -73,13 +117,36 @@ export component Icon inherits Text {
     accessible-role: none;
 }
 
-// Indicador circular indeterminado (CircularProgressIndicator).
+// Curves.fastOutSlowIn (Cubic(0,4, 0, 0,2, 1)) muestreada cada 0,01, con
+// la misma bisección que Flutter (error 0,001).
+global Curves {
+    out property <[float]> fast-out-slow-in: [0.0000, 0.0002, 0.0009, 0.0019, 0.0036, 0.0059, 0.0086, 0.0119, 0.0157, 0.0209, 0.0257, 0.0321, 0.0392, 0.0469, 0.0566, 0.0656, 0.0768, 0.0887, 0.1033, 0.1186, 0.1349, 0.1519, 0.1696, 0.1928, 0.2121, 0.2370, 0.2627, 0.2892, 0.3109, 0.3386, 0.3667, 0.3952, 0.4241, 0.4474, 0.4766, 0.5000, 0.5234, 0.5468, 0.5701, 0.5933, 0.6134, 0.6333, 0.6531, 0.6698, 0.6891, 0.7054, 0.7214, 0.7346, 0.7502, 0.7630, 0.7756, 0.7879, 0.8000, 0.8107, 0.8212, 0.8326, 0.8415, 0.8503, 0.8588, 0.8672, 0.8754, 0.8833, 0.8911, 0.8977, 0.9041, 0.9113, 0.9165, 0.9232, 0.9281, 0.9328, 0.9382, 0.9434, 0.9476, 0.9518, 0.9557, 0.9596, 0.9632, 0.9662, 0.9695, 0.9722, 0.9753, 0.9777, 0.9805, 0.9826, 0.9847, 0.9866, 0.9884, 0.9901, 0.9917, 0.9931, 0.9944, 0.9955, 0.9964, 0.9973, 0.9981, 0.9986, 0.9992, 0.9995, 0.9998, 1.0000, 1.0000];
+    public pure function fosi(x: float) -> float {
+        let i = floor(clamp(x, 0, 1) * 100);
+        let f = clamp(x, 0, 1) * 100 - i;
+        let a = fast-out-slow-in[i];
+        let b = fast-out-slow-in[min(i + 1, 100)];
+        return a + (b - a) * f;
+    }
+}
+
+// Indicador circular indeterminado (CircularProgressIndicator): la misma
+// animación que Flutter (cabeza y cola con fastOutSlowIn cada 1333 ms, giro
+// cada 2222 ms) contada desde que aparece.
 export component Spinner inherits Rectangle {
     in property <length> size: 36px;
     in property <length> stroke: 3.6px;
     in property <color> tint: Palette.accent;
-    // Con el tiempo simulado de los tests queda quieto en el primer cuadro.
-    property <float> turn: Theme.motion ? mod(animation-tick() / 1333ms, 1) : 0.1;
+    property <duration> born;
+    init => { born = animation-tick(); }
+    // Sin movimiento queda quieto en el primer cuadro.
+    property <float> ms: Theme.motion ? (animation-tick() - born) / 1ms : 0;
+    property <float> cycle: mod(ms / 1333, 1);
+    property <float> head: cycle < 0.5 ? Curves.fosi(cycle / 0.5) : 1;
+    property <float> tail: cycle < 0.5 ? 0 : Curves.fosi((cycle - 0.5) / 0.5);
+    property <float> rot: mod(ms / 2222, 1);
+    property <angle> start: -90deg + tail * 270deg + rot * 360deg + cycle * 90deg;
+    property <angle> sweep: max((head - tail) * 270deg, 0.06deg);
     width: size;
     height: size;
     accessible-role: progress-indicator;
@@ -91,12 +158,11 @@ export component Spinner inherits Rectangle {
         stroke: root.tint;
         stroke-width: root.stroke;
         stroke-line-cap: round;
-        // Arco de 270° que gira.
-        MoveTo { x: 50 + 45 * cos(turn * 360deg); y: 50 + 45 * sin(turn * 360deg); }
+        MoveTo { x: 50 + 45 * cos(root.start); y: 50 + 45 * sin(root.start); }
         ArcTo {
-            x: 50 + 45 * cos(turn * 360deg + 270deg);
-            y: 50 + 45 * sin(turn * 360deg + 270deg);
-            radius-x: 45; radius-y: 45; large-arc: true; sweep: true;
+            x: 50 + 45 * cos(root.start + root.sweep);
+            y: 50 + 45 * sin(root.start + root.sweep);
+            radius-x: 45; radius-y: 45; large-arc: root.sweep > 180deg; sweep: true;
         }
     }
 }

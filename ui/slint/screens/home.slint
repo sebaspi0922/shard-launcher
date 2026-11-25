@@ -1,0 +1,643 @@
+// Inicio (home_page.dart): saludo, tarjeta grande para seguir jugando,
+// recientes, sesión, partidas en marcha y servidores rápidos.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Fmt } from "../fmt.slint";
+import { Txt, Para, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedButton, TextButton, PlayButton, LaunchState, LaunchPhase } from "../components/buttons.slint";
+import { EmptyState, ErrorNote, LaunchFailureNote, LaunchFailure } from "../components/feedback.slint";
+import { Panel, Tag, Overline, TonalIconButton, TipArea, TipSide } from "../components/common.slint";
+import { PlayerAvatar, AccountChip } from "../components/shell.slint";
+import { InstanceIcon, InstanceItem, LoadState } from "instances.slint";
+
+// Servidor guardado con su estado (Rust lo prepara en `controller`).
+export struct ServerItem {
+    id: string,
+    name: string,
+    // «3 / 20 · 23 ms», «Sin conexión» o «…».
+    status: string,
+    // Barras de señal (0–4).
+    level: int,
+    online: bool,
+    // Favicon del servidor o, si no hay, paisaje generado con la dirección.
+    icon: image,
+    has-favicon: bool,
+    // Entrar: tiene instancia, no está ocupada ni en juego.
+    can-join: bool,
+    busy: bool,
+    running: bool,
+    tooltip: string,
+}
+
+export global HomeState {
+    in property <LoadState> state: LoadState.loading;
+    in property <string> error-message;
+    in property <string> error-detail;
+    // Instancia de la tarjeta grande (`has-hero` = hay alguna).
+    in property <bool> has-hero;
+    in property <InstanceItem> hero;
+    in property <LaunchFailure> hero-failure;
+    in property <image> hero-art;
+    // Las tres siguientes y todas (para «Cambiar instancia»).
+    in property <[InstanceItem]> recent;
+    in property <[InstanceItem]> picker;
+    in property <[InstanceItem]> running;
+    in property <[ServerItem]> servers;
+    in property <bool> account-microsoft;
+    // Cuenta Shard (Yggdrasil).
+    in property <bool> account-shard;
+    // Cara de la cuenta pintada a 42 px (avatar de 44 con borde).
+    in property <image> session-face;
+    callback select(string);
+    callback play(string);
+    callback dismiss-failure(string);
+    callback open(string);
+    callback see-all-instances;
+    callback see-all-servers;
+    callback join(string);
+    callback new-instance;
+    callback change-account;
+    callback add-microsoft;
+    callback add-offline;
+    callback add-shard;
+    callback add-server;
+    callback diagnose(string);
+    callback show-logs(string);
+    // Tamaño lógico de la tarjeta grande (Rust pinta el paisaje).
+    callback hero-size(length, length);
+}
+
+// Botón redondo de jugar de las tarjetas pequeñas (_MiniPlay).
+component MiniPlay inherits Rectangle {
+    in property <LaunchState> state;
+    callback clicked;
+    property <bool> busy: state.phase == LaunchPhase.preparing || state.phase == LaunchPhase.downloading || state.phase == LaunchPhase.starting;
+    property <bool> running: state.phase == LaunchPhase.running;
+    width: 48px;
+    height: 48px;
+    if root.busy: Spinner { size: 18px; stroke: 2px; }
+    if !root.busy: TonalIconButton {
+        icon: root.running ? Icons.sports-esports : Icons.play-arrow;
+        filled: true;
+        icon-size: 20px;
+        tooltip: root.running ? @tr("launchRunning") : @tr("play");
+        enabled: !root.running;
+        fill: root.running ? Palette.success.with-alpha(0.15) : Palette.accent-container;
+        tint: root.running ? Palette.success : Palette.on-accent-container;
+        accessible-id: "mini-play";
+        clicked => { root.clicked(); }
+    }
+}
+
+// Tarjeta de una reciente (_RecentCard).
+component RecentCard inherits Rectangle {
+    in property <InstanceItem> item;
+    callback open;
+    callback play;
+    height: 78px;
+    border-radius: Theme.radius-card;
+    background: Palette.card(Palette.surface1);
+    border-width: 1px;
+    border-color: Palette.border;
+    clip: true;
+    accessible-role: list-item;
+    accessible-label: item.name;
+    accessible-action-default => { open(); }
+    Rectangle {
+        background: ta.has-hover ? Palette.text.with-alpha(0.04) : transparent;
+        animate background { duration: Theme.fast; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+    // Material con borde: el hijo no se mete dentro del borde.
+    HorizontalLayout {
+        padding: 12px;
+        VerticalLayout {
+            alignment: center;
+            InstanceIcon { item: root.item; size: 44px; accessible-id: "recent-icon"; }
+        }
+        Rectangle { width: 12px; }
+        VerticalLayout {
+            alignment: center;
+            horizontal-stretch: 1;
+            Txt { text: root.item.name; style: Type.title-small; }
+            Rectangle { height: 2px; }
+            Txt { text: Fmt.version-line(root.item.mc, root.item.loader); style: Type.body-small; color: Palette.text-secondary; }
+            Txt { text: Fmt.relative(root.item.last-ago); style: Type.body-small; color: Palette.text-muted; }
+        }
+        VerticalLayout {
+            alignment: center;
+            MiniPlay { state: root.item.launch; clicked => { root.play(); } }
+        }
+    }
+}
+
+// Barras de señal (PingBars).
+component PingBars inherits Rectangle {
+    in property <int> level;
+    in property <bool> online;
+    property <color> on: !online ? Palette.text-muted : level >= 3 ? Palette.success : level == 2 ? Palette.warning : Palette.danger;
+    width: 4 * 3.5px + 3 * 2px;
+    height: 14px;
+    for i in 4: Rectangle {
+        x: i * 5.5px;
+        y: parent.height - self.height;
+        width: 3.5px;
+        height: 5px + i * 3px;
+        border-radius: 1px;
+        background: i < root.level ? root.on : Palette.surface3;
+    }
+}
+
+// Fila de un servidor rápido.
+component ServerRow inherits HorizontalLayout {
+    in property <ServerItem> item;
+    callback join;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    accessible-role: list-item;
+    accessible-label: item.name;
+    VerticalLayout {
+        alignment: center;
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            border-radius: 36px * 0.22;
+            clip: true;
+            Image {
+                x: 1px;
+                y: 1px;
+                width: parent.width - 2px;
+                height: parent.height - 2px;
+                source: root.item.icon;
+                image-fit: cover;
+                image-rendering: pixelated;
+                accessible-role: none;
+            }
+            Rectangle {
+                border-radius: parent.border-radius;
+                border-width: 1px;
+                border-color: #FFFFFF24;
+            }
+        }
+    }
+    Rectangle { width: 12px; }
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Txt { text: root.item.name; style: Type.title-small; }
+        Rectangle { height: 2px; }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                PingBars { level: root.item.level; online: root.item.online; }
+            }
+            Txt { text: root.item.status; style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 1; }
+        }
+    }
+    TonalIconButton {
+        icon: root.item.running ? Icons.sports-esports : Icons.login;
+        busy: root.item.busy;
+        enabled: root.item.can-join;
+        tooltip: root.item.tooltip;
+        accessible-id: "server-join";
+        clicked => { root.join(); }
+    }
+}
+
+component SessionCard inherits Panel {
+    in property <AccountChip> account;
+    height: lay.preferred-height + 2px;
+    accessible-role: groupbox;
+    accessible-id: "session";
+    lay := VerticalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        padding: 16px;
+        Overline { text: @tr("homeSession").to-uppercase(); }
+        Rectangle { height: 12px; }
+        if !root.account.present: VerticalLayout {
+            Txt { text: @tr("accountNoneHint"); style: Type.body-medium; }
+            Rectangle { height: 12px; }
+            // La columna de Flutter estira los botones a todo el ancho.
+            Rectangle {
+                height: 48px;
+                FilledButton { width: parent.width; text: @tr("accountsAddMicrosoft"); icon: Icons.add-circle; icon-size: 18px; clicked => { HomeState.add-microsoft(); } }
+            }
+            Rectangle { height: 8px; }
+            Rectangle {
+                height: 48px;
+                OutlinedButton { text: @tr("accountShard"); clicked => { HomeState.add-shard(); } }
+            }
+            Rectangle { height: 8px; }
+            Rectangle {
+                height: 48px;
+                OutlinedButton { text: @tr("accountsAddOffline"); clicked => { HomeState.add-offline(); } }
+            }
+        }
+        if root.account.present: HorizontalLayout {
+            height: 48px;
+            spacing: 12px;
+            VerticalLayout {
+                alignment: center;
+                PlayerAvatar {
+                    account: { present: root.account.present, name: root.account.name, face: HomeState.session-face };
+                    size: 44px;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                Txt { text: root.account.name; style: Type.title-medium; }
+                Rectangle { height: 2px; }
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    Icon {
+                        y: (parent.height - self.height) / 2;
+                        glyph: HomeState.account-microsoft ? Icons.verified : Icons.wifi-off;
+                        size: 14px;
+                        color: HomeState.account-microsoft ? Palette.info : Palette.text-muted;
+                    }
+                    Txt {
+                        text: HomeState.account-shard ? @tr("accountShard")
+                            : HomeState.account-microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
+                        style: Type.body-small;
+                        color: Palette.text-secondary;
+                    }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                TextButton { text: @tr("homeChangeAccount"); clicked => { HomeState.change-account(); } }
+            }
+        }
+    }
+}
+
+component RunningCard inherits Panel {
+    height: lay.preferred-height + 2px;
+    accessible-role: groupbox;
+    accessible-id: "running";
+    lay := VerticalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        padding: 16px;
+        Overline { text: @tr("homeRunningNow").to-uppercase(); }
+        Rectangle { height: 12px; }
+        if HomeState.running.length == 0: HorizontalLayout {
+            spacing: 8px;
+            Icon { glyph: Icons.bedtime; size: 18px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+            Txt { text: @tr("homeNothingRunning"); style: Type.body-medium; color: Palette.text-secondary; }
+        }
+        for r in HomeState.running: Rectangle {
+            height: row.preferred-height;
+            border-radius: Theme.radius-control;
+            background: rta.has-hover ? Palette.text.with-alpha(0.04) : transparent;
+            accessible-role: button;
+            accessible-label: r.name;
+            accessible-action-default => { HomeState.open(r.id); }
+            rta := TouchArea { mouse-cursor: pointer; clicked => { HomeState.open(r.id); } }
+            row := HorizontalLayout {
+                padding-top: 4px;
+                padding-bottom: 4px;
+                spacing: 12px;
+                InstanceIcon { item: r; size: 32px; }
+                Txt { text: r.name; style: Type.title-small; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+                HorizontalLayout {
+                    spacing: 6px;
+                    Rectangle {
+                        width: 7px;
+                        height: 7px;
+                        y: (parent.height - self.height) / 2;
+                        border-radius: 3.5px;
+                        background: Palette.success;
+                    }
+                    Txt { text: @tr("launchRunning"); style: Type.label-medium; color: Palette.success; y: (parent.height - self.height) / 2; }
+                }
+            }
+        }
+    }
+}
+
+component QuickServersCard inherits Panel {
+    height: lay.preferred-height + 2px;
+    accessible-role: groupbox;
+    accessible-id: "servers";
+    lay := VerticalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        padding-left: 16px;
+        padding-top: 12px;
+        padding-right: 12px;
+        padding-bottom: 12px;
+        HorizontalLayout {
+            height: 48px;
+            Overline { text: @tr("homeQuickServers").to-uppercase(); horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+            VerticalLayout {
+                alignment: center;
+                TextButton { height: 28px; pad: 8px; text: @tr("homeSeeAllServers"); clicked => { HomeState.see-all-servers(); } }
+            }
+        }
+        Rectangle { height: 4px; }
+        if HomeState.servers.length == 0: VerticalLayout {
+            HorizontalLayout {
+                spacing: 8px;
+                Icon { glyph: Icons.dns; size: 18px; color: Palette.text-muted; }
+                Para { text: @tr("homeQuickServersEmpty"); style: Type.body-small; horizontal-stretch: 1; }
+            }
+            Rectangle { height: 12px; }
+            HorizontalLayout {
+                alignment: start;
+                VerticalLayout {
+                    height: 48px;
+                    alignment: center;
+                    OutlinedButton { height: 34px; text: @tr("serverAdd"); icon: Icons.add; clicked => { HomeState.add-server(); } }
+                }
+            }
+        }
+        for s in HomeState.servers: ServerRow {
+            item: s;
+            join => { HomeState.join(s.id); }
+        }
+    }
+}
+
+// Menú de «Cambiar instancia» (MenuAnchor): filas de 38 como
+// MenuItemButton; con más de cinco instancias se desplaza.
+component PickerMenu inherits Rectangle {
+    in property <string> current;
+    callback picked(string);
+    property <length> row-h: 38px;
+    width: 300px;
+    height: min(col.preferred-height, 5 * row-h + 12px) + 2px;
+    border-radius: Theme.radius-card;
+    background: Theme.blend(Palette.surface3, Palette.background);
+    border-width: 1px;
+    border-color: Palette.border-strong;
+    drop-shadow-color: Theme.shadow;
+    drop-shadow-blur: 16px;
+    drop-shadow-offset-y: 6px;
+    Flickable {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        content-height: col.preferred-height;
+        col := VerticalLayout {
+            padding: 6px;
+            for i in HomeState.picker: Rectangle {
+                height: max(root.row-h, row.preferred-height);
+                border-radius: Theme.radius-control;
+                background: ita.has-hover ? Palette.surface2 : transparent;
+                accessible-role: list-item;
+                accessible-label: i.name;
+                accessible-id: "picker-item";
+                accessible-action-default => { root.picked(i.id); }
+                ita := TouchArea { mouse-cursor: pointer; clicked => { root.picked(i.id); } }
+                row := HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+                    VerticalLayout { alignment: center; InstanceIcon { item: i; size: 26px; } }
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        padding-left: 8px;
+                        Txt { text: i.name; style: Type.body-medium; }
+                        Txt { text: Fmt.version-line(i.mc, i.loader); style: Type.body-small; color: Palette.text-secondary; }
+                    }
+                    if i.id == root.current: Icon { glyph: Icons.check; size: 18px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+                }
+            }
+        }
+    }
+}
+
+// Tarjeta grande (_HeroCard).
+component HeroCard inherits Rectangle {
+    property <InstanceItem> item: HomeState.hero;
+    property <bool> failed: item.launch.phase == LaunchPhase.error && HomeState.hero-failure.present;
+    border-radius: Theme.radius-panel + 4px;
+    // Para la sombra (queda tapado por el paisaje).
+    background: Palette.background-deep;
+    drop-shadow-color: #00000059;
+    drop-shadow-blur: 30px;
+    drop-shadow-offset-y: 12px;
+    accessible-id: "hero";
+    accessible-role: groupbox;
+    accessible-label: item.name;
+    changed width => { HomeState.hero-size(self.width - 2px, self.height - 2px); }
+    changed height => { HomeState.hero-size(self.width - 2px, self.height - 2px); }
+    init => { HomeState.hero-size(self.width - 2px, self.height - 2px); }
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: Theme.radius-panel + 3px;
+        clip: true;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: HomeState.hero-art;
+            image-fit: fill;
+            accessible-role: none;
+        }
+        // Velo lateral para que el texto se lea sobre el paisaje.
+        Rectangle { background: @linear-gradient(90deg, #00000099 0%, #00000000 75%); }
+        Rectangle {
+            x: 32px;
+            y: 32px;
+            width: parent.width - 64px;
+            height: parent.height - 64px;
+            HorizontalLayout {
+                y: 0;
+                height: 40px;
+                spacing: 12px;
+                alignment: start;
+                InstanceIcon { item: root.item; size: 40px; accessible-id: "hero-icon"; }
+                Txt {
+                    y: (parent.height - self.height) / 2;
+                    text: @tr("homeContinue").to-uppercase();
+                    style: { size: Type.label-small.size, weight: Type.label-small.weight, line-height: Type.label-small.line-height, letter-spacing: 1.6px };
+                    color: Palette.accent;
+                }
+            }
+            bottom := VerticalLayout {
+                y: parent.height - self.height;
+                height: self.preferred-height;
+                alignment: end;
+                Txt { text: root.item.name; style: Type.display-small; accessible-id: "txt-hero-name"; }
+                Rectangle { height: 12px; }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    Tag { text: Fmt.version-line(root.item.mc, root.item.loader); dot: Fmt.loader-color(root.item.loader); strong: true; }
+                    Tag { text: Fmt.playtime(root.item.playtime); icon: Icons.schedule; strong: true; }
+                    Tag { text: root.item.last-ago < 0 ? @tr("homeNeverPlayed") : Fmt.relative(root.item.last-ago); icon: Icons.history; strong: true; }
+                }
+                Rectangle { height: 24px; }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 12px;
+                    PlayButton {
+                        large: true;
+                        state: root.item.launch;
+                        label: Fmt.launch-label(root.item.launch);
+                        accessible-id: "hero-play-btn";
+                        clicked => { HomeState.play(root.item.id); }
+                    }
+                    picker-btn := Rectangle {
+                        height: 56px;
+                        width: prow.preferred-width;
+                        border-radius: 14px;
+                        background: pta.has-hover ? Theme.blend(Palette.text.with-alpha(0.08), #0000004D) : #0000004D;
+                        border-width: 1px;
+                        border-color: #FFFFFF2E;
+                        accessible-role: button;
+                        accessible-label: @tr("homeChangeInstance");
+                        accessible-id: "hero-picker-btn";
+                        accessible-action-default => { menu.show(); }
+                        prow := HorizontalLayout {
+                            padding-left: 20px;
+                            padding-right: 20px;
+                            spacing: 8px;
+                            Icon { glyph: Icons.swap-horiz; size: 20px; color: Palette.text; y: (parent.height - self.height) / 2; }
+                            Txt { text: @tr("homeChangeInstance"); style: Type.label-large; y: (parent.height - self.height) / 2; }
+                        }
+                        pta := TouchArea { mouse-cursor: pointer; clicked => { menu.show(); } }
+                        menu := PopupWindow {
+                            x: 0;
+                            y: parent.height + 6px;
+                            width: picker.width;
+                            height: picker.height;
+                            close-policy: close-on-click-outside;
+                            picker := PickerMenu {
+                                x: 0;
+                                y: 0;
+                                current: root.item.id;
+                                picked(id) => {
+                                    menu.close();
+                                    HomeState.select(id);
+                                }
+                            }
+                        }
+                    }
+                }
+                if root.failed: VerticalLayout {
+                    Rectangle { height: 16px; }
+                    HorizontalLayout {
+                        alignment: start;
+                        LaunchFailureNote {
+                            width: min(520px, root.width - 66px);
+                            failure: HomeState.hero-failure;
+                            accessible-id: "hero-failure";
+                            dismissed => { HomeState.dismiss-failure(root.item.id); }
+                            diagnose => { HomeState.diagnose(root.item.id); }
+                            show-logs => { HomeState.show-logs(root.item.id); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Borde por encima del contenido recortado.
+    Rectangle {
+        border-radius: root.border-radius;
+        border-width: 1px;
+        border-color: Palette.border-strong;
+    }
+}
+
+export component HomePage inherits Rectangle {
+    in property <AccountChip> account;
+    VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-top: 4px;
+        padding-bottom: 32px;
+        Txt {
+            text: root.account.present ? @tr("homeGreeting", root.account.name) : @tr("homeGreetingAnon");
+            style: Type.headline-medium;
+            accessible-id: "txt-greeting";
+        }
+        Rectangle { height: 4px; }
+        Txt {
+            text: @tr("homeSubtitle");
+            style: Type.body-large;
+            color: Palette.text-secondary;
+            accessible-id: "txt-subtitle";
+        }
+        Rectangle { height: 24px; }
+        HorizontalLayout {
+            vertical-stretch: 1;
+            spacing: 24px;
+            Rectangle {
+                horizontal-stretch: 1;
+                if HomeState.state == LoadState.loading: Spinner { }
+                if HomeState.state == LoadState.failed: ErrorNote {
+                    width: min(parent.width, 520px);
+                    height: self.preferred-height;
+                    message: HomeState.error-message;
+                    detail: HomeState.error-detail;
+                    details-label: @tr("details");
+                }
+                if HomeState.state == LoadState.ready && !HomeState.has-hero: Panel {
+                    radius: Theme.radius-panel + 4px;
+                    accessible-role: groupbox;
+                    accessible-id: "no-instances";
+                    EmptyState {
+                        icon: Icons.deployed-code;
+                        title: @tr("homeNoInstancesTitle");
+                        body: @tr("homeNoInstancesBody");
+                        action: @tr("instancesNew");
+                        action-icon: Icons.add;
+                        act => { HomeState.new-instance(); }
+                    }
+                }
+                if HomeState.state == LoadState.ready && HomeState.has-hero: VerticalLayout {
+                    HeroCard { vertical-stretch: 1; }
+                    if HomeState.recent.length > 0: VerticalLayout {
+                        Rectangle { height: 24px; }
+                        HorizontalLayout {
+                            height: 48px;
+                            padding-bottom: 0;
+                            Txt { text: @tr("homeRecent"); style: Type.title-medium; horizontal-stretch: 1; y: (parent.height - self.height) / 2; accessible-id: "txt-recent"; }
+                            VerticalLayout {
+                                alignment: center;
+                                TextButton { text: @tr("homeSeeAll"); clicked => { HomeState.see-all-instances(); } }
+                            }
+                        }
+                        Rectangle { height: 12px; }
+                        recent-row := HorizontalLayout {
+                            spacing: 16px;
+                            for r in HomeState.recent: RecentCard {
+                                // Siempre un tercio (Expanded), mida lo que mida el texto.
+                                width: (recent-row.width - 32px) / 3;
+                                item: r;
+                                accessible-id: "recent";
+                                open => { HomeState.open(r.id); }
+                                play => { HomeState.play(r.id); }
+                            }
+                            // Huecos de las que faltan.
+                            for i in max(0, 3 - HomeState.recent.length): Rectangle { width: (recent-row.width - 32px) / 3; }
+                        }
+                    }
+                }
+            }
+            VerticalLayout {
+                width: 296px;
+                alignment: start;
+                spacing: 16px;
+                SessionCard { account: root.account; }
+                RunningCard { }
+                QuickServersCard { }
+            }
+        }
+    }
+}

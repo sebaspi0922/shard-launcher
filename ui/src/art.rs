@@ -51,7 +51,7 @@ impl DartRandom {
 
     pub fn next_int(&mut self, max: u32) -> u32 {
         let max = max as u64;
-        if max & max.wrapping_neg() == max {
+        if max.isolate_lowest_one() == max {
             self.next_state();
             return (self.0 & 0xFFFF_FFFF & (max - 1)) as u32;
         }
