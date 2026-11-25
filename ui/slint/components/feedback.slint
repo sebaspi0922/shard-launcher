@@ -12,6 +12,7 @@ export component EmptyState inherits VerticalLayout {
     in property <string> body;
     in property <string> action;
     in property <string> action-icon;
+    in property <length> action-icon-size: 20px;
     callback act;
     alignment: center;
     accessible-role: groupbox;
@@ -42,7 +43,7 @@ export component EmptyState inherits VerticalLayout {
                 Rectangle { height: 20px; }
                 HorizontalLayout {
                     alignment: center;
-                    FilledButton { text: root.action; icon: root.action-icon; clicked => { root.act(); } }
+                    FilledButton { text: root.action; icon: root.action-icon; icon-size: root.action-icon-size; accessible-id: "empty-action"; clicked => { root.act(); } }
                 }
             }
         }
@@ -151,6 +152,72 @@ export component AppDialog inherits Rectangle {
             if root.title != "": Txt { text: root.title; style: Type.title-large; }
             @children
         }
+    }
+}
+
+// Diálogo de formulario (AppDialog de common.dart): velo, panel centrado de
+// ancho máximo `panel-width`, relleno 24/24/24/20, cabecera con icono de
+// acento y título, 16 hasta el cuerpo. El cuerpo y las acciones van como
+// hijos; para las acciones, `DialogActions` (24 por encima, a la derecha).
+export component FormDialog inherits Rectangle {
+    in property <string> title;
+    in property <string> icon;
+    in property <length> panel-width: 440px;
+    // `false` = el clic en el velo no cierra (login de Microsoft).
+    in property <bool> dismissible: true;
+    callback dismissed;
+    background: #00000080;
+    accessible-role: none;
+    TouchArea { clicked => { if root.dismissible { root.dismissed(); } } }
+    panel := Rectangle {
+        width: min(root.panel-width, root.width - 48px);
+        height: body.preferred-height;
+        border-radius: Theme.radius-panel;
+        background: Theme.blend(Palette.surface2, Palette.background);
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        drop-shadow-color: Theme.shadow;
+        drop-shadow-blur: Theme.shadow-dialog-blur;
+        drop-shadow-offset-y: Theme.shadow-dialog-y;
+        accessible-role: groupbox;
+        accessible-label: root.title;
+        accessible-id: "dialog";
+        TouchArea { }
+        body := VerticalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 24px;
+            padding-bottom: 20px;
+            HorizontalLayout {
+                spacing: 12px;
+                if root.icon != "": Icon { glyph: root.icon; size: 22px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+                Txt { text: root.title; style: Type.title-large; accessible-id: "txt-dialog-title"; horizontal-stretch: 1; }
+            }
+            Rectangle { height: 16px; }
+            @children
+        }
+    }
+}
+
+// Fila de acciones de un FormDialog: a la derecha, 8 entre botones.
+export component DialogActions inherits HorizontalLayout {
+    alignment: end;
+    spacing: 8px;
+    padding-top: 24px;
+}
+
+// confirm() de common.dart: título, texto, «Cancelar» y la acción.
+export component ConfirmDialog inherits FormDialog {
+    in property <string> body;
+    in property <string> action;
+    in property <string> cancel-label;
+    in property <bool> danger;
+    callback accepted;
+    panel-width: 420px;
+    Para { text: root.body; color: Palette.text; }
+    DialogActions {
+        TextButton { text: root.cancel-label; height: 48px; clicked => { root.dismissed(); } }
+        FilledButton { text: root.action; danger: root.danger; clicked => { root.accepted(); } }
     }
 }
 

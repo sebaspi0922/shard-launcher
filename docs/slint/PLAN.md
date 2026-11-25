@@ -19,6 +19,7 @@ Contenido:
 6. [Riesgos y mitigación](#6-riesgos-y-mitigación)
 7. [Resultados de la fase 0](#7-resultados-de-la-fase-0)
 8. [Resultados de la fase 1](#8-resultados-de-la-fase-1)
+9. [Resultados de la fase 2](#9-resultados-de-la-fase-2)
 
 ---
 
@@ -40,7 +41,7 @@ funciones y un stream de eventos. 46 goldens de 1280 × 800 en
 | `/instances/:id?tab=` | `instance_detail_page.dart` + 6 pestañas (contenido, mundos, capturas, backups, ajustes, registros) | ⚠️ `InstanceView { id, tab }` | `instance_*` ×7 | 3 |
 | `/content` | `content/content_page.dart`, `project_sheet.dart`, `install.dart`, `modpack_dialog.dart` | ⚠️ buscador + ficha lateral | `content_search_es`, `content_curseforge_en`, `content_target_es`, `project_sheet_es`, `modpack_installing_es` | 4 |
 | `/servers` | `servers/*` | ⚠️ lista con ping, reordenar | `servers_es`, `server_dialog_en` | 4 |
-| `/skins` | `skins/skins_page.dart`, `skin_viewer.dart`, `skin_mesh.dart` | 🔴 visor 3D (ver riesgos) | `skins_es`, `skins_offline_en` | 2 |
+| `/skins` | `skins/skins_page.dart`, `skin_viewer.dart`, `skin_mesh.dart` | ✅ `screens/skins.slint` + visor en Rust (`skin_mesh.rs`) | `skins_es`, `skins_offline_en` | 2 |
 | `/settings` | `settings/settings_page.dart`, `appearance_group.dart`, `java_group.dart`, `curseforge_key_dialog.dart` | ⚠️ grupos General, Apariencia, Juego, Java, Descargas, Integraciones, Acerca de | `settings_*` ×5 | 5 |
 | `/welcome` | `first_run/first_run_page.dart` (1154) | ⚠️ 4 pasos (bienvenida, importar, cuenta, listo) | `first_run_*` ×4 | 5 |
 
@@ -53,7 +54,7 @@ acepta que la transición no sea idéntica (no hay golden de transiciones).
 | Diálogo | Origen | Fase |
 |---|---|---|
 | ¿Cerrar Shard? (preguntar / segundo plano / recordar) | `shell/app_shell.dart` | ✅ 0 |
-| Panel de cuentas, login Microsoft (código de dispositivo), cuenta offline | `accounts/*` | 2 |
+| Panel de cuentas, login Microsoft (código de dispositivo), cuenta offline | `accounts/*` | ✅ 2 |
 | Crear instancia, cambiar versión, papelera, menú de la instancia | `instances/*` | 3 |
 | Restaurar backup, borrar backup, captura a pantalla completa (flechas ←/→) | `instances/backups_tab.dart`, `screenshots_tab.dart` | 3 |
 | Modpack, ficha de proyecto (sheet) | `content/*` | 4 |
@@ -284,7 +285,7 @@ nada. Estimación en hilos de agente (como F0, que fue uno).
 |---|---|---|---|---|
 | **0** ✅ | Base (tema, componentes, marco, bandeja, cierre, i18n), Instancias, arnés, medición, CI | — | ver §7 | 1 |
 | **1** | Inicio con los 4 estilos, fondo con imagen + desenfoque + atenuado, acento desde imagen (`material-colors`), esfera ASCII, banners de actualización y fallo, flujo de lanzamiento con progreso (`Progress`/`TaskFinished`), escala de UI, tooltips, transición entre rutas | Es la pantalla principal y concentra los riesgos visuales (desenfoque, estilos, animaciones) | 10 goldens de inicio + `update_banner_es`, `crash_banner_es` ≥ 0,97 y cajas ±2 px; test de acento = mismo color que Flutter en 4 imágenes; lanzar una instancia real | 2–3 |
-| **2** | Cuentas (panel, Microsoft con código, offline, Shard/Yggdrasil), skins con visor 3D, capas, caras de skin en el raíl | Visor 3D es el mayor riesgo técnico | `accounts_panel_es`, `ms_login_es`, `offline_account_en`, `skins_es`, `skins_offline_en`; geometría del visor con tests contra `skin_mesh.dart`; login real probado a mano | 2 |
+| **2** ✅ | Cuentas (panel, Microsoft con código, offline, Shard/Yggdrasil), skins con visor 3D, capas, caras de skin en el raíl | Visor 3D es el mayor riesgo técnico | `accounts_panel_es`, `ms_login_es`, `offline_account_en`, `skins_es`, `skins_offline_en`; geometría del visor con tests contra `skin_mesh.dart`; login real probado a mano | 2 |
 | **3** | Detalle de instancia (6 pestañas), consola en vivo, crear instancia, cambiar versión, papelera, backups, mundos, capturas | Mucho volumen; la consola es el riesgo de rendimiento | `instance_*` ×7, `create_instance_es`, `change_version_es`, `trash_en`, `backup_restore_es`, `instance_menu_es`; consola con 5000 líneas sin bajar de 60 fps | 3 |
 | **4** | Contenido (Modrinth/CurseForge, ficha, instalación, modpacks) y Servidores | Red y listas con imágenes | `content_*` ×3, `project_sheet_es`, `modpack_installing_es`, `servers_es`, `server_dialog_en` | 2 |
 | **5** | Ajustes (todos los grupos, Java, Acerca de con `AboutSlint`), primer arranque (4 pasos, importar), Doctor | Formularios, poco riesgo | `settings_*` ×5, `first_run_*` ×4, `doctor_es` | 2 |
@@ -447,3 +448,63 @@ servidor, sin cuenta ni instancias, tooltip del raíl, estilos y escala de UI).
 abrir instancia (F3), panel y alta de cuentas (F2), añadir servidor (F4):
 los botones llaman a `Actions` y hoy solo dejan traza. Fundido entre rutas:
 la sección nueva entra con fundido; la vieja se va sin él (sin golden).
+
+---
+
+## 9. Resultados de la fase 2
+
+Cuentas (panel, login de Microsoft con código, alta offline, alta Shard con
+usuario y contraseña contra `add_shard_account`, quitar con confirmación,
+cuenta activa en el raíl con la cara de su skin) y Skins (visor
+3D girable con frente y espalda, cambiar skin por PNG o URL, clásica o
+delgada, restablecer, capas), con el núcleo real (`accounts_backend.rs`).
+
+**Paridad** (`tools/paridad.sh all`, informe en `docs/slint/paridad-f2/`).
+Las referencias de cuentas abren el panel y los diálogos sobre Instancias, no
+sobre Inicio como los goldens, para no depender de la fase 1.
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| accounts_panel_es | 0,9778 | 8/8 |
+| ms_login_es | 0,9727 | 8/8 |
+| offline_account_en | 0,9753 | 6/6 |
+| shard_account_es (nueva, sin golden) | 0,9742 | 7/7 |
+| skins_es | 0,9758 | 17/17 |
+| skins_offline_en | 0,9766 | 5/5 |
+
+**Visor 3D.** `skin_mesh.rs` porta `skin_mesh.dart` (cajas, UV, poses, luz por
+cara, orden de pintor con el mismo `List.sort` de Dart, que no es estable y
+decide las costuras) y rasteriza los triángulos como Skia sin antialias.
+`skin_mesh::tests::igual_que_flutter` lo compara con lo que pinta
+`SkinViewer` en Flutter (`tools/paridad/flutter/skin_mesh_ref_test.dart`):
+mismo número de cuadriláteros y ≤ 0,033 % de píxeles distintos en 4 casos.
+
+**Pruebas:** `tests/cuentas.rs` (clics y teclado; panel, cambiar y quitar
+cuenta, alta offline con validación e Intro, login con cuenta atrás,
+caducidad, reintento y cancelación, skins: modelo, URL, PNG válido e
+inválido, capas, restablecer, arrastrar y doble clic en el visor, estados
+sin cuenta y offline; alta Shard: Intro pasa a la contraseña, no se cancela
+mientras inicia sesión, `auth_invalid_credentials`, refresco al terminar,
+Skins con cuenta Shard) y `tests/nucleo_cuentas.rs` (lo mismo contra `lcore`
+real en una carpeta temporal: `accounts.json` cambia como debe; Shard sin red
+da error y no guarda nada). `login_shard_real` (ignorado) hace el login real
+contra `auth.sebaspi.com` con `prueba_ui`; la contraseña va por
+`SHARD_PRUEBA_PASSWORD_FILE`, nunca en el repo.
+
+**Piezas compartidas nuevas** (para las fases siguientes):
+- `components/panels.slint`: `Panel`, `SectionTitle`, `Tag`, `ColorBadge`.
+- `components/feedback.slint`: `FormDialog` (= `AppDialog` de common.dart, con
+  icono), `DialogActions`, `ConfirmDialog` (= `confirm()`); `EmptyState` con
+  `action-icon-size`.
+- `components/inputs.slint`: `LabeledField` (etiqueta flotante, ayuda, error).
+- `components/buttons.slint`: `FilledButton` sin ancho mínimo, con `danger`,
+  `busy` e `icon-size`; `OutlinedButton` y `TextButton` con área de toque de
+  48 como Material, y `TextButton` con icono y `enabled`.
+- `Para` con el alto de línea del estilo (`line-height-factor`).
+- `media.rs` (imágenes remotas en la misma caché que Flutter),
+  `errors::Failure`, `fixtures::Recorder`.
+- Lección de paridad: en Flutter el borde de un `Container` también empuja al
+  hijo (relleno + 1); el visor mide 444 × 549, no 446 × 551.
+
+**Pendiente:** login de Microsoft real completo, a mano (necesita a Sebas);
+sensación del arrastre del visor a mano.

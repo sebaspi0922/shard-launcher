@@ -19,11 +19,13 @@ use i_slint_backend_testing::{ElementHandle, ElementRoot};
 use shard_ui::controller::{Actions, Controller};
 use shard_ui::fixtures;
 use shard_ui::instances::Phase;
+use shard_ui::accounts::Accounts;
 use shard_ui::launch::Failure;
 use shard_ui::notices::CrashNotice;
 use shard_ui::prefs::UiPrefs;
+use shard_ui::skins::Skins;
 use shard_ui::theme::Style;
-use shard_ui::{Backdrop, InstancesState, MainWindow, Route};
+use shard_ui::{AccountsState, Backdrop, InstancesState, MainWindow, Route};
 use slint::ComponentHandle;
 use slint::platform::{PointerEventButton, WindowEvent};
 
@@ -36,11 +38,27 @@ impl Actions for NoActions {
     fn show_trash(&self) {}
 }
 
+/// Lo que una escena puede tocar.
+struct Ctx<'a> {
+    ui: &'a MainWindow,
+    ctl: &'a Controller,
+    acc: &'a Accounts,
+    skins: &'a Skins,
+}
+
 /// Una escena: idioma y qué hacer después de cargar los datos de ejemplo.
 struct Scene {
     name: &'static str,
     lang: &'static str,
-    setup: fn(&Controller, &MainWindow),
+    setup: fn(&Ctx),
+}
+
+/// Perfil de ejemplo con sus texturas ya descargadas.
+fn sample_skins(c: &Ctx) {
+    c.skins.set_profile("a1", c.skins.profile_seq(), Ok(fixtures::sample_profile()));
+    for url in [fixtures::SKIN_URL, fixtures::CAPE_1_URL, fixtures::CAPE_2_URL] {
+        c.skins.texture_loaded(url, Some(fixtures::sample_texture(url)));
+    }
 }
 
 /// Inicio con los datos de ejemplo de los goldens (instancias, cuenta de
@@ -63,42 +81,93 @@ const SCENES: &[Scene] = &[
     Scene {
         name: "instances_grid_es",
         lang: "es",
-        setup: |c, _| {
-            c.set_instances(fixtures::sample_instances());
-            c.set_phase("create-aeronautica", Phase::Running);
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ctl.set_phase("create-aeronautica", Phase::Running);
         },
     },
     Scene {
         name: "instances_list_en",
         lang: "en",
-        setup: |c, ui| {
-            c.set_instances(fixtures::sample_instances());
-            ui.global::<InstancesState>().set_grid(false);
-            c.model.borrow_mut().grid = false;
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ui.global::<InstancesState>().set_grid(false);
+            c.ctl.model.borrow_mut().grid = false;
         },
     },
-    Scene { name: "instances_empty_es", lang: "es", setup: |c, _| c.set_instances(vec![]) },
+    Scene { name: "instances_empty_es", lang: "es", setup: |c| c.ctl.set_instances(vec![]) },
     Scene {
         name: "instances_search_es",
         lang: "es",
-        setup: |c, ui| {
-            c.set_instances(fixtures::sample_instances());
-            type_into(ui, "search", "sur");
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            type_into(c.ui, "search", "sur");
         },
     },
     Scene {
         name: "instances_noresults_es",
         lang: "es",
-        setup: |c, ui| {
-            c.set_instances(fixtures::sample_instances());
-            type_into(ui, "search", "zzz");
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            type_into(c.ui, "search", "zzz");
         },
     },
-    Scene { name: "home_es", lang: "es", setup: home },
+    // Fase 2. Panel y diálogos sobre Instancias (como sus referencias).
+    Scene {
+        name: "accounts_panel_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            by_label(c.ui, "NadiaK").mock_single_click(PointerEventButton::Left);
+        },
+    },
+    Scene {
+        name: "ms_login_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ui.global::<AccountsState>().invoke_add_microsoft();
+            c.acc.login_code(1, fixtures::sample_device_code());
+        },
+    },
+    Scene {
+        name: "offline_account_en",
+        lang: "en",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ui.global::<AccountsState>().invoke_add_offline();
+        },
+    },
+    Scene {
+        name: "shard_account_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.ui.global::<AccountsState>().invoke_add_shard();
+        },
+    },
+    Scene {
+        name: "skins_es",
+        lang: "es",
+        setup: |c| {
+            c.ui.set_route(Route::Skins);
+            sample_skins(c);
+        },
+    },
+    Scene {
+        name: "skins_offline_en",
+        lang: "en",
+        setup: |c| {
+            c.acc.set_accounts(Ok(fixtures::offline_accounts()));
+            c.ui.set_route(Route::Skins);
+        },
+    },
+    Scene { name: "home_es", lang: "es", setup: |x| home(x.ctl, x.ui) },
     Scene {
         name: "home_downloading_es",
         lang: "es",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
             c.set_phase("survival-amigos", Phase::Downloading { done: 1834, total: 3920 });
         },
@@ -106,7 +175,8 @@ const SCENES: &[Scene] = &[
     Scene {
         name: "home_error_es",
         lang: "es",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
             c.set_failure(
                 "survival-amigos",
@@ -117,20 +187,22 @@ const SCENES: &[Scene] = &[
     Scene {
         name: "home_empty_en",
         lang: "en",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
             c.set_account(None);
             c.set_instances(vec![]);
         },
     },
-    Scene { name: "home_style_graphite_es", lang: "es", setup: |c, ui| styled(c, ui, Style::Graphite) },
-    Scene { name: "home_style_sebaspi_es", lang: "es", setup: |c, ui| styled(c, ui, Style::Sebaspi) },
-    Scene { name: "home_style_landscape_es", lang: "es", setup: |c, ui| styled(c, ui, Style::Landscape) },
-    Scene { name: "home_style_aurora_es", lang: "es", setup: |c, ui| styled(c, ui, Style::Aurora) },
+    Scene { name: "home_style_graphite_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Graphite) },
+    Scene { name: "home_style_sebaspi_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Sebaspi) },
+    Scene { name: "home_style_landscape_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Landscape) },
+    Scene { name: "home_style_aurora_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Aurora) },
     Scene {
         name: "web_home_graphite_es",
         lang: "es",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             ui.global::<Backdrop>().set_hidden(true);
             home(c, ui);
         },
@@ -138,7 +210,8 @@ const SCENES: &[Scene] = &[
     Scene {
         name: "crash_banner_es",
         lang: "es",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
             c.show_crash(CrashNotice { game_id: 2, instance_id: "create-aeronautica".into(), code: Some(1), crash_report: None });
         },
@@ -146,12 +219,17 @@ const SCENES: &[Scene] = &[
     Scene {
         name: "update_banner_es",
         lang: "es",
-        setup: |c, ui| {
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
             c.update_checked(Some(fixtures::sample_update()), false);
         },
     },
 ];
+
+fn by_label(ui: &MainWindow, label: &str) -> ElementHandle {
+    ElementHandle::find_by_accessible_label(ui, label).next().unwrap_or_else(|| panic!("no hay «{label}»"))
+}
 
 /// Elementos con `accessible-id` (en orden del árbol).
 pub fn by_id(ui: &MainWindow, id: &str) -> Vec<ElementHandle> {
@@ -186,6 +264,9 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
         "rail", "titlebar", "pill", "txt-title", "txt-count", "search", "view-toggle", "trash", "new", "empty", "txt-greeting",
         "txt-subtitle", "txt-hero-name", "txt-recent", "hero", "hero-icon", "hero-play-btn", "hero-picker-btn", "hero-failure",
         "no-instances", "session", "running", "servers", "update-banner", "crash-banner",
+        // Fase 2.
+        "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "field-2", "code", "outlined", "filled", "cancel",
+        "progress", "chip", "empty-action", "viewer", "change", "source", "reset", "apply", "capes",
     ] {
         if let Some(e) = by_id(ui, name).first() {
             let r = rect(e);
@@ -193,6 +274,11 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
             if r[3] > 1.0 {
                 out.insert(name.to_owned(), r);
             }
+        }
+    }
+    for kind in ["account", "action", "stage", "model", "cape"] {
+        for (i, e) in by_id(ui, kind).iter().enumerate() {
+            out.insert(format!("{kind}-{i}"), rect(e));
         }
     }
     for kind in ["card", "row", "recent"] {
@@ -236,10 +322,13 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     ui.set_background_still_at((ref_clock(refs, scene.name, "atmosphere_s").unwrap_or(0.0) * 1000.0).round() as i64);
     let ctl = Controller::new(&ui, scene.lang, Box::new(|| fixtures::NOW), Box::new(NoActions));
     ctl.appearance.set_sphere_time(Some(ref_clock(refs, scene.name, "sphere_s").unwrap_or(0.0)));
-    ctl.set_account(Some(fixtures::ACTIVE_ACCOUNT));
+    let rec = fixtures::Recorder::default();
+    let acc = Accounts::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| 0));
+    let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
+    acc.set_accounts(Ok(fixtures::sample_accounts()));
     ui.set_route(Route::Instances);
     ui.show().unwrap();
-    (scene.setup)(&ctl, &ui);
+    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins });
     // El fondo animado de Flutter va quieto en el modo de la escena.
     ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.

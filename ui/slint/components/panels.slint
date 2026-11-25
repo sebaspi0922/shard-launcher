@@ -1,0 +1,78 @@
+// Superficies y etiquetas de common.dart y media.dart: Panel, SectionTitle,
+// Tag y ColorBadge. Compartidas por todas las pantallas.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon } from "base.slint";
+
+// Panel (common.dart): superficie translúcida con borde fino. El contenido va
+// como hijo; el relleno por defecto es 20 (Space.x5) más el borde de 1.
+export component Panel inherits Rectangle {
+    // 1, 2 o 3: superficie 1/2/3 sobre la base del estilo.
+    in property <int> level: 1;
+    in property <length> pad: 20px;
+    border-radius: Theme.radius-card;
+    background: Palette.card(level == 1 ? Palette.surface1 : level == 2 ? Palette.surface2 : Palette.surface3);
+    border-width: 1px;
+    border-color: Palette.border;
+    VerticalLayout {
+        padding: root.pad + 1px;
+        @children
+    }
+}
+
+// SectionTitle: título (titleMedium) y algo opcional a la derecha, 12 debajo.
+export component SectionTitle inherits HorizontalLayout {
+    in property <string> text;
+    padding-bottom: 12px;
+    Txt { text: root.text; style: Type.title-medium; horizontal-stretch: 1; }
+    @children
+}
+
+// Tag: píldora con icono (o punto de color) y texto.
+export component Tag inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> strong;
+    width: row.preferred-width;
+    height: row.preferred-height;
+    border-radius: self.height / 2;
+    background: strong ? #00000059 : Palette.surface2;
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    row := HorizontalLayout {
+        // Relleno + el borde (Container suma el borde al relleno).
+        padding-left: 11px;
+        padding-right: 11px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        spacing: 5px;
+        if root.icon != "": Icon { glyph: root.icon; size: 14px; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.label-medium; color: root.strong ? Palette.text : Palette.text-secondary; }
+    }
+}
+
+// ColorBadge (media.dart): píldora tenue de un color.
+export component ColorBadge inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <color> tint: Palette.accent;
+    width: row.preferred-width;
+    height: row.preferred-height;
+    border-radius: self.height / 2;
+    background: tint.with-alpha(0.12);
+    border-width: 1px;
+    border-color: tint.with-alpha(0.3);
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    row := HorizontalLayout {
+        padding-left: 9px;
+        padding-right: 9px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        spacing: 4px;
+        if root.icon != "": Icon { glyph: root.icon; size: 13px; color: root.tint; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: { size: 11px, weight: 600, line-height: 1.35, letter-spacing: 0.2px }; color: root.tint; }
+    }
+}
