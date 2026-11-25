@@ -67,6 +67,11 @@ impl Update {
     /// Resultado de una consulta. Un aviso cerrado vuelve a salir solo si
     /// hay otra versión (o si la consulta la pidió el usuario).
     pub fn checked(&mut self, info: Option<UpdateView>, manual: bool) {
+        // Una consulta automática no pisa una instalación en curso o lista
+        // (Flutter ni la lanza en esos estados; esta pudo salir antes).
+        if !manual && matches!(self.status, UpdateStatus::Installing | UpdateStatus::Ready) {
+            return;
+        }
         *self = match info {
             None => Update { status: UpdateStatus::UpToDate, ..Default::default() },
             Some(info) => {
@@ -173,6 +178,19 @@ mod tests {
         u.checked(None, false);
         assert_eq!(u.status, UpdateStatus::UpToDate);
         assert!(!u.visible());
+    }
+
+    #[test]
+    fn consulta_automatica_no_pisa_la_instalacion() {
+        let mut u = Update::default();
+        u.checked(Some(info("0.2")), false);
+        u.begin_install();
+        u.checked(Some(info("0.2")), false);
+        assert_eq!(u.status, UpdateStatus::Installing);
+        u.status = UpdateStatus::Ready;
+        u.path = Some("/x".into());
+        u.checked(None, false);
+        assert_eq!((u.status, u.path.as_deref()), (UpdateStatus::Ready, Some(std::path::Path::new("/x"))));
     }
 
     #[test]

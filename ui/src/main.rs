@@ -107,6 +107,7 @@ fn main() {
     match &backend {
         Some(b) => {
             b.load();
+            b.restore_games();
             b.pump_events();
             b.schedule_update_checks();
             if ui_prefs.accent == prefs::AccentMode::Auto
