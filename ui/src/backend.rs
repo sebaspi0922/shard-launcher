@@ -132,6 +132,10 @@ impl Backend {
                         if matches!(e, Event::AccountsChanged) {
                             crate::accounts::post(|a| a.reload());
                         }
+                        if matches!(e, Event::Progress { .. }) {
+                            let e = e.clone();
+                            crate::content::post(move |c| c.on_event(&e));
+                        }
                         post(move |c| c.on_event(&e));
                         if reload {
                             // Tiempo jugado, última partida o cuenta cambiaron.
@@ -279,7 +283,7 @@ impl Actions for CoreActions {
     }
 
     fn add_server(&self) {
-        tracing::info!("añadir servidor: pendiente (fase 4)");
+        crate::servers::post(|s| s.open_dialog(None));
     }
 
     fn diagnose(&self, id: &str) {

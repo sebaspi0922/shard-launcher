@@ -390,3 +390,43 @@ impl crate::curseforge::KeyActions for Recorder {
         self.push("clear-key".into());
     }
 }
+
+impl crate::servers::ServerActions for Recorder {
+    fn save(&self, d: &crate::servers::Draft) {
+        self.push(format!("save-server {:?} «{}» {} {:?} {:?}", d.id, d.name, d.address, d.instance_id, d.account_id));
+    }
+    fn remove(&self, id: &str, name: &str) {
+        self.push(format!("remove-server {id} «{name}»"));
+    }
+    fn move_to(&self, id: &str, index: usize) {
+        self.push(format!("move-server {id} {index}"));
+    }
+    fn import(&self, instance_id: &str, _: &str) {
+        self.push(format!("import-servers {instance_id}"));
+    }
+    fn reload(&self) {
+        self.push("reload-servers".into());
+    }
+}
+
+/// Estados de `sampleStatuses()` más `localhost` sin conexión (lo que
+/// devuelve `FakeBridge.pingServers` para las que no conoce).
+pub fn sample_statuses_all() -> Vec<(String, crate::home::Status)> {
+    let mut v = sample_statuses();
+    v.push(("localhost".into(), crate::home::Status::default()));
+    v
+}
+
+impl crate::controller::Actions for Recorder {
+    fn open_instance(&self, id: &str) {
+        self.push(format!("open-instance {id}"));
+    }
+    fn play(&self, id: &str) {
+        self.push(format!("play {id}"));
+    }
+    fn new_instance(&self) {}
+    fn show_trash(&self) {}
+    fn join_server(&self, instance_id: &str, address: &str, account: Option<&str>) {
+        self.push(format!("join {instance_id} {address} {account:?}"));
+    }
+}

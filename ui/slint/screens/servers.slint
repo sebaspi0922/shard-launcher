@@ -1,0 +1,657 @@
+// Servidores (servers_page.dart, server_widgets.dart, server_dialog.dart):
+// lista reordenable con estado en vivo, «Entrar», menú por servidor,
+// importar de una instancia y el diálogo de añadir/editar. Rust
+// (`servers.rs`) es la fuente de verdad: aquí solo hay vista.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedButton, TextButton } from "../components/buttons.slint";
+import { LabeledField } from "../components/inputs.slint";
+import { EmptyState, ErrorNote, FormDialog, DialogActions, ConfirmDialog } from "../components/feedback.slint";
+import { TipArea } from "../components/common.slint";
+import { SelectButton, SelectOption } from "../components/select.slint";
+import { InstanceIcon, InstanceItem } from "instances.slint";
+
+// Un servidor listo para pintar.
+export struct ServerCard {
+    id: string,
+    name: string,
+    address: string,
+    // MOTD, «Consultando…», «No responde» o "".
+    motd: string,
+    // Ya hay estado (punto gris si no).
+    known: bool,
+    online: bool,
+    version: string,
+    // «3 / 20», «Sin conexión» o «…».
+    players: string,
+    // Jugadores de muestra (globo), uno por línea.
+    sample: string,
+    level: int,
+    // «23 ms» o «—».
+    ping: string,
+    icon: image,
+    has-favicon: bool,
+    has-instance: bool,
+    instance: InstanceItem,
+    can-join: bool,
+    busy: bool,
+    running: bool,
+    join-tooltip: string,
+}
+
+// Una entrada del menú «Importar» (las instancias).
+export struct ServerMenu {
+    value: string,
+    label: string,
+    instance: InstanceItem,
+}
+
+export global ServersState {
+    // Ya se leyó la lista.
+    in property <bool> loaded;
+    in property <string> subtitle;
+    in property <bool> pinging;
+    in property <[ServerCard]> items;
+    in property <bool> has-instances;
+    in property <[ServerMenu]> import-items;
+
+    // Menú abierto: "" ninguno, "import" o el id de un servidor; posición
+    // en la ventana.
+    in-out property <string> menu;
+    in-out property <length> menu-x;
+    in-out property <length> menu-y;
+    in-out property <string> menu-name;
+    in-out property <string> menu-address;
+    // Servidor a quitar (confirmación).
+    in-out property <string> confirm-id;
+    in-out property <string> confirm-name;
+
+    // Diálogo.
+    in property <bool> dialog-open;
+    in property <bool> dialog-editing;
+    in property <bool> dialog-busy;
+    in-out property <string> dialog-address;
+    in-out property <string> dialog-name;
+    in property <string> dialog-error;
+    in property <[SelectOption]> dialog-instance-options;
+    in property <string> dialog-instance;
+    in property <[SelectOption]> dialog-account-options;
+    in property <string> dialog-account;
+    in property <bool> dialog-has-error;
+    in property <string> dialog-error-message;
+    in property <string> dialog-error-detail;
+
+    callback shown();
+    callback refresh();
+    callback add();
+    callback edit(string);
+    callback join(string);
+    callback copy(string);
+    callback remove(string);
+    callback import(string);
+    // Servidor y posición nueva.
+    callback move(string, int);
+    callback dialog-instance-changed(string);
+    callback dialog-account-changed(string);
+    callback dialog-save();
+    callback dialog-close();
+    callback address-edited();
+}
+
+// Barras de señal (PingBars).
+component PingBars inherits Rectangle {
+    in property <int> level;
+    in property <bool> online;
+    property <color> on: !online ? Palette.text-muted : level >= 3 ? Palette.success : level == 2 ? Palette.warning : Palette.danger;
+    width: 4 * 3.5px + 3 * 2px;
+    height: 14px;
+    for i in 4: Rectangle {
+        x: i * 5.5px;
+        y: parent.height - self.height;
+        width: 3.5px;
+        height: 5px + i * 3px;
+        border-radius: 1px;
+        background: i < root.level ? root.on : Palette.surface3;
+    }
+}
+
+// IconButton estándar (40 visibles en 48) con globo.
+component IconAction inherits Rectangle {
+    in property <string> icon;
+    in property <length> icon-size: 20px;
+    in property <string> tooltip;
+    in property <bool> enabled: true;
+    in property <bool> busy;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: enabled && !busy;
+    accessible-action-default => { if enabled && !busy { clicked(); } }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: 20px;
+        background: ta.has-hover && root.enabled && !root.busy ? Palette.surface2 : transparent;
+        if !root.busy: Icon { glyph: root.icon; size: root.icon-size; color: root.enabled ? Palette.text-secondary : Palette.text-muted; }
+        if root.busy: Spinner { size: 16px; stroke: 2px; }
+    }
+    ta := TipArea { tip: root.tooltip; enabled: root.enabled && !root.busy; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Favicon del servidor o el paisaje de su dirección.
+component Favicon inherits Rectangle {
+    in property <image> icon;
+    in property <length> size: 56px;
+    width: size;
+    height: size;
+    border-radius: size * 0.22;
+    clip: true;
+    accessible-role: image;
+    Image {
+        width: parent.width;
+        height: parent.height;
+        source: root.icon;
+        image-fit: cover;
+        image-rendering: pixelated;
+        accessible-role: none;
+    }
+    Rectangle {
+        border-radius: parent.border-radius;
+        border-width: 1px;
+        border-color: #FFFFFF24;
+    }
+}
+
+// Tarjeta de un servidor (_ServerCard).
+component ServerCardView inherits Rectangle {
+    in property <ServerCard> item;
+    in property <int> index;
+    // Desplazamiento mientras se arrastra.
+    // Desplazamiento mientras se arrastra (en coordenadas de la ventana: la
+    // tarjeta se mueve con el puntero).
+    out property <length> drag-dy;
+    out property <bool> dragging: handle.pressed;
+    property <length> drag-start;
+    callback dropped(length);
+    callback more(length, length);
+    height: 84px;
+    border-radius: Theme.radius-card;
+    background: Palette.card(Palette.surface1);
+    border-width: 1px;
+    border-color: Palette.border;
+    drop-shadow-color: dragging ? #00000080 : transparent;
+    drop-shadow-blur: dragging ? 16px : 0;
+    drop-shadow-offset-y: dragging ? 4px : 0;
+    accessible-role: list-item;
+    accessible-label: item.name;
+    accessible-id: "server";
+    HorizontalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        padding-left: 8px;
+        padding-right: 12px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        // Asa para arrastrar.
+        Rectangle {
+            width: 28px;
+            accessible-role: none;
+            Icon { glyph: Icons.drag-indicator; size: 20px; color: Palette.text-muted; }
+            handle := TouchArea {
+                mouse-cursor: self.pressed ? grabbing : grab;
+                pointer-event(e) => {
+                    if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                        root.drag-start = self.absolute-position.y + self.mouse-y - root.drag-dy;
+                        root.drag-dy = 0;
+                    } else if e.kind == PointerEventKind.up && e.button == PointerEventButton.left {
+                        root.dropped(root.drag-dy);
+                        root.drag-dy = 0;
+                    }
+                }
+                moved => {
+                    if self.pressed {
+                        root.drag-dy = self.absolute-position.y + self.mouse-y - root.drag-start;
+                    }
+                }
+            }
+        }
+        Rectangle { width: 4px; }
+        VerticalLayout {
+            alignment: center;
+            Favicon { icon: root.item.icon; accessible-id: "server-icon"; }
+        }
+        Rectangle { width: 16px; }
+        // Nombre, punto, versión, dirección y MOTD.
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            min-width: 0;
+            HorizontalLayout {
+                alignment: start;
+                HorizontalLayout {
+                    horizontal-stretch: 0;
+                    Txt { text: root.item.name; style: Type.title-medium; }
+                }
+                Rectangle { width: 8px; }
+                VerticalLayout {
+                    alignment: center;
+                    Rectangle {
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 4px;
+                        background: !root.item.known ? Palette.text-muted : root.item.online ? Palette.success : Palette.danger;
+                    }
+                }
+                if root.item.version != "": HorizontalLayout {
+                    Rectangle { width: 8px; }
+                    Txt { text: root.item.version; style: Type.body-small; color: Palette.text-muted; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+                }
+            }
+            Rectangle { height: 2px; }
+            Txt {
+                text: root.item.address;
+                style: { size: 11.5px, weight: 400, line-height: 1.45, letter-spacing: 0, nudge: -2px };
+                family: "JetBrains Mono";
+                color: Palette.text-secondary;
+            }
+            if root.item.motd != "": VerticalLayout {
+                Rectangle { height: 2px; }
+                Txt { text: root.item.motd; style: Type.body-small; color: root.item.online ? Palette.text-secondary : Palette.text-muted; }
+            }
+        }
+        Rectangle { width: 16px; }
+        // Jugadores y ping.
+        VerticalLayout {
+            width: 150px;
+            alignment: center;
+            HorizontalLayout {
+                alignment: end;
+                Icon { glyph: Icons.group; size: 16px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+                Rectangle { width: 4px; }
+                HorizontalLayout {
+                    horizontal-stretch: 0;
+                    Txt {
+                        text: root.item.players;
+                        style: Type.label-large;
+                        family: "Inter Tnum";
+                        color: root.item.online ? Palette.text : Palette.text-muted;
+                    }
+                }
+                players-tip := TipArea { width: 0; height: 0; tip: root.item.sample; }
+            }
+            Rectangle { height: 4px; }
+            HorizontalLayout {
+                alignment: end;
+                VerticalLayout {
+                    alignment: center;
+                    PingBars { level: root.item.level; online: root.item.online; }
+                }
+                Rectangle { width: 6px; }
+                HorizontalLayout {
+                    horizontal-stretch: 0;
+                    Txt { text: root.item.ping; style: Type.body-small; color: Palette.text-muted; y: 1px; }
+                }
+            }
+        }
+        Rectangle { width: 16px; }
+        // Instancia.
+        HorizontalLayout {
+            width: 190px;
+            if !root.item.has-instance: Txt {
+                text: @tr("serverNoInstance");
+                style: Type.body-small;
+                color: Palette.text-muted;
+                y: ceil((parent.height - self.height) / 2 / 1px) * 1px;
+            }
+            if root.item.has-instance: HorizontalLayout {
+                VerticalLayout {
+                    alignment: center;
+                    InstanceIcon { item: root.item.instance; size: 28px; }
+                }
+                Rectangle { width: 8px; }
+                Txt {
+                    text: root.item.instance.name;
+                    style: Type.body-small;
+                    color: Palette.text-secondary;
+                    horizontal-stretch: 1;
+                    y: ceil((parent.height - self.height) / 2 / 1px) * 1px;
+                }
+            }
+        }
+        Rectangle { width: 12px; }
+        VerticalLayout {
+            alignment: center;
+            join := FilledButton {
+                text: root.item.running ? @tr("launchRunning") : @tr("serverJoin");
+                icon: root.item.running ? Icons.sports-esports : Icons.login;
+                icon-size: 18px;
+                busy: root.item.busy;
+                enabled: root.item.can-join;
+                accessible-id: "server-play";
+                clicked => { ServersState.join(root.item.id); }
+                TipArea { tip: root.item.join-tooltip; enabled: !root.item.can-join; }
+            }
+        }
+        Rectangle { width: 4px; }
+        VerticalLayout {
+            alignment: center;
+            more-btn := IconAction {
+                icon: Icons.more-vert;
+                icon-size: 19px;
+                tooltip: @tr("instanceMore");
+                accessible-id: "server-more";
+                clicked => { root.more(self.absolute-position.x, self.absolute-position.y + self.height); }
+            }
+        }
+    }
+}
+
+export component ServersPage inherits Rectangle {
+    property <length> pad: 32px;
+    property <length> top: 4px;
+    property <length> avail: root.width - 2 * pad;
+    property <length> list-y: top + 55px + 24px;
+    init => { ServersState.shown(); }
+
+    Txt {
+        x: root.pad;
+        y: root.top;
+        text: @tr("serversTitle");
+        style: Type.headline-medium;
+        accessible-id: "txt-title";
+    }
+    Txt {
+        x: root.pad;
+        y: root.top + 35px;
+        text: ServersState.subtitle;
+        color: Palette.text-secondary;
+        accessible-id: "txt-subtitle";
+    }
+    HorizontalLayout {
+        x: root.width - root.pad - self.width;
+        y: root.top + 55px - 48px;
+        width: self.preferred-width;
+        height: 48px;
+        IconAction {
+            icon: Icons.refresh;
+            tooltip: @tr("serversRefresh");
+            busy: ServersState.pinging;
+            accessible-id: "refresh";
+            clicked => { ServersState.refresh(); }
+        }
+        Rectangle { width: 8px; }
+        import-btn := OutlinedButton {
+            text: @tr("serversImport");
+            icon: Icons.download;
+            visible-height: 42px;
+            enabled: ServersState.has-instances;
+            accessible-id: "import";
+            clicked => {
+                if ServersState.menu == "import" {
+                    ServersState.menu = "";
+                } else {
+                    ServersState.menu-x = self.absolute-position.x;
+                    ServersState.menu-y = self.absolute-position.y + self.height - 2px;
+                    ServersState.menu = "import";
+                }
+            }
+        }
+        Rectangle { width: 12px; }
+        FilledButton {
+            text: @tr("serverAdd");
+            icon: Icons.add;
+            accessible-id: "add";
+            clicked => { ServersState.add(); }
+        }
+    }
+
+    Rectangle {
+        x: root.pad;
+        y: root.list-y;
+        width: root.avail;
+        height: root.height - root.list-y;
+        if ServersState.loaded && ServersState.items.length == 0: EmptyState {
+            icon: Icons.dns;
+            title: @tr("serversEmptyTitle");
+            body: @tr("serversEmptyBody");
+            action: @tr("serverAdd");
+            action-icon: Icons.add;
+            accessible-id: "empty";
+            act => { ServersState.add(); }
+        }
+        if !ServersState.loaded: Spinner { accessible-id: "loading"; }
+        if ServersState.items.length > 0: Flickable {
+            content-height: ServersState.items.length * 96px + 32px;
+            for it[i] in ServersState.items: card := ServerCardView {
+                // Mientras se arrastra va encima y sigue al ratón.
+                y: i * 96px + self.drag-dy;
+                z: self.dragging ? 1 : 0;
+                width: parent.width;
+                item: it;
+                index: i;
+                dropped(dy) => {
+                    ServersState.move(it.id, max(0, min(ServersState.items.length - 1, i + round(dy / 96px))));
+                }
+                more(x, y) => {
+                    if ServersState.menu == it.id {
+                        ServersState.menu = "";
+                    } else {
+                        ServersState.menu-x = x - 140px;
+                        ServersState.menu-y = y + 4px;
+                        ServersState.menu-name = it.name;
+                        ServersState.menu-address = it.address;
+                        ServersState.menu = it.id;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Entrada de un menú (MenuItemButton).
+component MenuRow inherits Rectangle {
+    in property <string> icon;
+    in property <string> text;
+    in property <bool> danger;
+    in property <InstanceItem> instance;
+    in property <bool> has-instance;
+    callback activated;
+    height: 40px;
+    width: max(180px, lay.preferred-width);
+    background: ta.has-hover ? Palette.surface3 : transparent;
+    accessible-role: AccessibleRole.button;
+    accessible-label: text;
+    accessible-action-default => { activated(); }
+    lay := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 16px;
+        spacing: 12px;
+        if root.has-instance: VerticalLayout {
+            alignment: center;
+            InstanceIcon { item: root.instance; size: 24px; }
+        }
+        if !root.has-instance: Icon { glyph: root.icon; size: 18px; color: root.danger ? Palette.danger : Palette.text-secondary; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.body-medium; color: root.danger ? Palette.danger : Palette.text; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.activated(); } }
+}
+
+// Panel de un menú abierto.
+component MenuPanel inherits Rectangle {
+    background: Theme.blend(Palette.surface2, Palette.background-deep);
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+    drop-shadow-color: #00000066;
+    drop-shadow-blur: 16px;
+    drop-shadow-offset-y: 6px;
+    clip: true;
+    accessible-role: list;
+    width: col.preferred-width + 2px;
+    height: col.preferred-height + 2px;
+    col := VerticalLayout {
+        x: 1px;
+        y: 1px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+        @children
+    }
+}
+
+// Diálogo de añadir o editar (ServerDialog).
+component ServerDialog inherits Rectangle {
+    FormDialog {
+        title: ServersState.dialog-editing ? @tr("serverEdit") : @tr("serverAdd");
+        icon: Icons.dns;
+        panel-width: 480px;
+        dismissible: !ServersState.dialog-busy;
+        accessible-id: "server-dialog";
+        dismissed => { ServersState.dialog-close(); }
+        LabeledField {
+            label: @tr("serverAddress");
+            placeholder: "play.example.net:25565";
+            prefix-icon: Icons.language;
+            error: ServersState.dialog-error;
+            enabled: !ServersState.dialog-busy;
+            text <=> ServersState.dialog-address;
+            accessible-id: "field";
+            init => {
+                if !ServersState.dialog-editing {
+                    self.focus-input();
+                }
+            }
+            edited => { ServersState.address-edited(); }
+            accepted => { ServersState.dialog-save(); }
+        }
+        Rectangle { height: 12px; }
+        LabeledField {
+            label: @tr("serverName");
+            placeholder: @tr("serverNameHint");
+            enabled: !ServersState.dialog-busy;
+            text <=> ServersState.dialog-name;
+            accessible-id: "field-2";
+            accepted => { ServersState.dialog-save(); }
+        }
+        Rectangle { height: 16px; }
+        Txt { text: @tr("serverInstance"); style: Type.label-large; }
+        Rectangle { height: 8px; }
+        SelectButton {
+            options: ServersState.dialog-instance-options;
+            value: ServersState.dialog-instance;
+            enabled: !ServersState.dialog-busy;
+            menu-min-width: 432px;
+            accessible-id: "select";
+            changed(v) => { ServersState.dialog-instance-changed(v); }
+        }
+        Rectangle { height: 12px; }
+        Txt { text: @tr("serverAccount"); style: Type.label-large; }
+        Rectangle { height: 8px; }
+        SelectButton {
+            options: ServersState.dialog-account-options;
+            value: ServersState.dialog-account;
+            enabled: !ServersState.dialog-busy;
+            menu-min-width: 432px;
+            accessible-id: "select";
+            changed(v) => { ServersState.dialog-account-changed(v); }
+        }
+        if ServersState.dialog-has-error: VerticalLayout {
+            Rectangle { height: 12px; }
+            ErrorNote { message: ServersState.dialog-error-message; detail: ServersState.dialog-error-detail; details-label: @tr("details"); accessible-id: "error"; }
+        }
+        DialogActions {
+            TextButton {
+                text: @tr("cancel");
+                height: 48px;
+                enabled: !ServersState.dialog-busy;
+                accessible-id: "cancel";
+                clicked => { ServersState.dialog-close(); }
+            }
+            FilledButton {
+                text: ServersState.dialog-editing ? @tr("save") : @tr("serverAdd");
+                enabled: !ServersState.dialog-busy;
+                accessible-id: "filled";
+                clicked => { ServersState.dialog-save(); }
+            }
+        }
+    }
+}
+
+// Lo que va encima de toda la ventana: menús, confirmación y diálogo.
+export component ServersLayer inherits Rectangle {
+    // Copiar al portapapeles (Slint no tiene otra vía sin dependencias).
+    clip := TextInput { width: 0; height: 0; opacity: 0; read-only: true; accessible-role: none; }
+    if ServersState.menu != "": Rectangle {
+        TouchArea { clicked => { ServersState.menu = ""; } }
+        if ServersState.menu == "import": MenuPanel {
+            x: ServersState.menu-x;
+            y: ServersState.menu-y + 6px;
+            accessible-id: "import-menu";
+            for m in ServersState.import-items: MenuRow {
+                text: m.label;
+                instance: m.instance;
+                has-instance: true;
+                activated => {
+                    ServersState.menu = "";
+                    ServersState.import(m.value);
+                }
+            }
+        }
+        if ServersState.menu != "import": MenuPanel {
+            x: ServersState.menu-x;
+            y: ServersState.menu-y;
+            accessible-id: "server-menu";
+            MenuRow {
+                icon: Icons.edit;
+                text: @tr("serverEdit");
+                accessible-id: "menu-edit";
+                activated => {
+                    ServersState.edit(ServersState.menu);
+                    ServersState.menu = "";
+                }
+            }
+            MenuRow {
+                icon: Icons.content-copy;
+                text: @tr("serverCopyAddress");
+                accessible-id: "menu-copy";
+                activated => {
+                    clip.text = ServersState.menu-address;
+                    clip.select-all();
+                    clip.copy();
+                    ServersState.copy(ServersState.menu);
+                    ServersState.menu = "";
+                }
+            }
+            MenuRow {
+                icon: Icons.delete;
+                text: @tr("remove");
+                danger: true;
+                accessible-id: "menu-remove";
+                activated => {
+                    ServersState.confirm-id = ServersState.menu;
+                    ServersState.confirm-name = ServersState.menu-name;
+                    ServersState.menu = "";
+                }
+            }
+        }
+    }
+    if ServersState.confirm-id != "": ConfirmDialog {
+        title: @tr("serverRemoveTitle", ServersState.confirm-name);
+        body: @tr("serverRemoveBody");
+        action: @tr("remove");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm";
+        dismissed => { ServersState.confirm-id = ""; }
+        accepted => {
+            ServersState.remove(ServersState.confirm-id);
+            ServersState.confirm-id = "";
+        }
+    }
+    if ServersState.dialog-open: ServerDialog { }
+}

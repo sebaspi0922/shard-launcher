@@ -502,3 +502,60 @@ sin cuenta y offline, y cuentas antiguas deshabilitadas) y
 
 **Pendiente:** login de Microsoft real completo, a mano (necesita a Sebas);
 sensación del arrastre del visor a mano.
+
+## 11. Resultados de la fase 4
+
+(Numerada 11 para dejar la 10 a la fase 3, que se integra después.)
+
+Contenido (búsqueda en Modrinth y CurseForge con filtros, tipos y scroll
+infinito; destino al entrar desde una instancia; ficha lateral con versiones
+compatibles, «Ya está instalado» e instalación; modpacks desde la ficha, un
+archivo o una URL, con progreso de la etapa `modpack`; clave de API de
+CurseForge en el llavero) y Servidores (lista reordenable con estado en vivo,
+«Entrar» con su instancia y cuenta, añadir/editar con validación, copiar,
+quitar con confirmación, importar de `servers.dat`), con el núcleo real
+(`content_backend.rs`, `servers::CoreServers`, `curseforge::CoreKeys`).
+
+**Paridad** (`tools/paridad.sh all`, informe en `docs/slint/paridad-f4/`).
+Las referencias salen idénticas byte a byte a los goldens de Flutter.
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| content_search_es | 0,9733 | 33/33 |
+| content_target_es | 0,9707 | 34/34 |
+| content_curseforge_en | 0,9791 | 16/16 |
+| project_sheet_es | 0,9726 | 16/16 |
+| modpack_installing_es | 0,9702 | 7/7 |
+| servers_es | 0,9769 | 17/17 |
+| server_dialog_en | 0,9712 | 9/9 |
+
+**Pruebas:** `tests/contenido.rs` (clics y teclado: búsqueda por
+generaciones, espera al teclear, tipos, error y reintento, página siguiente
+al bajar, ficha con versiones, instalar una versión o la última, error al
+instalar, destino con «Instalado», «Volver a la instancia», CurseForge sin
+clave hasta guardarla, modpack por archivo y URL con progreso, intentos
+viejos, error y abrir la instancia; Servidores: «Entrar», actualizar estado,
+diálogo con validación e Intro, editar, copiar, quitar con confirmación,
+importar y arrastrar para reordenar) y `tests/nucleo_servidores.rs` (lo mismo
+contra `lcore` real en una carpeta temporal: `servers.json` cambia como
+debe; Contenido contesta la primera búsqueda, con o sin red).
+
+**Piezas compartidas nuevas o cambiadas** (para las fases siguientes):
+- `components/select.slint`: `SelectButton` + `SelectMenuLayer` (menú en una
+  capa propia). Regla de Slint aprendida: ningún layout puede ser hijo
+  directo de un componente con `preferred-width: lay.preferred-width` fuera
+  de `lay`, porque le pasa su ancho máximo.
+- `components/pills.slint`: `PillTabs`.
+- `components/curseforge_key.slint` + `curseforge.rs`: `CurseforgeKey`
+  (también lo usa Ajustes).
+- `TextStyle.nudge`: corrección vertical del glifo medida con el arnés
+  (body-medium −2, body-small/label-medium/label-small −1). `Wrapped.spaced`
+  (de F5) corrige además el reparto del interlineado (Slint mitad y mitad,
+  Flutter según el ascendente).
+- Campos (`TextField`, `LabeledField`): el texto escrito en body-large (15),
+  como Flutter. `OutlinedButton` con `enabled` y `visible-height`.
+- Lección de paridad: en filas de alto impar, Flutter manda el medio píxel
+  del centrado hacia abajo (`ceil`).
+
+**Pendiente:** probar a mano una instalación real de mod y de modpack con
+red; el arrastre de servidores a mano (sensación).

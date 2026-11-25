@@ -96,6 +96,16 @@ pub fn compact(lang: &str, n: u64) -> String {
     format!("{s}{suffix}")
 }
 
+/// `serverPlayers`: «3 / 20», «31,8 mil / 200 mil», «Sin conexión» o «…».
+pub fn players(lang: &str, s: Option<&Status>) -> String {
+    let Some(s) = s else { return "…".into() };
+    if !s.online {
+        return crate::i18n::text(lang, "serverOffline");
+    }
+    let n = |v: u32| if v >= 10_000 { compact(lang, v as u64) } else { v.to_string() };
+    crate::i18n::text(lang, "serverPlayersText").replace("{online}", &n(s.players_online)).replace("{max}", &n(s.players_max))
+}
+
 /// `serverPlayers` + latencia: «3 / 20 · 23 ms», «Sin conexión» o «…».
 pub fn status_line(lang: &str, s: Option<&Status>) -> String {
     let t = |k| crate::i18n::text(lang, k);
@@ -103,9 +113,7 @@ pub fn status_line(lang: &str, s: Option<&Status>) -> String {
     if !s.online {
         return t("serverOffline");
     }
-    let n = |v: u32| if v >= 10_000 { compact(lang, v as u64) } else { v.to_string() };
-    let players = t("serverPlayersText").replace("{online}", &n(s.players_online)).replace("{max}", &n(s.players_max));
-    format!("{players} · {}", t("serverPing").replace("{ms}", &s.latency_ms.to_string()))
+    format!("{} · {}", players(lang, Some(s)), t("serverPing").replace("{ms}", &s.latency_ms.to_string()))
 }
 
 #[cfg(test)]

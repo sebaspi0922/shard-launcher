@@ -308,8 +308,8 @@ impl Controller {
         }
     }
 
-    /// «Entrar» de un servidor rápido.
-    fn join(&self, server_id: &str) {
+    /// «Entrar» de un servidor (Inicio y Servidores).
+    pub fn join(&self, server_id: &str) {
         let server = self.servers.borrow().as_ref().and_then(|l| l.iter().find(|s| s.id == server_id).cloned());
         let Some(s) = server else { return };
         let Some(id) = s.instance_id.clone() else { return };
@@ -469,6 +469,28 @@ impl Controller {
     pub fn set_statuses(&self, list: Vec<(String, Status)>) {
         self.statuses.borrow_mut().extend(list);
         self.refresh();
+    }
+
+    /// Servidores guardados (`None` mientras no se han leído).
+    pub fn servers(&self) -> Option<Vec<Server>> {
+        self.servers.borrow().clone()
+    }
+
+    /// Último estado conocido de una dirección.
+    pub fn status(&self, address: &str) -> Option<Status> {
+        self.statuses.borrow().get(address).cloned()
+    }
+
+    /// Olvida los estados (se vuelven a consultar: se ve «Consultando…»).
+    pub fn clear_statuses(&self) {
+        self.statuses.borrow_mut().clear();
+        self.refresh();
+    }
+
+    /// Instancia de Inicio (la elegida o la última jugada).
+    pub fn home_instance_id(&self) -> Option<String> {
+        let selected = self.selected.borrow().clone();
+        home::home_instance(&self.model.borrow().all, selected.as_deref()).map(|r| r.id.clone())
     }
 
     /// Direcciones de los servidores rápidos (para el ping).

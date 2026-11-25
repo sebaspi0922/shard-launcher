@@ -140,7 +140,7 @@ export component LabeledField inherits VerticalLayout {
             y: root.floating ? 0.75px - self.height / 2 : (parent.height - self.height) / 2 - 2.5px;
             width: self.preferred-width;
             text: root.label;
-            style: root.floating ? { size: Type.body-small.size * 0.75, weight: Type.body-small.weight, line-height: Type.body-small.line-height, letter-spacing: 0 } : Type.body-medium;
+            style: root.floating ? { size: Type.body-small.size * 0.75, weight: Type.body-small.weight, line-height: Type.body-small.line-height, letter-spacing: 0 } : { size: Type.body-medium.size, weight: Type.body-medium.weight, line-height: Type.body-medium.line-height, letter-spacing: 0, nudge: 0 };
             color: root.error != "" ? Palette.danger : root.floating ? Palette.accent : Palette.text-secondary;
             accessible-role: none;
         }

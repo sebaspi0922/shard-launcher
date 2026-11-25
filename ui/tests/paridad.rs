@@ -21,6 +21,7 @@ use shard_ui::fixtures;
 use shard_ui::instances::Phase;
 use shard_ui::accounts::Accounts;
 use shard_ui::content::Content;
+use shard_ui::servers::Servers;
 use shard_ui::launch::Failure;
 use shard_ui::notices::CrashNotice;
 use shard_ui::prefs::UiPrefs;
@@ -46,6 +47,7 @@ struct Ctx<'a> {
     acc: &'a Accounts,
     skins: &'a Skins,
     content: &'a Content,
+    servers: &'a Servers,
 }
 
 /// Una escena: idioma y qué hacer después de cargar los datos de ejemplo.
@@ -104,6 +106,14 @@ fn content_target(c: &Ctx) {
     c.content.installed_loaded("survival-amigos", fixtures::sample_installed());
     c.content.shown();
     answer_search(c);
+}
+
+/// Servidores con la lista y los estados de `FakeBridge`.
+fn servers_ready(c: &Ctx) {
+    c.ctl.set_instances(fixtures::sample_instances());
+    c.ctl.set_servers(fixtures::sample_servers());
+    c.ctl.set_statuses(fixtures::sample_statuses_all());
+    c.ui.set_route(Route::Servers);
 }
 
 const SCENES: &[Scene] = &[
@@ -279,6 +289,15 @@ const SCENES: &[Scene] = &[
             c.content.set_modpack_progress(87, 212);
         },
     },
+    Scene { name: "servers_es", lang: "es", setup: servers_ready },
+    Scene {
+        name: "server_dialog_en",
+        lang: "en",
+        setup: |c| {
+            servers_ready(c);
+            c.servers.open_dialog(None);
+        },
+    },
 ];
 
 fn by_label(ui: &MainWindow, label: &str) -> ElementHandle {
@@ -387,11 +406,16 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     let rec = fixtures::Recorder::default();
     let acc = Accounts::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| 0));
     let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec.clone()));
-    let content = Content::new(&ui, ctl.clone(), Box::new(rec));
+    let content = Content::new(&ui, ctl.clone(), Box::new(rec.clone()));
+    let servers = Servers::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
+    {
+        let s = servers.clone();
+        ctl.on_refresh(move |_| s.refresh());
+    }
     acc.set_accounts(Ok(fixtures::sample_accounts()));
     ui.set_route(Route::Instances);
     ui.show().unwrap();
-    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content });
+    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers });
     // El fondo animado de Flutter va quieto en el modo de la escena.
     ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.
