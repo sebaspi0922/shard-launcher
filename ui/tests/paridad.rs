@@ -65,7 +65,7 @@ fn sample_skins(c: &Ctx) {
 /// Microsoft, servidores con su estado).
 fn home(c: &Controller, ui: &MainWindow) {
     ui.set_route(Route::Home);
-    c.set_account_kind(true, false);
+    c.set_account_kind(true);
     c.set_instances(fixtures::sample_instances());
     c.set_servers(fixtures::sample_servers());
     c.set_statuses(fixtures::sample_statuses());
@@ -136,14 +136,6 @@ const SCENES: &[Scene] = &[
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             c.ui.global::<AccountsState>().invoke_add_offline();
-        },
-    },
-    Scene {
-        name: "shard_account_es",
-        lang: "es",
-        setup: |c| {
-            c.ctl.set_instances(fixtures::sample_instances());
-            c.ui.global::<AccountsState>().invoke_add_shard();
         },
     },
     Scene {

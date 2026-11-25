@@ -3,7 +3,9 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:shard/core/bridge.dart';
 import 'package:shard/ui/accounts/account_dialogs.dart';
+import 'package:shard/ui/accounts/account_panel.dart';
 import 'package:shard/ui/home/home_page.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/settings/settings_page.dart';
@@ -37,6 +39,31 @@ void main() {
     await settle(tester);
     expect(bridge.accounts.any((a) => a.name == 'Alex_99'), isTrue);
     expect(find.byType(OfflineAccountDialog), findsNothing);
+    debugDisableShadows = true;
+  });
+
+  testWidgets('cuenta antigua: visible, deshabilitada y se puede quitar', (tester) async {
+    const legacy = AccountView(
+      id: 'legacy',
+      name: 'Antigua',
+      microsoft: false,
+      shard: true,
+      active: false,
+    );
+    final bridge = FakeBridge(accounts: [...sampleAccounts(), legacy]);
+    await pumpApp(tester, location: '/', bridge: bridge);
+    showAccountPanel(pageContext(tester));
+    await settle(tester);
+
+    final row = find.ancestor(
+      of: find.text('No disponible'),
+      matching: find.byType(InkWell),
+    ).first;
+    expect(tester.widget<InkWell>(row).onTap, isNull);
+    expect(
+      find.descendant(of: row, matching: find.byTooltip('Quitar')),
+      findsOneWidget,
+    );
     debugDisableShadows = true;
   });
 

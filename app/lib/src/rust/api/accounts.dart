@@ -28,14 +28,6 @@ void cancelMicrosoftLogin() =>
 Future<AccountView> addOfflineAccount({required String name}) =>
     RustLib.instance.api.crateApiAccountsAddOfflineAccount(name: name);
 
-Future<AccountView> addShardAccount({
-  required String username,
-  required String password,
-}) => RustLib.instance.api.crateApiAccountsAddShardAccount(
-  username: username,
-  password: password,
-);
-
 Future<void> setActiveAccount({required String id}) =>
     RustLib.instance.api.crateApiAccountsSetActiveAccount(id: id);
 

@@ -208,11 +208,28 @@ async fn ping(addresses: Vec<String>) {
 pub struct CoreActions(pub Backend);
 
 impl CoreActions {
-    fn launch(&self, id: &str, opts: LaunchOptions) {
+    fn launch(&self, id: &str, mut opts: LaunchOptions) {
         let id = id.to_owned();
         let core = self.0.core.clone();
         self.0.rt.spawn(async move {
-            match core.launch(&id, opts).await {
+            let result = async {
+                let file = core.accounts().await?;
+                let supported = || file.accounts.iter()
+                    .filter(|a| a.kind != lcore::auth::AccountKind::Shard);
+                let find = |id: &str| supported().find(|a| a.id == id);
+                let account = opts.account.as_deref().and_then(find)
+                    .or_else(|| file.active.as_deref().and_then(find))
+                    .or_else(|| supported().next())
+                    .ok_or_else(|| lcore::Error::AccountNotFound(String::new()))?;
+                // El núcleo busca por nombre antes que por ID.
+                let resolved = core.find_account(&account.id).await?;
+                if resolved.id != account.id || resolved.kind != account.kind {
+                    return Err(lcore::Error::AccountNotFound(account.id.clone()));
+                }
+                opts.account = Some(account.id.clone());
+                core.launch(&id, opts).await
+            }.await;
+            match result {
                 Ok(game) => post(move |c| c.launch_done(&id, Ok(game.game_id))),
                 Err(e) => {
                     tracing::warn!(id, error = %e, "no se pudo lanzar");
@@ -259,10 +276,6 @@ impl Actions for CoreActions {
 
     fn add_offline_account(&self) {
         tracing::info!("cuenta offline: pendiente (fase 2)");
-    }
-
-    fn add_shard_account(&self) {
-        tracing::info!("cuenta Shard: pendiente (fase 2)");
     }
 
     fn add_server(&self) {

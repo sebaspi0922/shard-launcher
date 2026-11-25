@@ -45,7 +45,7 @@ Future<void> main(List<String> args) async {
     if (needsFirstRun(
       prefs,
       hasInstances: instances.isNotEmpty,
-      hasAccounts: accounts.isNotEmpty,
+      hasAccounts: accounts.any((account) => !account.shard),
     )) {
       location = '/welcome';
     }

@@ -23,8 +23,7 @@ pub struct Account {
     pub id: String,
     pub name: String,
     pub microsoft: bool,
-    /// Cuenta Shard (Yggdrasil): sin skins desde el launcher.
-    pub shard: bool,
+    pub unavailable: bool,
     /// Textura de la skin (para la cara), si es de Microsoft y se conoce.
     pub skin_url: Option<String>,
     pub active: bool,
@@ -36,7 +35,7 @@ impl Account {
             id: a.id.clone(),
             name: a.name.clone(),
             microsoft: a.kind == lcore::auth::AccountKind::Msa,
-            shard: a.kind == lcore::auth::AccountKind::Shard,
+            unavailable: a.kind == lcore::auth::AccountKind::Shard,
             skin_url: a.skin_url.clone(),
             active: active == Some(a.id.as_str()),
         }
@@ -45,7 +44,8 @@ impl Account {
 
 /// Cuenta activa: la marcada o, si no hay, la primera (`activeAccountProvider`).
 pub fn active(list: &[Account]) -> Option<&Account> {
-    list.iter().find(|a| a.active).or(list.first())
+    let mut available = list.iter().filter(|a| !a.unavailable);
+    available.clone().find(|a| a.active).or_else(|| available.next())
 }
 
 /// Nombre de cuenta offline válido: 3–16 letras ASCII, dígitos o `_`.
@@ -104,9 +104,6 @@ pub trait AccountActions {
     fn remove(&self, id: &str, name: &str);
     /// → [`Accounts::offline_added`] con el mismo `attempt`.
     fn add_offline(&self, name: &str, attempt: u64);
-    /// Inicia sesión en Shard (Yggdrasil) y guarda la cuenta → también
-    /// [`Accounts::offline_added`] (mismo diálogo).
-    fn add_shard(&self, username: &str, password: &str, attempt: u64);
     /// Pide un código y espera al usuario → [`Accounts::login_code`],
     /// [`Accounts::login_done`] o [`Accounts::login_failed`] con `attempt`.
     fn begin_login(&self, attempt: u64);
@@ -200,17 +197,7 @@ impl Accounts {
             }
         })));
         st.on_copied(with(Box::new(|a| a.toast("copied", false))));
-        st.on_add_offline(with(Box::new(|a| a.open_credentials(false))));
-        st.on_add_shard(with(Box::new(|a| a.open_credentials(true))));
-        let weak = Rc::downgrade(&me);
-        st.on_shard_submit(move |user, password| {
-            if let Some(a) = weak.upgrade()
-                && !user.trim().is_empty()
-                && !password.is_empty()
-            {
-                a.actions.add_shard(user.trim(), &password, a.submit_credentials());
-            }
-        });
+        st.on_add_offline(with(Box::new(|a| a.open_credentials())));
         let weak = Rc::downgrade(&me);
         st.on_offline_submit(move |name| {
             if let Some(a) = weak.upgrade()
@@ -221,7 +208,9 @@ impl Accounts {
         });
         let weak = Rc::downgrade(&me);
         st.on_select(move |id| {
-            if let Some(a) = weak.upgrade() {
+            if let Some(a) = weak.upgrade()
+                && a.list.borrow().iter().any(|item| item.id == id.as_str() && !item.unavailable)
+            {
                 a.actions.set_active(&id);
             }
         });
@@ -236,8 +225,8 @@ impl Accounts {
         me
     }
 
-    /// Abre el diálogo de alta offline o Shard, limpio.
-    fn open_credentials(&self, shard: bool) {
+    /// Abre el diálogo de alta offline, limpio.
+    fn open_credentials(&self) {
         // Diálogo nuevo: lo que llegue de envíos anteriores ya no es suyo.
         self.credentials_attempt.set(self.credentials_attempt.get() + 1);
         let Some(ui) = self.ui.upgrade() else { return };
@@ -245,7 +234,6 @@ impl Accounts {
         st.set_offline_error("".into());
         st.set_offline_error_detail("".into());
         st.set_offline_busy(false);
-        st.set_credentials_shard(shard);
         st.set_offline_open(true);
     }
 
@@ -324,7 +312,7 @@ impl Accounts {
                 id: a.id.as_str().into(),
                 name: a.name.as_str().into(),
                 microsoft: a.microsoft,
-                shard: a.shard,
+                unavailable: a.unavailable,
                 active: act.is_some_and(|x| x.id == a.id),
                 chip: self.chip(Some(a)),
             })
@@ -336,7 +324,7 @@ impl Accounts {
         // Raíl e Inicio: la cara generada pintada a su tamaño (Controller),
         // o la de la skin cuando ya está.
         self.shell.set_account(act.map(|a| a.name.as_str()));
-        self.shell.set_account_kind(act.is_some_and(|a| a.microsoft), act.is_some_and(|a| a.shard));
+        self.shell.set_account_kind(act.is_some_and(|a| a.microsoft));
         if let Some(face) = act.and_then(|a| a.skin_url.as_ref()).and_then(|u| self.faces.borrow().get(u).cloned().flatten()) {
             ui.set_account(chip.clone());
             ui.global::<crate::HomeState>().set_session_face(face);
@@ -385,7 +373,7 @@ impl Accounts {
         self.credentials_attempt.get()
     }
 
-    /// Resultado de un alta offline o Shard.
+    /// Resultado de un alta offline.
     pub fn offline_added(&self, attempt: u64, r: Result<String, Failure>) {
         let Some(ui) = self.ui.upgrade() else { return };
         let st = ui.global::<AccountsState>();
@@ -555,7 +543,7 @@ mod tests {
 
     #[test]
     fn activa_es_la_marcada_o_la_primera() {
-        let a = |id: &str, active| Account { id: id.into(), name: id.into(), microsoft: true, shard: false, skin_url: None, active };
+        let a = |id: &str, active| Account { id: id.into(), name: id.into(), microsoft: true, unavailable: false, skin_url: None, active };
         assert_eq!(active(&[a("1", false), a("2", true)]).unwrap().id, "2");
         assert_eq!(active(&[a("1", false), a("2", false)]).unwrap().id, "1");
         assert!(active(&[]).is_none());

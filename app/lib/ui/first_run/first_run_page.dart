@@ -982,7 +982,8 @@ class _AccountStep extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context);
     final c = context.colors;
-    final accounts = ref.watch(accountsProvider).value ?? const <AccountView>[];
+    final accounts = (ref.watch(accountsProvider).value ?? const <AccountView>[])
+        .where((account) => !account.shard);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1003,16 +1004,6 @@ class _AccountStep extends ConsumerWidget {
                   body: l.firstRunMicrosoftDesc,
                   selected: false,
                   onTap: () => showMicrosoftLogin(context),
-                ),
-              ),
-              const SizedBox(width: Space.x3),
-              Expanded(
-                child: _ChoiceCard(
-                  icon: Symbols.login_rounded,
-                  title: l.accountShard,
-                  body: l.shardAccountBody,
-                  selected: false,
-                  onTap: () => showShardAccount(context),
                 ),
               ),
               const SizedBox(width: Space.x3),
@@ -1046,9 +1037,7 @@ class _AccountStep extends ConsumerWidget {
                           const SizedBox(width: Space.x3),
                           Expanded(child: Text(a.name, style: context.text.titleSmall)),
                           ColorBadge(
-                            a.shard
-                                ? l.accountShard
-                                : a.microsoft
+                            a.microsoft
                                 ? l.accountMicrosoft
                                 : l.accountOffline,
                             color: a.microsoft ? c.accent : c.textSecondary,

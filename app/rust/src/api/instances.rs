@@ -1,5 +1,6 @@
 //! Instancias, versiones y lanzamiento.
 
+use lcore::auth::AccountKind;
 use lcore::instance::{GameVersion, LoaderKind, NewInstance};
 use lcore::launch::LaunchOptions;
 
@@ -125,11 +126,29 @@ pub async fn launch_instance(
 ) -> Result<GameView, BridgeError> {
     let core = core()?;
     on_rt(async move {
+        let file = core.accounts().await?;
+        let supported = || {
+            file.accounts
+                .iter()
+                .filter(|a| a.kind != AccountKind::Shard)
+        };
+        let find = |id: &str| supported().find(|a| a.id == id);
+        let account = account
+            .as_deref()
+            .and_then(find)
+            .or_else(|| file.active.as_deref().and_then(find))
+            .or_else(|| supported().next())
+            .ok_or_else(|| lcore::Error::AccountNotFound(String::new()))?;
+        // El núcleo busca por nombre antes que por ID.
+        let resolved = core.find_account(&account.id).await?;
+        if resolved.id != account.id || resolved.kind != account.kind {
+            return Err(lcore::Error::AccountNotFound(account.id.clone()).into());
+        }
         let info = core
             .launch(
                 &id,
                 LaunchOptions {
-                    account,
+                    account: Some(account.id.clone()),
                     server,
                     ..LaunchOptions::default()
                 },

@@ -1,8 +1,7 @@
-// Alta de cuentas Microsoft, offline y Shard.
+// Alta de cuentas Microsoft y offline.
 
 import 'dart:async';
 
-import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:material_ui/material_ui.dart';
@@ -31,17 +30,6 @@ Future<void> showOfflineAccount(BuildContext context) async {
   final account = await showDialog<AccountView>(
     context: context,
     builder: (_) => const OfflineAccountDialog(),
-  );
-  if (account != null && context.mounted) {
-    showToast(context, AppLocalizations.of(context).accountAdded(account.name));
-  }
-}
-
-Future<void> showShardAccount(BuildContext context) async {
-  final account = await showDialog<AccountView>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => const AccountCredentialsDialog(shard: true),
   );
   if (account != null && context.mounted) {
     showToast(context, AppLocalizations.of(context).accountAdded(account.name));
@@ -284,24 +272,16 @@ class _MicrosoftLoginDialogState extends ConsumerState<MicrosoftLoginDialog> {
 
 final _offlineName = RegExp(r'^[A-Za-z0-9_]{3,16}$');
 
-class OfflineAccountDialog extends AccountCredentialsDialog {
-  const OfflineAccountDialog({super.key}) : super(shard: false);
-}
-
-class AccountCredentialsDialog extends ConsumerStatefulWidget {
-  const AccountCredentialsDialog({required this.shard, super.key});
-
-  final bool shard;
+class OfflineAccountDialog extends ConsumerStatefulWidget {
+  const OfflineAccountDialog({super.key});
 
   @override
-  ConsumerState<AccountCredentialsDialog> createState() =>
-      _AccountCredentialsDialogState();
+  ConsumerState<OfflineAccountDialog> createState() =>
+      _OfflineAccountDialogState();
 }
 
-class _AccountCredentialsDialogState
-    extends ConsumerState<AccountCredentialsDialog> {
+class _OfflineAccountDialogState extends ConsumerState<OfflineAccountDialog> {
   final _name = TextEditingController();
-  final _password = TextEditingController();
   bool _busy = false;
   bool _touched = false;
   Object? _error;
@@ -309,13 +289,10 @@ class _AccountCredentialsDialogState
   @override
   void dispose() {
     _name.dispose();
-    _password.dispose();
     super.dispose();
   }
 
-  bool get _valid => widget.shard
-      ? _name.text.trim().isNotEmpty && _password.text.isNotEmpty
-      : _offlineName.hasMatch(_name.text.trim());
+  bool get _valid => _offlineName.hasMatch(_name.text.trim());
 
   Future<void> _submit() async {
     setState(() => _touched = true);
@@ -327,9 +304,7 @@ class _AccountCredentialsDialogState
     try {
       final accounts = ref.read(accountsProvider.notifier);
       final name = _name.text.trim();
-      final a = widget.shard
-          ? await accounts.addShard(name, _password.text)
-          : await accounts.addOffline(name);
+      final a = await accounts.addOffline(name);
       if (mounted) Navigator.of(context).pop(a);
     } catch (e) {
       if (mounted) {
@@ -345,57 +320,40 @@ class _AccountCredentialsDialogState
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return AppDialog(
-      title: widget.shard ? l.accountShard : l.offlineTitle,
+      title: l.offlineTitle,
       icon: Symbols.person_rounded,
       actions: [
         TextButton(
-          onPressed: widget.shard && _busy
-              ? null
-              : () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           child: Text(l.cancel),
         ),
         FilledButton(
-          onPressed: _busy || (widget.shard && !_valid) ? null : _submit,
-          child: Text(widget.shard ? l.shardSignIn : l.add),
+          onPressed: _busy ? null : _submit,
+          child: Text(l.add),
         ),
       ],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.shard ? l.shardAccountBody : l.offlineBody),
+          Text(l.offlineBody),
           const SizedBox(height: Space.x4),
           TextField(
             controller: _name,
             autofocus: true,
-            enabled: !widget.shard || !_busy,
-            maxLength: widget.shard ? null : 16,
+            maxLength: 16,
             onChanged: (_) => setState(() {}),
-            textInputAction: widget.shard ? TextInputAction.next : null,
-            onSubmitted: widget.shard ? null : (_) => _submit(),
+            onSubmitted: (_) => _submit(),
             decoration: InputDecoration(
-              labelText: widget.shard ? l.shardUsername : l.offlineNameLabel,
-              helperText: widget.shard ? null : l.offlineNameHint,
+              labelText: l.offlineNameLabel,
+              helperText: l.offlineNameHint,
               counterText: '',
-              errorText: !widget.shard && _touched && !_valid
+              errorText: _touched && !_valid
                   ? l.offlineNameInvalid
                   : null,
               prefixIcon: const Icon(Symbols.badge_rounded, size: 18),
             ),
           ),
-          if (widget.shard) ...[
-            const SizedBox(height: Space.x3),
-            TextField(
-              controller: _password,
-              enabled: !_busy,
-              obscureText: true,
-              autocorrect: false,
-              enableSuggestions: false,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: (_) => _submit(),
-              decoration: InputDecoration(labelText: l.shardPassword),
-            ),
-          ],
           if (_error != null) ...[
             const SizedBox(height: Space.x3),
             ErrorNote(_error!),

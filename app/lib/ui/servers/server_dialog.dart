@@ -97,7 +97,8 @@ class _ServerDialogState extends ConsumerState<ServerDialog> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final instances = ref.watch(recentInstancesProvider);
-    final accounts = ref.watch(accountsProvider).value ?? const <AccountView>[];
+    final accounts = (ref.watch(accountsProvider).value ?? const <AccountView>[])
+        .where((account) => !account.shard);
     final editing = widget.server != null;
     return AppDialog(
       title: editing ? l.serverEdit : l.serverAdd,
@@ -168,9 +169,7 @@ class _ServerDialogState extends ConsumerState<ServerDialog> {
                 SelectOption(
                   a.id,
                   a.name,
-                  subtitle: a.shard
-                      ? l.accountShard
-                      : a.microsoft
+                  subtitle: a.microsoft
                       ? l.accountMicrosoft
                       : l.accountOffline,
                   leading: PlayerAvatar(account: a, size: 22),

@@ -212,6 +212,31 @@ void main() {
       expect(state('quilt-pruebas').done, 70);
     });
 
+    const legacy = AccountView(
+      id: 'legacy',
+      name: 'Antigua',
+      microsoft: false,
+      shard: true,
+      active: true,
+    );
+
+    test('un servidor con cuenta antigua usa una cuenta admitida', () async {
+      bridge.accounts = [legacy, sampleAccounts().last];
+      bridge.launchCompleter = null;
+      await container
+          .read(launchProvider.notifier)
+          .launch('vanilla-puro', server: 'mc.example.net', account: legacy.id);
+      expect(bridge.lastLaunch?.account, 'a2');
+    });
+
+    test('una cuenta antigua como única cuenta impide el lanzamiento', () async {
+      bridge.accounts = [legacy];
+      bridge.launchCompleter = null;
+      await container.read(launchProvider.notifier).launch('vanilla-puro');
+      expect(state('vanilla-puro').phase, LaunchPhase.error);
+      expect(bridge.lastLaunch, isNull);
+    });
+
     test('entrar a un servidor pasa la dirección y la cuenta', () async {
       bridge.launchCompleter = null;
       await container

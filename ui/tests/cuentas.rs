@@ -202,56 +202,6 @@ fn alta_offline_valida_el_nombre() {
     assert_eq!(a.rec.take(), ["load"]);
 }
 
-fn alta_shard_con_usuario_y_contrasena() {
-    let a = app("es");
-    let st = a.ui.global::<AccountsState>();
-    click(&by_label(&a.ui, "NadiaK")[0]);
-    click(&by_label(&a.ui, "Cuenta Shard")[0]);
-    assert!(st.get_offline_open() && st.get_credentials_shard());
-    // Sin contraseña no se puede enviar.
-    type_text(&a.ui, "prueba_ui");
-    assert_eq!(by_id(&a.ui, "filled")[0].accessible_enabled(), Some(false));
-    // Intro en el usuario pasa a la contraseña.
-    type_text(&a.ui, "\n");
-    assert!(a.rec.take().is_empty());
-    type_text(&a.ui, "s3creta!");
-    assert_eq!(by_id(&a.ui, "filled")[0].accessible_enabled(), Some(true));
-    type_text(&a.ui, "\n");
-    assert_eq!(a.rec.take(), ["shard prueba_ui (8 caracteres)"]);
-    // Mientras inicia sesión no se puede cancelar ni reenviar.
-    assert!(st.get_offline_busy());
-    assert_eq!(by_id(&a.ui, "cancel")[0].accessible_enabled(), Some(false));
-
-    // Credenciales malas: el texto de errors.dart y el diálogo sigue abierto.
-    let bad = lcore::Error::from(lcore::auth::AuthError::InvalidCredentials);
-    a.acc.offline_added(a.acc.credentials_attempt(), Err(Failure::new("es", &bad)));
-    settle();
-    assert!(st.get_offline_open() && !st.get_offline_busy());
-    assert!(!by_label(&a.ui, "Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).").is_empty());
-
-    click(&by_id(&a.ui, "filled")[0]);
-    assert_eq!(a.rec.take(), ["shard prueba_ui (8 caracteres)"]);
-    a.acc.offline_added(a.acc.credentials_attempt(), Ok("prueba_ui".into()));
-    settle();
-    assert!(!st.get_offline_open());
-    assert_eq!(toast(&a.ui), "Cuenta «prueba_ui» añadida");
-    assert_eq!(a.rec.take(), ["load"], "refresca la lista al terminar");
-
-    // En la lista sale como «Cuenta Shard» y Skins explica dónde cambiarla.
-    let mut list = fixtures::sample_accounts();
-    list[0].active = false;
-    list.push(shard_ui::accounts::Account { id: "shard1".into(), name: "prueba_ui".into(), microsoft: false, shard: true, skin_url: None, active: true });
-    a.acc.set_accounts(Ok(list));
-    a.ui.set_route(Route::Skins);
-    settle();
-    assert!(a.rec.take().is_empty(), "sin perfil de Microsoft que pedir");
-    assert!(a.ui.global::<SkinsState>().get_shard());
-    assert!(!by_label(&a.ui, "Gestiona las skins y capas desde el sitio donde registraste tu cuenta Shard.").is_empty());
-    click(&by_id(&a.ui, "chip")[0]);
-    let items = st.get_items();
-    assert!(items.row_data(2).unwrap().shard);
-}
-
 fn login_de_microsoft_con_codigo_y_caducidad() {
     let a = app("es");
     let st = a.ui.global::<AccountsState>();
@@ -446,7 +396,7 @@ fn skins_resultados_viejos_y_reintentos() {
     click(&by_label(&a.ui, "Clásica")[0]);
     click(&by_id(&a.ui, "apply")[0]);
     a.rec.take();
-    let other = shard_ui::accounts::Account { id: "a3".into(), name: "Otra".into(), microsoft: true, shard: false, skin_url: None, active: true };
+    let other = shard_ui::accounts::Account { id: "a3".into(), name: "Otra".into(), microsoft: true, unavailable: false, skin_url: None, active: true };
     let mut list = fixtures::sample_accounts();
     list[0].active = false;
     list.push(other);
@@ -497,6 +447,34 @@ fn skins_sin_cuenta_y_offline() {
     assert_eq!(a.rec.take(), ["login 1"]);
 }
 
+fn cuenta_antigua_visible_sin_activacion() {
+    let a = app("es");
+    let mut list = fixtures::sample_accounts();
+    list[0].active = false;
+    list.push(shard_ui::accounts::Account {
+        id: "antigua".into(),
+        name: "Antigua".into(),
+        microsoft: false,
+        unavailable: true,
+        skin_url: None,
+        active: true,
+    });
+    a.acc.set_accounts(Ok(list));
+    let st = a.ui.global::<AccountsState>();
+    st.set_panel_open(true);
+    settle();
+
+    let row = st.get_items().row_data(2).unwrap();
+    assert!(row.unavailable && !row.active);
+    assert!(!by_label(&a.ui, "No disponible").is_empty());
+    a.rec.take();
+    click(&by_label(&a.ui, "Antigua")[0]);
+    st.invoke_select("antigua".into());
+    assert!(a.rec.take().is_empty());
+    click(&by_id(&a.ui, "account-remove")[2]);
+    assert_eq!(st.get_remove_id(), "antigua");
+}
+
 #[test]
 fn cuentas_y_skins() {
     slint::platform::set_platform(Box::new(i_slint_backend_testing::TestingBackend::new(
@@ -508,8 +486,8 @@ fn cuentas_y_skins() {
     )))
     .unwrap();
     panel_cambia_de_cuenta_y_quita_con_confirmacion();
+    cuenta_antigua_visible_sin_activacion();
     alta_offline_valida_el_nombre();
-    alta_shard_con_usuario_y_contrasena();
     login_de_microsoft_con_codigo_y_caducidad();
     skins_cambiar_modelo_capa_y_restablecer();
     skins_resultados_viejos_y_reintentos();

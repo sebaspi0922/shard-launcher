@@ -109,14 +109,6 @@ class AccountPanel extends ConsumerWidget {
                 },
               ),
               _ActionTile(
-                icon: Symbols.login_rounded,
-                label: l.accountShard,
-                onTap: () {
-                  final nav = Navigator.of(context)..pop();
-                  showShardAccount(nav.context);
-                },
-              ),
-              _ActionTile(
                 icon: Symbols.person_add_rounded,
                 label: l.accountsAddOffline,
                 onTap: () {
@@ -149,7 +141,7 @@ class _AccountTile extends ConsumerWidget {
         borderRadius: BorderRadius.circular(Radii.control + 2),
         child: InkWell(
           borderRadius: BorderRadius.circular(Radii.control + 2),
-          onTap: active
+          onTap: active || account.shard
               ? null
               : () async {
                   try {
@@ -178,20 +170,20 @@ class _AccountTile extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(
+                          if (!account.shard) Icon(
                             account.microsoft
                                 ? Symbols.verified_rounded
                                 : Symbols.wifi_off_rounded,
                             size: 13,
                             color: account.microsoft ? c.info : c.textMuted,
                           ),
-                          const SizedBox(width: 4),
+                          if (!account.shard) const SizedBox(width: 4),
                           Text(
                             account.shard
-                                ? l.accountShard
+                                ? l.accountUnavailable
                                 : account.microsoft
-                                ? l.accountMicrosoft
-                                : l.accountOffline,
+                                    ? l.accountMicrosoft
+                                    : l.accountOffline,
                             style: context.text.bodySmall,
                           ),
                         ],

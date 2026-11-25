@@ -55,17 +55,12 @@ fn click(ui: &MainWindow, label: &str) {
     by_label(ui, label).mock_single_click(PointerEventButton::Left);
 }
 
-/// Abre el alta Shard y deja que el diálogo se cree y tome el foco.
-fn open_shard(ui: &MainWindow) {
-    open_dialog(ui, true);
-}
-
-/// Abre el alta (offline o Shard) desde el panel de cuentas, con un clic.
-fn open_dialog(ui: &MainWindow, shard: bool) {
+/// Abre el alta offline desde el panel de cuentas.
+fn open_dialog(ui: &MainWindow) {
     ui.global::<AccountsState>().set_panel_open(true);
     let w = ui.as_weak();
     wait("panel", move || w.unwrap().global::<AccountsState>().get_panel_open());
-    let label = if shard { "Cuenta Shard" } else { "Añadir cuenta offline" };
+    let label = "Añadir cuenta offline";
     let item = ElementHandle::find_by_accessible_label(ui, label)
         .find(|e| e.accessible_id().as_deref() == Some("action"))
         .unwrap_or_else(|| panic!("no hay «{label}» en el panel"));
@@ -116,7 +111,7 @@ fn cuentas_con_el_nucleo_real() {
 
     // Alta offline desde el panel, con teclado.
     for name in ["Steve_01", "Alex"] {
-        open_dialog(&ui, false);
+        open_dialog(&ui);
         type_line(&ui, name);
         let (w, n) = (ui.as_weak(), name.to_owned());
         wait("cuenta añadida", move || w.unwrap().get_toast_message() == format!("Cuenta «{n}» añadida"));
@@ -130,7 +125,7 @@ fn cuentas_con_el_nucleo_real() {
     assert_eq!(ui.get_account().name, active.as_str());
 
     // Nombre inválido: el núcleo no se toca.
-    open_dialog(&ui, false);
+    open_dialog(&ui);
     type_line(&ui, "no vale");
     assert!(ui.global::<AccountsState>().get_offline_open());
     click(&ui, "Cancelar");
@@ -165,16 +160,6 @@ fn cuentas_con_el_nucleo_real() {
     click(&ui, "Cancelar");
     assert!(!ui.global::<AccountsState>().get_login_open());
 
-    // Shard sin red: error en el diálogo, sin cuenta nueva.
-    open_shard(&ui);
-    type_line(&ui, "prueba_ui");
-    type_line(&ui, "x");
-    let s = ui.as_weak();
-    wait("error de Shard", move || !s.unwrap().global::<AccountsState>().get_offline_error().is_empty());
-    assert!(ui.global::<AccountsState>().get_offline_open());
-    click(&ui, "Cancelar");
-    assert_eq!(rt.block_on(core.accounts()).unwrap().accounts.len(), 2);
-
     // Quitar con confirmación.
     ui.global::<AccountsState>().set_panel_open(true);
     let remove = ElementHandle::find_by_accessible_label(&ui, "Quitar").next().unwrap();
@@ -184,67 +169,4 @@ fn cuentas_con_el_nucleo_real() {
     let s = ui.as_weak();
     wait("una cuenta", move || s.unwrap().global::<AccountsState>().get_items().row_count() == 1);
     assert_eq!(rt.block_on(core.accounts()).unwrap().accounts.len(), 1);
-}
-
-/// Login real contra el servidor Shard de la comunidad (red): solo a mano,
-/// con la contraseña de `prueba_ui` en un archivo (nunca en el repo ni en logs):
-///
-///   SHARD_PRUEBA_PASSWORD_FILE=/ruta/0600 cargo test -p shard-ui --test nucleo_cuentas -- --ignored
-#[test]
-#[ignore = "red y contraseña de prueba_ui"]
-fn login_shard_real() {
-    let Some(file) = std::env::var_os("SHARD_PRUEBA_PASSWORD_FILE") else {
-        panic!("falta SHARD_PRUEBA_PASSWORD_FILE");
-    };
-    let password = std::fs::read_to_string(file).unwrap().trim_end_matches(['\n', '\r']).to_owned();
-    slint::platform::set_platform(Box::new(i_slint_backend_testing::TestingBackend::new(
-        i_slint_backend_testing::TestingBackendOptions { mock_time: false, threading: true, renderer_name: Some("software".into()) },
-    )))
-    .unwrap();
-    let dir = tempfile::tempdir().unwrap();
-    let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().unwrap();
-    let core = rt
-        .block_on(Core::open(Options {
-            data_dir: Some(dir.path().to_path_buf()),
-            secrets: Some(Arc::new(lcore::secrets::MemoryStore::default())),
-            ..Default::default()
-        }))
-        .unwrap();
-    let backend = Backend::new(core.clone(), rt.handle().clone());
-    let ui = MainWindow::new().unwrap();
-    ui.window().set_size(slint::LogicalSize::new(1280.0, 800.0));
-    let ctl = Controller::new(&ui, "es", Box::new(|| 0), Box::new(NoActions));
-    let acc = Accounts::new(&ui, ctl.clone(), Box::new(CoreAccounts::new(backend.clone(), "es")), Box::new(|| 0));
-    let _skins = Skins::new(&ui, ctl, acc, Box::new(CoreSkins { backend, lang: "es".into() }));
-    ui.show().unwrap();
-
-    // Contraseña mala primero: el error de credenciales.
-    open_shard(&ui);
-    type_line(&ui, "prueba_ui");
-    type_line(&ui, "no-es-la-clave");
-    assert!(ui.global::<AccountsState>().get_offline_busy(), "no se envió el formulario");
-    let s = ui.as_weak();
-    wait("credenciales malas", move || !s.unwrap().global::<AccountsState>().get_offline_error().is_empty());
-    assert_eq!(
-        ui.global::<AccountsState>().get_offline_error(),
-        "Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil)."
-    );
-    click(&ui, "Cancelar");
-
-    // La buena.
-    open_shard(&ui);
-    type_line(&ui, "prueba_ui");
-    type_line(&ui, &password);
-    let w = ui.as_weak();
-    wait("cuenta Shard añadida", move || w.unwrap().get_toast_message() == "Cuenta «prueba_ui» añadida");
-    let w = ui.as_weak();
-    wait("en el raíl", move || w.unwrap().get_account().name == "prueba_ui");
-    let file = rt.block_on(core.accounts()).unwrap();
-    let a = file.accounts.iter().find(|a| a.name == "prueba_ui").expect("cuenta guardada");
-    assert_eq!(a.kind, lcore::auth::AccountKind::Shard);
-    // Y sirve para jugar: el núcleo saca una sesión con ella.
-    let session = rt.block_on(core.session(Some(&a.id))).expect("sesión Shard");
-    assert_eq!(session.name, "prueba_ui");
-    ui.set_route(Route::Skins);
-    assert!(ui.global::<SkinsState>().get_shard());
 }
