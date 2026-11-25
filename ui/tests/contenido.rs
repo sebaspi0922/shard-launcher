@@ -278,6 +278,19 @@ fn ficha_con_la_instancia_de_inicio_y_respuesta_en_camino() {
     a.content.versions_loaded(seq, Ok(fixtures::sample_versions("fresh-animations", Some("1.21.4"), None)));
     settle();
     assert_eq!(by_id(&a.ui, "version").len(), 4);
+
+    // Cerrar con una consulta en camino y abrir otra ficha sin instancias:
+    // la respuesta vieja no llega a la nueva, que tampoco se queda cargando.
+    click(&by_id(&a.ui, "sheet-close")[0]);
+    click(&by_id(&a.ui, "card")[0]);
+    let seq = a.content.versions_seq();
+    click(&by_id(&a.ui, "sheet-close")[0]);
+    a.ctl.set_instances(Vec::new());
+    click(&by_id(&a.ui, "card")[0]);
+    a.content.versions_loaded(seq, Ok(fixtures::sample_versions("fresh-animations", Some("1.21.4"), None)));
+    settle();
+    assert!(by_id(&a.ui, "version").is_empty());
+    assert_eq!(a.ui.global::<ContentState>().get_sheet_state(), shard_ui::LoadState::Ready);
 }
 
 fn destino_desde_una_instancia() {

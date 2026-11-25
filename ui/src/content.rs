@@ -952,7 +952,7 @@ impl Content {
             }
         };
         if close {
-            *self.sheet.borrow_mut() = None;
+            self.drop_sheet();
         }
         self.refresh();
     }
@@ -965,7 +965,9 @@ impl Content {
         // Sin destino, la instancia de Inicio (`homeInstanceProvider`).
         let instance = t.as_ref().map(|t| t.instance_id.clone()).or_else(|| self.shell.home_instance_id());
         *self.sheet.borrow_mut() =
-            Some(Sheet { project: p, instance, world: t.and_then(|t| t.world), query: None, versions: Load::Loading, installing: None });
+            Some(Sheet { project: p, instance, world: t.and_then(|t| t.world), query: None, versions: Load::Ready(vec![]), installing: None });
+        // Una respuesta de la ficha anterior no es de esta.
+        self.sheet_seq.set(self.sheet_seq.get() + 1);
         self.sheet_changed();
     }
 
@@ -1027,8 +1029,14 @@ impl Content {
     }
 
     fn close_sheet(&self) {
-        *self.sheet.borrow_mut() = None;
+        self.drop_sheet();
         self.refresh();
+    }
+
+    /// Cierra la ficha y descarta la respuesta de versiones que esté en camino.
+    fn drop_sheet(&self) {
+        *self.sheet.borrow_mut() = None;
+        self.sheet_seq.set(self.sheet_seq.get() + 1);
     }
 
     fn sheet_instance(&self, id: &str) {
@@ -1171,7 +1179,7 @@ impl Content {
         };
         // Al cerrarse el del modpack se cierra también la ficha.
         if fixed {
-            *self.sheet.borrow_mut() = None;
+            self.drop_sheet();
         }
         self.refresh();
     }
