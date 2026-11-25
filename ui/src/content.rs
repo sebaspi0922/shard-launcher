@@ -962,7 +962,8 @@ impl Content {
     pub fn open_sheet(&self, id: &str) {
         let Some(p) = self.project(id) else { return };
         let t = self.target.borrow().clone();
-        let instance = t.as_ref().map(|t| t.instance_id.clone()).or_else(|| self.shell.model.borrow().all.first().map(|r| r.id.clone()));
+        // Sin destino, la instancia de Inicio (`homeInstanceProvider`).
+        let instance = t.as_ref().map(|t| t.instance_id.clone()).or_else(|| self.shell.home_instance_id());
         *self.sheet.borrow_mut() =
             Some(Sheet { project: p, instance, world: t.and_then(|t| t.world), query: None, versions: Load::Loading, installing: None });
         self.sheet_changed();
@@ -994,18 +995,19 @@ impl Content {
                 loader: kind_uses_loader(&kind).then(|| r.loader.clone()),
             })
         };
-        let seq = self.sheet_seq.get() + 1;
-        self.sheet_seq.set(seq);
+        // Solo una consulta nueva invalida la que esté en camino: con los
+        // mismos filtros (otra instancia igual) la respuesta sigue valiendo.
         let mut ask = None;
         if let Some(s) = self.sheet.borrow_mut().as_mut() {
             if s.query != query || matches!(s.versions, Load::Failed(_)) {
+                self.sheet_seq.set(self.sheet_seq.get() + 1);
                 s.versions = if query.is_some() { Load::Loading } else { Load::Ready(vec![]) };
                 ask = query.clone();
             }
             s.query = query;
         }
         if let Some(q) = ask {
-            self.actions.versions(&q, seq);
+            self.actions.versions(&q, self.sheet_seq.get());
         }
         self.request_icons();
         self.refresh();

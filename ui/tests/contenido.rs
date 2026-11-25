@@ -16,7 +16,7 @@ use shard_ui::curseforge::Keys;
 use shard_ui::errors::Failure;
 use shard_ui::fixtures::{self, Recorder};
 use shard_ui::servers::Servers;
-use shard_ui::{ContentState, CurseforgeKey, MainWindow, ModpackPhase, Route, ServersState};
+use shard_ui::{ContentState, CurseforgeKey, HomeState, MainWindow, ModpackPhase, Route, ServersState};
 use slint::platform::{PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, LogicalPosition, Model};
 
@@ -255,6 +255,29 @@ fn ficha_e_instalacion() {
     assert!(a.content.sheet_open());
     click(&by_id(&a.ui, "sheet-close")[0]);
     assert!(!a.content.sheet_open());
+}
+
+fn ficha_con_la_instancia_de_inicio_y_respuesta_en_camino() {
+    let a = app("es");
+    // La ficha empieza en la instancia elegida en Inicio, no en la primera.
+    a.ui.global::<HomeState>().invoke_select("vanilla-puro".into());
+    open_content(&a);
+    click(&by_label(&a.ui, "Paquetes de recursos")[0]);
+    answer(&a);
+    a.rec.take();
+    click(&by_id(&a.ui, "card")[0]);
+    assert_eq!(a.ui.global::<ContentState>().get_sheet_instance(), "vanilla-puro");
+    let asked = a.rec.take();
+    assert!(asked.iter().any(|x| x.starts_with("versions fresh-animations Some(\"1.21.4\") None")), "{asked:?}");
+    // Otra instancia con los mismos filtros mientras llega la respuesta: no
+    // se pide de nuevo y la respuesta en camino sigue valiendo.
+    let seq = a.content.versions_seq();
+    a.ui.global::<ContentState>().invoke_sheet_pick_instance("survival-amigos".into());
+    settle();
+    assert!(!a.rec.take().iter().any(|x| x.starts_with("versions ")));
+    a.content.versions_loaded(seq, Ok(fixtures::sample_versions("fresh-animations", Some("1.21.4"), None)));
+    settle();
+    assert_eq!(by_id(&a.ui, "version").len(), 4);
 }
 
 fn destino_desde_una_instancia() {
@@ -504,6 +527,7 @@ fn contenido_y_servidores() {
     busqueda_filtros_y_texto();
     mas_resultados_al_bajar();
     ficha_e_instalacion();
+    ficha_con_la_instancia_de_inicio_y_respuesta_en_camino();
     destino_desde_una_instancia();
     curseforge_sin_clave();
     modpacks();
