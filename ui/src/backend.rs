@@ -72,7 +72,7 @@ impl Backend {
         Self { core, rt, pending_update: Arc::default() }
     }
 
-    /// Instancias, cuenta activa y servidores.
+    /// Instancias y servidores (la cuenta activa la lleva `accounts`).
     pub fn load(&self) {
         let core = self.core.clone();
         let me = self.clone();
@@ -87,12 +87,6 @@ impl Backend {
                     c.set_failed(msg, detail);
                 }),
             }
-            let active = core.accounts().await.ok().and_then(|f| f.active_account().cloned());
-            post(move |c| {
-                c.set_account(active.as_ref().map(|a| a.name.as_str()));
-                let kind = active.as_ref().map(|a| a.kind);
-                c.set_account_kind(kind == Some(lcore::auth::AccountKind::Msa), kind == Some(lcore::auth::AccountKind::Shard));
-            });
             me.load_servers();
         });
     }
@@ -135,6 +129,9 @@ impl Backend {
                     Ok(Event::GameLog { ref line, .. }) if !is_ready_line(line) => {}
                     Ok(e) => {
                         let reload = matches!(e, Event::GameExited { .. } | Event::GameCrashed { .. } | Event::AccountsChanged);
+                        if matches!(e, Event::AccountsChanged) {
+                            crate::accounts::post(|a| a.reload());
+                        }
                         post(move |c| c.on_event(&e));
                         if reload {
                             // Tiempo jugado, última partida o cuenta cambiaron.

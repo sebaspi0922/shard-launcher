@@ -52,6 +52,8 @@ export component Txt {
 // Texto que puede ocupar varias líneas (cuerpo de diálogos, estados vacíos).
 export component Para inherits Text {
     in property <TextStyle> style: Type.body-medium;
+    // Alto de línea del estilo (el factor de Slint es sobre el natural).
+    line-height-factor: style.line-height / InterMetrics.natural;
     font-family: "Inter";
     font-size: style.size;
     font-weight: style.weight;

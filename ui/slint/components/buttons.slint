@@ -17,19 +17,25 @@ export component FilledButton inherits Rectangle {
     in property <length> pad-v: 12px;
     in property <length> min-visible: 40px;
     in property <bool> enabled: true;
+    // Acción destructiva (confirm con `danger`): rojo con texto oscuro.
+    in property <bool> danger;
+    // Ruedita en lugar del icono (acción en curso).
+    in property <bool> busy;
     callback clicked;
     property <length> visible-height: max(root.min-visible, 2 * root.pad-v + max(root.icon != "" ? root.icon-size : 0px, 18px));
     height: max(48px, visible-height);
-    width: max(64px, lay.preferred-width);
+    // Sin ancho mínimo (minimumSize: Size(0, 40) en app_theme.dart).
+    width: lay.preferred-width;
     accessible-role: button;
     accessible-label: text;
     accessible-enabled: enabled;
     accessible-action-default => { clicked(); }
+    property <color> fg: !enabled ? Palette.text-muted : danger ? #2B0A0A : Palette.on-accent;
     Rectangle {
         y: (parent.height - root.visible-height) / 2;
         height: root.visible-height;
         border-radius: Theme.radius-control;
-        background: !root.enabled ? Palette.surface2 : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
+        background: !root.enabled ? Palette.surface2 : root.danger ? Palette.danger : ta.pressed ? Palette.accent-hover.darker(0.05) : ta.has-hover ? Palette.accent-hover : Palette.accent;
         animate background { duration: Theme.fast; }
     }
     lay := HorizontalLayout {
@@ -37,16 +43,17 @@ export component FilledButton inherits Rectangle {
         padding-right: root.pad;
         spacing: 8px;
         alignment: center;
-        if icon != "": Icon {
+        if icon != "" && !busy: Icon {
             glyph: icon;
             size: root.icon-size;
             y: (parent.height - self.height) / 2;
-            color: enabled ? Palette.on-accent : Palette.text-muted;
+            color: root.fg;
         }
+        if busy: Spinner { size: 16px; stroke: 2px; tint: root.fg; y: (parent.height - self.height) / 2; }
         Txt {
             text: root.text;
             style: Type.label-large;
-            color: enabled ? Palette.on-accent : Palette.text-muted;
+            color: root.fg;
             y: (parent.height - self.height) / 2;
         }
     }
@@ -58,20 +65,27 @@ export component FilledButton inherits Rectangle {
 }
 
 // OutlinedButton: superficie 1 y borde fuerte.
+// Como FilledButton: 44 visibles en un área de toque de 48.
 export component OutlinedButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
     callback clicked;
-    height: 40px;
-    border-radius: Theme.radius-control;
-    border-width: 1px;
-    border-color: Palette.border-strong;
-    background: ta.has-hover ? Palette.surface2 : Palette.surface1;
-    animate background { duration: Theme.fast; }
+    height: 48px;
+    preferred-width: lay.preferred-width;
+    min-width: lay.min-width;
     accessible-role: button;
     accessible-label: text;
     accessible-action-default => { clicked(); }
-    HorizontalLayout {
+    Rectangle {
+        y: 2px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        background: ta.has-hover ? Palette.surface2 : Palette.surface1;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
         padding-left: 16px;
         padding-right: 16px;
         spacing: 8px;
@@ -82,31 +96,39 @@ export component OutlinedButton inherits Rectangle {
     ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
-// TextButton: solo texto secundario. `icon` y `tint` (color) opcionales; `pad`
-// = relleno horizontal (12 por defecto).
+// TextButton(.icon): solo texto secundario. `icon`, `tint` (color) y
+// `enabled` opcionales; `pad` = relleno horizontal (12 por defecto). 36 de
+// alto; en diálogos, 48 (área de toque de Material) con 40 visibles.
 export component TextButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
     in property <color> tint: Palette.text-secondary;
     in property <length> pad: 12px;
     in property <length> icon-size: 18px;
+    in property <bool> enabled: true;
     callback clicked;
     height: 36px;
     width: lay.preferred-width;
-    border-radius: Theme.radius-control;
-    background: ta.has-hover ? Palette.surface1 : transparent;
+    property <color> fg: root.enabled ? root.tint : Palette.text-muted;
     accessible-role: button;
     accessible-label: text;
+    accessible-enabled: enabled;
     accessible-action-default => { clicked(); }
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: min(parent.height, 40px);
+        border-radius: Theme.radius-control;
+        background: ta.has-hover && root.enabled ? Palette.surface1 : transparent;
+    }
     lay := HorizontalLayout {
         padding-left: root.pad;
         padding-right: root.pad;
         spacing: 8px;
         alignment: center;
-        if root.icon != "": Icon { glyph: root.icon; size: root.icon-size; color: root.tint; y: (parent.height - self.height) / 2; }
-        Txt { text: root.text; style: Type.label-large; color: root.tint; y: (parent.height - self.height) / 2; }
+        if root.icon != "": Icon { glyph: root.icon; size: root.icon-size; color: root.fg; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.label-large; color: root.fg; y: (parent.height - self.height) / 2; }
     }
-    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
 // IconButton.outlined: 40 × 40 visible dentro de un área de toque de 48.

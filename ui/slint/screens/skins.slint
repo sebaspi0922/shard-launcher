@@ -1,0 +1,592 @@
+// Skins (skins/skins_page.dart, skin_viewer.dart): visor 3D de la skin
+// activa con frente y espalda, cambiarla (PNG o URL, clásica o delgada),
+// restablecerla y elegir capa. Solo cuentas de Microsoft. Rust (`skins.rs`)
+// rellena `SkinsState` y pinta el visor (`skin_mesh.rs`).
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Para, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedButton, TextButton } from "../components/buttons.slint";
+import { EmptyState, ErrorNote, ConfirmDialog } from "../components/feedback.slint";
+import { LabeledField } from "../components/inputs.slint";
+import { Panel, SectionTitle, Tag, ColorBadge } from "../components/panels.slint";
+import { PlayerAvatar, AccountChip } from "../components/shell.slint";
+import { LoadState } from "instances.slint";
+import { AccountsState } from "accounts.slint";
+
+// Una ficha de capa; la primera es «Sin capa» (`id` vacío).
+export struct CapeItem {
+    id: string,
+    label: string,
+    selected: bool,
+    busy: bool,
+    loading: bool,
+    has-preview: bool,
+    preview: image,
+}
+
+// Qué pinta el visor.
+export enum SkinView { main, front, back }
+
+export global SkinsState {
+    // Cuenta activa.
+    in property <bool> has-account;
+    in property <bool> accounts-loading;
+    in property <bool> microsoft;
+    // Cuenta Shard: sus skins se gestionan en la web de la comunidad.
+    in property <bool> shard;
+    in property <AccountChip> chip;
+
+    // Perfil de la cuenta de Microsoft.
+    in property <LoadState> state: LoadState.loading;
+    in property <string> error-message;
+    in property <string> error-detail;
+
+    // Textura a la vista (la actual o la vista previa de un PNG).
+    in property <bool> has-texture;
+    in property <bool> texture-loading;
+    in property <bool> preview;
+    in property <bool> slim;
+    // Sube cuando cambia lo que pinta el visor (textura, capa, modelo).
+    in property <int> revision;
+
+    // Cambiar skin.
+    in-out property <bool> from-url;
+    in property <string> file-name;
+    in property <bool> preview-error;
+    in-out property <string> url;
+    in property <bool> busy;
+    in property <bool> can-apply;
+    in-out property <bool> reset-confirm;
+
+    // Capas.
+    in property <[CapeItem]> capes;
+    in property <int> capes-count;
+    in property <bool> cape-busy;
+
+    // Imagen del visor a un tamaño lógico y con la cámara dada.
+    pure callback render(SkinView, length, length, float, float, int) -> image;
+    // Fondo de «estudio» (SkinStage) a un tamaño lógico.
+    pure callback stage(length, length) -> image;
+    callback source-changed(bool);
+    callback pick-file;
+    callback clear-file;
+    callback url-edited(string);
+    callback slim-changed(bool);
+    callback apply;
+    callback reset;
+    callback cape(string);
+    callback retry;
+}
+
+// Fondo de estudio con borde y etiqueta opcional (SkinStage).
+component Stage inherits Rectangle {
+    in property <string> label;
+    border-radius: Theme.radius-card;
+    clip: true;
+    Image {
+        width: parent.width;
+        height: parent.height;
+        // Sin tamaño preferido: el tamaño lo pone el layout, no la imagen.
+        preferred-width: 0;
+        preferred-height: 0;
+        source: SkinsState.stage(self.width, self.height);
+        image-fit: fill;
+    }
+    @children
+    // Container suma el borde (1) al relleno: todo va 1 más adentro.
+    if root.label != "": Txt {
+        x: 13px;
+        y: 9px;
+        text: root.label;
+        style: Type.label-small;
+        color: Palette.text-muted;
+    }
+    Rectangle {
+        border-radius: Theme.radius-card;
+        border-width: 1px;
+        border-color: Palette.border;
+    }
+}
+
+// Modelo del jugador pintado por Rust.
+component Viewer inherits Rectangle {
+    in property <SkinView> view;
+    in property <float> yaw;
+    in property <float> pitch;
+    Image {
+        width: parent.width;
+        height: parent.height;
+        preferred-width: 0;
+        preferred-height: 0;
+        source: SkinsState.render(root.view, self.width, self.height, root.yaw, root.pitch, SkinsState.revision);
+        image-fit: fill;
+        image-rendering: pixelated;
+        accessible-role: image;
+    }
+}
+
+// Panel izquierdo: visor girable, etiqueta del modelo y miniaturas.
+component ViewerPanel inherits Panel {
+    pad: 12px;
+    accessible-role: groupbox;
+    accessible-id: "viewer";
+    // Cámara del visor principal (kDefaultSkinCamera).
+    property <float> yaw: -0.5;
+    property <float> pitch: 0.16;
+    HorizontalLayout {
+        spacing: 12px;
+        main := Stage {
+            horizontal-stretch: 1;
+            accessible-role: groupbox;
+            accessible-id: "stage";
+            if !SkinsState.has-texture && SkinsState.texture-loading: Spinner { }
+            if !SkinsState.has-texture && !SkinsState.texture-loading: VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+                HorizontalLayout { alignment: center; Icon { glyph: Icons.image-not-supported; size: 32px; color: Palette.text-muted; } }
+                HorizontalLayout { alignment: center; Txt { text: @tr("skinsTextureMissing"); style: Type.body-small; color: Palette.text-secondary; } }
+            }
+            if SkinsState.has-texture: Viewer {
+                x: 1px;
+                y: 41px;
+                width: parent.width - 2px;
+                height: parent.height - 74px;
+                view: SkinView.main;
+                yaw: root.yaw;
+                pitch: root.pitch;
+            }
+            if SkinsState.has-texture: drag := TouchArea {
+                mouse-cursor: grab;
+                property <length> last-x;
+                property <length> last-y;
+                pointer-event(e) => {
+                    if e.kind == PointerEventKind.down {
+                        self.last-x = self.mouse-x;
+                        self.last-y = self.mouse-y;
+                    }
+                }
+                moved => {
+                    if self.pressed {
+                        root.yaw += (self.mouse-x - self.last-x) / 1px * 0.012;
+                        root.pitch = max(-0.6, min(0.8, root.pitch + (self.mouse-y - self.last-y) / 1px * 0.008));
+                        self.last-x = self.mouse-x;
+                        self.last-y = self.mouse-y;
+                    }
+                }
+                double-clicked => {
+                    root.yaw = -0.5;
+                    root.pitch = 0.16;
+                }
+            }
+            HorizontalLayout {
+                x: 13px;
+                y: 13px;
+                width: self.preferred-width;
+                height: self.preferred-height;
+                spacing: 8px;
+                if SkinsState.preview: ColorBadge { text: @tr("skinsPreview"); icon: Icons.visibility; }
+                Tag { text: SkinsState.slim ? @tr("skinsSlim") : @tr("skinsClassic"); icon: Icons.accessibility-new; }
+            }
+            if SkinsState.has-texture: Txt {
+                y: parent.height - 13px - self.height;
+                width: parent.width;
+                text: @tr("skinsDragHint");
+                style: Type.label-small;
+                color: Palette.text-muted;
+                horizontal-alignment: center;
+            }
+        }
+        if SkinsState.has-texture: VerticalLayout {
+            width: 132px;
+            spacing: 12px;
+            Stage {
+                label: @tr("skinsFront");
+                accessible-role: groupbox;
+            accessible-id: "stage";
+                Viewer { x: 9px; y: 23px; width: parent.width - 18px; height: parent.height - 32px; view: SkinView.front; }
+            }
+            Stage {
+                label: @tr("skinsBack");
+                accessible-role: groupbox;
+            accessible-id: "stage";
+                Viewer { x: 9px; y: 23px; width: parent.width - 18px; height: parent.height - 32px; view: SkinView.back; }
+            }
+        }
+    }
+}
+
+// Archivo PNG | URL (SegmentedButton con icono y texto, sin marca).
+component SourceToggle inherits Rectangle {
+    // 32 visibles en 40 (como SegmentedIcons).
+    height: 40px;
+    accessible-role: groupbox;
+    accessible-id: "source";
+    box := Rectangle {
+        y: 4px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+        for seg[i] in [
+            { glyph: Icons.upload-file, label: @tr("skinsFromFile"), url: false },
+            { glyph: Icons.link, label: @tr("skinsFromUrl"), url: true },
+        ]: Rectangle {
+            x: i * box.width / 2;
+            width: box.width / 2;
+            property <bool> on: SkinsState.from-url == seg.url;
+            background: on ? Palette.accent-container : Palette.surface1;
+            accessible-role: button;
+            accessible-label: seg.label;
+            accessible-checkable: true;
+            accessible-checked: on;
+            accessible-action-default => { SkinsState.source-changed(seg.url); }
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                Icon { glyph: seg.glyph; size: 18px; color: on ? Palette.on-accent-container : Palette.text-secondary; y: (parent.height - self.height) / 2; }
+                Txt { text: seg.label; style: on ? Type.title-small : Type.label-medium; color: on ? Palette.on-accent-container : Palette.text-secondary; y: (parent.height - self.height) / 2; }
+            }
+            TouchArea { mouse-cursor: pointer; clicked => { SkinsState.source-changed(seg.url); } }
+        }
+        Rectangle { x: box.width / 2 - 0.5px; width: 1px; background: Palette.border; }
+    }
+}
+
+// Opción de modelo (_ModelOption).
+component ModelOption inherits Rectangle {
+    in property <string> label;
+    in property <string> detail;
+    in property <bool> selected;
+    callback clicked;
+    height: 59px;
+    border-radius: Theme.radius-control;
+    background: selected ? Palette.accent-container.with-alpha(0.7) : ta.has-hover ? Palette.surface2 : Palette.surface1;
+    border-width: 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.6) : Palette.border;
+    accessible-role: radio-button;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-id: "model";
+    accessible-action-default => { root.clicked(); }
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 8px;
+        Icon {
+            glyph: root.selected ? Icons.radio-checked : Icons.radio-unchecked;
+            size: 18px;
+            color: root.selected ? Palette.accent : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            Txt { text: root.label; style: Type.title-small; }
+            Txt { text: root.detail; style: Type.body-small; color: Palette.text-secondary; }
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Tarjeta «Cambiar skin» (_ChangeSkinCard).
+component ChangeSkinCard inherits Panel {
+    accessible-role: groupbox;
+    accessible-id: "change";
+    SectionTitle { text: @tr("skinsChange"); }
+    SourceToggle { }
+    Rectangle { height: 16px; }
+    if !SkinsState.from-url: Rectangle {
+        border-radius: Theme.radius-control;
+        background: pick-ta.has-hover && !SkinsState.busy ? Theme.blend(Palette.surface1, Palette.background-deep.with-alpha(0.35)) : Palette.background-deep.with-alpha(0.35);
+        border-width: 1px;
+        border-color: SkinsState.preview-error ? Palette.danger.with-alpha(0.6) : Palette.border-strong;
+        height: pick-row.preferred-height;
+        accessible-role: button;
+        accessible-label: SkinsState.file-name != "" ? SkinsState.file-name : @tr("skinsPickPng");
+        accessible-id: "pick";
+        accessible-action-default => { if !SkinsState.busy { SkinsState.pick-file(); } }
+        pick-ta := TouchArea { mouse-cursor: pointer; clicked => { if !SkinsState.busy { SkinsState.pick-file(); } } }
+        pick-row := HorizontalLayout {
+            padding: 17px;
+            spacing: 12px;
+            Icon {
+                glyph: SkinsState.file-name == "" ? Icons.add-photo-alternate : Icons.image;
+                size: 20px;
+                color: SkinsState.file-name == "" ? Palette.text-muted : Palette.accent;
+                y: (parent.height - self.height) / 2;
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Txt { text: SkinsState.file-name != "" ? SkinsState.file-name : @tr("skinsPickPng"); style: Type.title-small; }
+                Rectangle { height: 2px; }
+                Txt {
+                    text: SkinsState.preview-error ? @tr("skinsInvalidPng") : @tr("skinsPngHint");
+                    style: Type.body-small;
+                    color: SkinsState.preview-error ? Palette.danger : Palette.text-secondary;
+                }
+            }
+            if SkinsState.file-name != "": Rectangle {
+                width: 40px;
+                accessible-role: button;
+                accessible-label: @tr("remove");
+                accessible-action-default => { SkinsState.clear-file(); }
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: Theme.radius-control;
+                    background: clear-ta.has-hover ? Palette.surface2 : transparent;
+                }
+                Icon { glyph: Icons.close; size: 18px; color: Palette.text-secondary; }
+                clear-ta := TouchArea { mouse-cursor: pointer; clicked => { SkinsState.clear-file(); } }
+            }
+        }
+    }
+    if SkinsState.from-url: LabeledField {
+        text: SkinsState.url;
+        label: @tr("skinsUrl");
+        placeholder: "https://…/skin.png";
+        helper: @tr("skinsUrlHint");
+        prefix-icon: Icons.link;
+        backdrop: Palette.card(Palette.surface1);
+        accessible-id: "url";
+        edited(t) => {
+            SkinsState.url = t;
+            SkinsState.url-edited(t);
+        }
+    }
+    Rectangle { height: 20px; }
+    Txt { text: @tr("skinsModel"); style: Type.title-small; }
+    Rectangle { height: 8px; }
+    HorizontalLayout {
+        spacing: 12px;
+        ModelOption {
+            horizontal-stretch: 1;
+            label: @tr("skinsClassic");
+            detail: @tr("skinsClassicDesc");
+            selected: !SkinsState.slim;
+            clicked => { SkinsState.slim-changed(false); }
+        }
+        ModelOption {
+            horizontal-stretch: 1;
+            label: @tr("skinsSlim");
+            detail: @tr("skinsSlimDesc");
+            selected: SkinsState.slim;
+            clicked => { SkinsState.slim-changed(true); }
+        }
+    }
+    Rectangle { height: 20px; }
+    HorizontalLayout {
+        TextButton {
+            height: 48px;
+            horizontal-stretch: 0;
+            text: @tr("skinsReset");
+            icon: Icons.restart-alt;
+            enabled: !SkinsState.busy;
+            accessible-id: "reset";
+            clicked => { SkinsState.reset-confirm = true; }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        FilledButton {
+            horizontal-stretch: 0;
+            text: @tr("skinsApply");
+            icon: Icons.check;
+            icon-size: 18px;
+            busy: SkinsState.busy;
+            enabled: SkinsState.can-apply;
+            accessible-id: "apply";
+            clicked => { SkinsState.apply(); }
+        }
+    }
+}
+
+// Ficha de una capa (_CapeTile): 92 × 112 y el nombre debajo.
+component CapeTile inherits Rectangle {
+    in property <CapeItem> cape;
+    width: 92px;
+    height: col.preferred-height;
+    accessible-role: radio-button;
+    accessible-label: cape.label;
+    accessible-checkable: true;
+    accessible-checked: cape.selected;
+    accessible-id: "cape";
+    accessible-action-default => { root.pick(); }
+    col := VerticalLayout {
+        spacing: 8px;
+        Rectangle {
+            height: 112px;
+            border-radius: Theme.radius-card;
+            background: root.cape.selected ? Palette.accent-container.with-alpha(0.6) : ta.has-hover && !SkinsState.cape-busy ? Palette.surface2 : Palette.surface1;
+            border-width: root.cape.selected ? 2px : 1px;
+            border-color: root.cape.selected ? Palette.accent : Palette.border;
+            if root.cape.busy || (root.cape.loading && root.cape.id != ""): Spinner { size: root.cape.busy ? 18px : 16px; stroke: 2px; }
+            if !root.cape.busy && root.cape.id == "": Icon { glyph: Icons.block; size: 20px; color: Palette.text-muted; }
+            if !root.cape.busy && !root.cape.loading && root.cape.id != "" && root.cape.has-preview: Image {
+                width: 57.5px;
+                height: 92px;
+                source: root.cape.preview;
+                image-fit: fill;
+                image-rendering: pixelated;
+            }
+            if !root.cape.busy && !root.cape.loading && root.cape.id != "" && !root.cape.has-preview: Icon { glyph: Icons.flag; size: 20px; color: Palette.text-muted; }
+        }
+        Txt {
+            text: root.cape.label;
+            style: Type.label-medium;
+            color: root.cape.selected ? Palette.text : Palette.text-secondary;
+            horizontal-alignment: center;
+            accessible-role: none;
+        }
+    }
+    // Toda la ficha (también el nombre) responde al clic.
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.pick(); } }
+    function pick() {
+        if !SkinsState.cape-busy && !root.cape.selected {
+            SkinsState.cape(root.cape.id);
+        }
+    }
+}
+
+// Tarjeta «Capas» (_CapesCard).
+component CapesCard inherits Panel {
+    accessible-role: groupbox;
+    accessible-id: "capes";
+    SectionTitle {
+        text: @tr("skinsCapes");
+        Txt { text: SkinsState.capes-count == 0 ? @tr("skinsCapesCount.zero") : @tr("skinsCapesCount" | "skinsCapesCount" % SkinsState.capes-count); style: Type.body-small; color: Palette.text-secondary; }
+    }
+    if SkinsState.capes-count == 0: Txt { text: @tr("skinsNoCapes"); style: Type.body-small; color: Palette.text-secondary; }
+    // Wrap con 12 entre fichas.
+    if SkinsState.capes-count > 0: tiles := Rectangle {
+        property <int> per-row: max(1, floor((self.width + 12px) / 104px));
+        height: ceil(SkinsState.capes.length / per-row) * 148px - 12px;
+        for c[i] in SkinsState.capes: CapeTile {
+            x: mod(i, tiles.per-row) * 104px;
+            y: floor(i / tiles.per-row) * 148px;
+            cape: c;
+        }
+    }
+}
+
+// Cabecera: título, subtítulo y la cuenta (abre el panel de cuentas).
+component AccountPill inherits Rectangle {
+    height: 40px;
+    width: row.preferred-width;
+    border-radius: self.height / 2;
+    background: ta.has-hover ? Palette.surface3 : Palette.surface2;
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: button;
+    accessible-label: SkinsState.chip.name;
+    accessible-id: "chip";
+    accessible-action-default => { AccountsState.panel-open = true; }
+    row := HorizontalLayout {
+        padding-left: 7px;
+        padding-right: 15px;
+        PlayerAvatar { account: SkinsState.chip; size: 26px; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 8px; }
+        Txt { text: SkinsState.chip.name; style: Type.label-large; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 4px; }
+        Icon { glyph: Icons.expand-more; size: 18px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { AccountsState.panel-open = true; } }
+}
+
+export component SkinsPage inherits Rectangle {
+    VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-top: 4px;
+        padding-bottom: 24px;
+        HorizontalLayout {
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Txt { text: @tr("skinsTitle"); style: Type.headline-medium; accessible-id: "txt-title"; }
+                Rectangle { height: 4px; }
+                Txt { text: @tr("skinsSubtitle"); color: Palette.text-secondary; }
+            }
+            if SkinsState.has-account: VerticalLayout {
+                alignment: end;
+                AccountPill { }
+            }
+        }
+        Rectangle { height: 24px; }
+        Rectangle {
+            vertical-stretch: 1;
+            if !SkinsState.has-account && SkinsState.accounts-loading: Spinner { }
+            if !SkinsState.has-account && !SkinsState.accounts-loading: EmptyState {
+                icon: Icons.checkroom;
+                title: @tr("skinsNoAccountTitle");
+                body: @tr("skinsNoAccountBody");
+                action: @tr("skinsAddAccount");
+                action-icon: Icons.person-add;
+                action-icon-size: 18px;
+                accessible-id: "empty";
+                act => { AccountsState.panel-open = true; }
+            }
+            if SkinsState.has-account && SkinsState.shard: EmptyState {
+                icon: Icons.checkroom;
+                title: @tr("accountShard");
+                body: @tr("shardSkinsBody");
+                accessible-id: "empty";
+            }
+            if SkinsState.has-account && !SkinsState.microsoft && !SkinsState.shard: EmptyState {
+                icon: Icons.no-accounts;
+                title: @tr("skinsOfflineTitle");
+                body: @tr("skinsOfflineBody", SkinsState.chip.name);
+                action: @tr("accountsAddMicrosoft");
+                action-icon: Icons.login;
+                action-icon-size: 18px;
+                accessible-id: "empty";
+                act => { AccountsState.add-microsoft(); }
+            }
+            if SkinsState.has-account && SkinsState.microsoft && SkinsState.state == LoadState.loading: Spinner { }
+            if SkinsState.has-account && SkinsState.microsoft && SkinsState.state == LoadState.failed: VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    VerticalLayout {
+                        width: min(480px, root.width - 64px);
+                        spacing: 16px;
+                        ErrorNote { message: SkinsState.error-message; detail: SkinsState.error-detail; details-label: @tr("details"); }
+                        HorizontalLayout {
+                            alignment: center;
+                            OutlinedButton { text: @tr("retry"); icon: Icons.refresh; clicked => { SkinsState.retry(); } }
+                        }
+                    }
+                }
+            }
+            if SkinsState.has-account && SkinsState.microsoft && SkinsState.state == LoadState.ready: HorizontalLayout {
+                spacing: 20px;
+                // Expanded flex 11 | 9.
+                ViewerPanel { width: (parent.width - 20px) * 11 / 20; }
+                Flickable {
+                    width: (parent.width - 20px) * 9 / 20;
+                    content-height: max(self.height, side.preferred-height);
+                    side := VerticalLayout {
+                        alignment: start;
+                        spacing: 20px;
+                        ChangeSkinCard { }
+                        CapesCard { }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Confirmación de «Restablecer» (va encima de toda la ventana).
+export component SkinsLayer inherits Rectangle {
+    if SkinsState.reset-confirm: ConfirmDialog {
+        title: @tr("skinsResetTitle");
+        body: @tr("skinsResetBody");
+        action: @tr("skinsReset");
+        cancel-label: @tr("cancel");
+        accessible-id: "confirm-reset";
+        dismissed => { SkinsState.reset-confirm = false; }
+        accepted => {
+            SkinsState.reset-confirm = false;
+            SkinsState.reset();
+        }
+    }
+}

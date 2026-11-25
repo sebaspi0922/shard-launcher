@@ -9,6 +9,8 @@ import { FilledButton, OutlinedButton, TextButton, Checkbox, LaunchState, Launch
 import { EmptyState, AppDialog, Snackbar } from "components/feedback.slint";
 import { Atmosphere, NavRail, TitleBar, Route, AccountChip, Activity } from "components/shell.slint";
 import { InstancesPage, InstancesState, InstanceItem, LoadState } from "screens/instances.slint";
+import { AccountsLayer, AccountsState, AccountItem, LoginPhase } from "screens/accounts.slint";
+import { SkinsPage, SkinsLayer, SkinsState, CapeItem, SkinView } from "screens/skins.slint";
 import { HomePage, HomeState, ServerItem } from "screens/home.slint";
 import { LaunchFailure } from "components/feedback.slint";
 import { Notices, UpdatePhase, UpdateBanner, CrashBanner } from "components/banners.slint";
@@ -16,6 +18,7 @@ import { TipLayer, Tips } from "components/common.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase,
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
+export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
 
 // Fondo de la app (backdrop.dart): el del estilo o una imagen propia.
 export enum BackdropKind {
@@ -146,7 +149,10 @@ export component MainWindow inherits Window {
             root.route = r;
             root.route-changed(r);
         }
-        account-clicked => { root.account-clicked(); }
+        account-clicked => {
+            AccountsState.panel-open = true;
+            root.account-clicked();
+        }
         toggle-max => { root.toggle-max(); }
     }
     Rectangle {
@@ -171,8 +177,9 @@ export component MainWindow inherits Window {
             // Cambio de sección: la nueva entra con un fundido de 260 ms.
             if root.route == Route.home: PageFade { HomePage { account: root.account; } }
             if root.route == Route.instances: PageFade { InstancesPage { } }
+            if root.route == Route.skins: PageFade { SkinsPage { } }
             // Pantallas de fases siguientes: solo su título por ahora.
-            if root.route != Route.instances && root.route != Route.home: EmptyState {
+            if root.route != Route.instances && root.route != Route.home && root.route != Route.skins: EmptyState {
                 icon: root.route == Route.content ? Icons.extension
                     : root.route == Route.servers ? Icons.dns
                     : root.route == Route.skins ? Icons.checkroom : Icons.settings;
@@ -194,6 +201,8 @@ export component MainWindow inherits Window {
         UpdateBanner { accessible-id: "update-banner"; }
         CrashBanner { accessible-id: "crash-banner"; }
     }
+    AccountsLayer { }
+    SkinsLayer { }
     Snackbar {
         x: (parent.width - self.width) / 2;
         y: parent.height - self.height - 24px;

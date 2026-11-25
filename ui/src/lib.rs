@@ -4,6 +4,8 @@
 slint::include_modules!();
 
 pub mod accent;
+pub mod accounts;
+pub mod accounts_backend;
 pub mod appearance;
 pub mod arb;
 pub mod art;
@@ -17,7 +19,11 @@ pub mod home;
 pub mod i18n;
 pub mod instances;
 pub mod launch;
+pub mod media;
 pub mod notices;
 pub mod prefs;
+pub mod skin;
+pub mod skin_mesh;
+pub mod skins;
 pub mod theme;
 pub mod window;

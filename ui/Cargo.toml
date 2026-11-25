@@ -33,10 +33,14 @@ indexmap = "2.14.2"
 ahash = { version = "0.8.13", default-features = false }
 # Glifos de la esfera ASCII del estilo «sebaspi», pintada en CPU.
 ab_glyph = "0.2.32"
-# Abrir enlaces (novedades y descarga de la versión nueva).
+# Abrir enlaces (novedades, descarga de la versión nueva, login de Microsoft).
 webbrowser = "1.2.7"
 serde_json = "1.0.154"
+# Texturas de skin y capa.
+png = "0.18"
 tracing = "0.1.44"
+# Elegir el PNG de la skin.
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 # Saber si hay host de bandeja (StatusNotifierWatcher) antes de ocultar la
@@ -46,7 +50,7 @@ zbus = { version = "5.19.0", default-features = false, features = ["async-io", "
 
 [dev-dependencies]
 i-slint-backend-testing = { version = "=1.19.0", features = ["renderer-software"] }
-png = "0.18"
+tempfile = "3.27.0"
 
 [build-dependencies]
 slint-build = "=1.19.0"

@@ -1,7 +1,7 @@
 // Campos de texto con el `inputDecorationTheme` de app_theme.dart.
 
 import { Palette, Theme, Type } from "../theme.slint";
-import { Icon } from "base.slint";
+import { Icon, Txt } from "base.slint";
 
 // TextField relleno (superficie 1), borde de 1 px que pasa al acento con el
 // foco, icono opcional delante y botón de borrar detrás.
@@ -80,4 +80,107 @@ export component TextField inherits Rectangle {
         input.text = "";
         edited("");
     }
+}
+
+// TextField con etiqueta flotante, texto de ayuda y error (InputDecoration
+// con labelText/helperText/errorText y OutlineInputBorder del tema): caja de
+// 48 con borde de 1 (1,5 con foco), la etiqueta sube al borde con foco o con
+// texto, y debajo, 4 más abajo, la ayuda o el error.
+export component LabeledField inherits VerticalLayout {
+    in-out property <string> text <=> input.text;
+    in property <string> label;
+    in property <string> placeholder;
+    in property <string> helper;
+    // No vacío = en rojo en lugar de la ayuda.
+    in property <string> error;
+    in property <string> prefix-icon;
+    // Texto oculto (contraseña).
+    in property <bool> password;
+    in property <bool> enabled: true;
+    // Color de lo que hay detrás (hueco de la etiqueta sobre el borde).
+    in property <color> backdrop: Theme.blend(Palette.surface2, Palette.background);
+    out property <bool> has-focus: input.has-focus;
+    callback edited(string);
+    callback accepted(string);
+    forward-focus: input;
+    accessible-role: text-input;
+    accessible-label: label;
+    accessible-value: text;
+    accessible-placeholder-text: placeholder;
+    accessible-action-set-value(v) => {
+        input.text = v;
+        root.edited(v);
+    }
+    property <bool> floating: input.has-focus || root.text != "";
+    property <color> edge: root.error != "" ? Palette.danger : input.has-focus ? Palette.accent : Palette.border;
+    property <length> lead: root.prefix-icon != "" ? 48px : 14px;
+    box := Rectangle {
+        // Denso: 47; el icono delante pide 48 (BoxConstraints del prefijo).
+        height: root.prefix-icon != "" ? 48px : 47px;
+        border-radius: Theme.radius-control;
+        background: Palette.surface1;
+        border-width: input.has-focus ? 1.5px : 1px;
+        border-color: root.edge;
+        if root.prefix-icon != "": Icon {
+            x: (48px - self.width) / 2;
+            glyph: root.prefix-icon;
+            size: 18px;
+            color: Palette.text-muted;
+        }
+        if root.floating && root.label != "": Rectangle {
+            x: 18px - 4px;
+            y: -1px;
+            width: lab.preferred-width + 8px;
+            height: 3px;
+            background: root.backdrop;
+        }
+        lab := Txt {
+            x: root.floating ? 18px : root.lead + 4px;
+            // Arriba, la etiqueta flotante se encoge al 75 % (Material).
+            y: root.floating ? 0.75px - self.height / 2 : (parent.height - self.height) / 2 - 2.5px;
+            width: self.preferred-width;
+            text: root.label;
+            style: root.floating ? { size: Type.body-small.size * 0.75, weight: Type.body-small.weight, line-height: Type.body-small.line-height, letter-spacing: 0 } : Type.body-medium;
+            color: root.error != "" ? Palette.danger : root.floating ? Palette.accent : Palette.text-secondary;
+            accessible-role: none;
+        }
+        if root.text == "" && root.floating: Text {
+            x: root.lead + 4px;
+            width: parent.width - self.x - 14px;
+            text: root.placeholder;
+            font-family: "Inter";
+            font-size: Type.body-medium.size;
+            color: Palette.text-muted;
+            vertical-alignment: center;
+            overflow: elide;
+            accessible-role: none;
+        }
+        input := TextInput {
+            x: root.lead + 4px;
+            width: parent.width - self.x - 14px;
+            height: parent.height;
+            font-family: "Inter";
+            font-size: Type.body-medium.size;
+            color: Palette.text;
+            selection-background-color: Palette.accent.with-alpha(0.35);
+            selection-foreground-color: Palette.text;
+            vertical-alignment: center;
+            single-line: true;
+            input-type: root.password ? InputType.password : InputType.text;
+            enabled: root.enabled;
+            accessible-role: none;
+            edited => { root.edited(self.text); }
+            accepted => { root.accepted(self.text); }
+        }
+    }
+    if root.helper != "" || root.error != "": Rectangle { height: 4px; }
+    if root.helper != "" || root.error != "": HorizontalLayout {
+        padding-left: 18px;
+        Txt {
+            text: root.error != "" ? root.error : root.helper;
+            style: Type.body-small;
+            color: root.error != "" ? Palette.danger : Palette.text-secondary;
+        }
+    }
+    public function focus-input() { input.focus(); }
 }
