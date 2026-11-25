@@ -390,15 +390,16 @@ marcha, carga/error/vacío, raíl, diálogo de cierre, sin bandeja).
 
 **Paridad** (`tools/paridad.sh all`, informe y capturas lado a lado en
 `docs/slint/paridad-f1/`). Referencias nuevas creadas con el método de F0
-(`parity_ref_test.dart`, `--refs`): las 11 salen idénticas byte a byte a sus
-goldens.
+(`parity_ref_test.dart`, `--refs`): salen idénticas byte a byte a sus
+goldens, salvo `home_empty_en`, que ya incluye el botón «Cuenta Shard» que
+`main` añadió a Flutter sin regenerar su golden.
 
 | escena | SSIM | cajas ±2 px |
 |---|---|---|
 | home_es | 0,9758 | 19/19 |
 | home_downloading_es | 0,9700 | 20/20 |
 | home_error_es | 0,9720 | 20/20 |
-| home_empty_en | 0,9711 | 8/8 |
+| home_empty_en | 0,9708 | 8/8 |
 | home_style_graphite_es | 0,9757 | 19/19 |
 | home_style_sebaspi_es | 0,9701 | 19/19 |
 | home_style_landscape_es | 0,9731 | 19/19 |

@@ -90,7 +90,8 @@ impl Backend {
             let active = core.accounts().await.ok().and_then(|f| f.active_account().cloned());
             post(move |c| {
                 c.set_account(active.as_ref().map(|a| a.name.as_str()));
-                c.set_account_microsoft(active.as_ref().is_some_and(|a| a.kind == lcore::auth::AccountKind::Msa));
+                let kind = active.as_ref().map(|a| a.kind);
+                c.set_account_kind(kind == Some(lcore::auth::AccountKind::Msa), kind == Some(lcore::auth::AccountKind::Shard));
             });
             me.load_servers();
         });
@@ -261,6 +262,10 @@ impl Actions for CoreActions {
 
     fn add_offline_account(&self) {
         tracing::info!("cuenta offline: pendiente (fase 2)");
+    }
+
+    fn add_shard_account(&self) {
+        tracing::info!("cuenta Shard: pendiente (fase 2)");
     }
 
     fn add_server(&self) {

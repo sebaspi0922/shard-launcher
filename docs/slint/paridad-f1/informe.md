@@ -6,7 +6,7 @@ Umbral: SSIM ≥ 0.97, cajas ±2.0 px (textos y botones `-btn`: x, y, alto; boto
 |---|---|---|---|---|
 | crash_banner_es | 0.9738 | 20/20 | 2.36 % | ok |
 | home_downloading_es | 0.9700 | 20/20 | 2.52 % | ok |
-| home_empty_en | 0.9711 | 8/8 | 2.04 % | ok |
+| home_empty_en | 0.9708 | 8/8 | 1.94 % | ok |
 | home_error_es | 0.9720 | 20/20 | 2.41 % | ok |
 | home_es | 0.9758 | 19/19 | 2.13 % | ok |
 | home_style_aurora_es | 0.9755 | 19/19 | 2.08 % | ok |
