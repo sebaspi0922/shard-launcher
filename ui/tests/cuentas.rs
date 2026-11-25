@@ -43,6 +43,8 @@ fn app(lang: &str) -> App {
     ui.set_animate_background(false);
     let ctl = Controller::new(&ui, lang, Box::new(|| fixtures::NOW), Box::new(NoActions));
     ctl.set_instances(fixtures::sample_instances());
+    // El controlador enciende el fondo animado según las preferencias.
+    ui.set_animate_background(false);
     let rec = Recorder::default();
     let clock = Rc::new(std::cell::Cell::new(0));
     let c = clock.clone();
@@ -389,7 +391,7 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     assert_eq!(a.rec.take(), ["load"]);
 
     // Arrastrar gira el modelo; doble clic lo devuelve al ángulo inicial.
-    let before = a.ui.window().take_snapshot().unwrap();
+    let before = stage_pixels(&a.ui);
     let st0 = &by_id(&a.ui, "stage")[0];
     let (p, sz) = (st0.absolute_position(), st0.size());
     let at = |dx: f32| slint::LogicalPosition::new(p.x + sz.width / 2.0 + dx, p.y + sz.height / 2.0);
@@ -400,14 +402,13 @@ fn skins_cambiar_modelo_capa_y_restablecer() {
     }
     w.dispatch_event(WindowEvent::PointerReleased { position: at(60.0), button: PointerEventButton::Left });
     settle();
-    let turned = w.take_snapshot().unwrap();
-    assert_ne!(before.as_bytes(), turned.as_bytes(), "arrastrar no giró el modelo");
+    assert_ne!(before, stage_pixels(&a.ui), "arrastrar no giró el modelo");
     for _ in 0..2 {
         w.dispatch_event(WindowEvent::PointerPressed { position: at(0.0), button: PointerEventButton::Left });
         w.dispatch_event(WindowEvent::PointerReleased { position: at(0.0), button: PointerEventButton::Left });
     }
     settle();
-    assert_eq!(before.as_bytes(), w.take_snapshot().unwrap().as_bytes(), "doble clic no lo centró");
+    assert!(before == stage_pixels(&a.ui), "doble clic no lo centró");
 
     // PNG elegido: se lee y, si no es una skin, avisa y no deja aplicar.
     click(&by_label(&a.ui, "Archivo PNG")[0]);

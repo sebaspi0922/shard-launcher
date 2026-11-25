@@ -91,10 +91,8 @@ fn main() {
         }
     };
     let lang = i18n::resolve(settings.language.as_deref(), i18n::system_locale().as_deref());
-    let backend = core.map(|core| Backend { core, rt: rt.handle().clone() });
+    let backend = core.map(|core| Backend::new(core, rt.handle().clone()));
     let ui_prefs = backend.as_ref().map(|b| prefs::load(b.core.paths().root())).unwrap_or_default();
-    ui.set_animate_background(!ui_prefs.performance);
-    ui.global::<shard_ui::Theme>().set_motion(!ui_prefs.performance);
 
     let actions: Box<dyn shard_ui::controller::Actions> = match &backend {
         Some(b) => Box::new(CoreActions(b.clone())),
@@ -102,6 +100,7 @@ fn main() {
     };
     let now = || std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0);
     let ctl = Controller::new(&ui, lang, Box::new(now), actions);
+    ctl.set_prefs(ui_prefs.clone());
     backend::install(ctl.clone());
     // Cuentas y skins (sin núcleo no hay cuentas: listas vacías).
     let (acc_actions, skin_actions): (Box<dyn shard_ui::accounts::AccountActions>, Box<dyn shard_ui::skins::SkinActions>) = match &backend {
@@ -120,6 +119,12 @@ fn main() {
         Some(b) => {
             b.load();
             b.pump_events();
+            b.schedule_update_checks();
+            if ui_prefs.accent == prefs::AccentMode::Auto
+                && let Some(path) = ui_prefs.uses_image()
+            {
+                b.image_accent(path.to_owned());
+            }
         }
         None => ctl.set_failed(i18n::text(lang, "errGeneric"), "lcore: no se pudo abrir la carpeta de datos".into()),
     }

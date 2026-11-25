@@ -15,9 +15,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shard/app.dart';
 import 'package:shard/core/bridge.dart';
+import 'package:shard/core/crash_notice.dart';
 import 'package:shard/core/launch.dart';
 import 'package:shard/ui/accounts/account_dialogs.dart';
 import 'package:shard/ui/accounts/account_panel.dart';
+import 'package:shard/core/updates.dart';
+import 'package:shard/ui/doctor/crash_banner.dart';
+import 'package:shard/ui/home/home_page.dart';
+import 'package:shard/ui/shell/backdrop.dart';
+import 'package:shard/ui/shell/update_banner.dart';
 import 'package:shard/ui/instances/instances_page.dart';
 import 'package:shard/ui/shell/title_bar.dart';
 import 'package:shard/ui/skins/skin_viewer.dart';
@@ -28,6 +34,7 @@ import 'package:shard/ui/widgets/play_button.dart';
 
 import 'support/fake_bridge.dart';
 import 'support/harness.dart';
+import 'support/updates.dart';
 
 // Relativo al test (golden) y a app/ (JSON).
 const _goldenOut = '../../tools/paridad/ref';
@@ -134,6 +141,63 @@ Map<String, Rect> _skinsBoxes(WidgetTester tester, {required String title, requi
   return boxes;
 }
 
+Finder _inHome(Finder f) =>
+    find.descendant(of: find.byType(HomePage), matching: f);
+
+/// Cajas de Inicio y de los avisos flotantes. `*-btn`: botón anclado a la
+/// izquierda tan ancho como su texto (x, y y alto).
+Map<String, Rect> _homeBoxes(WidgetTester tester, {required Map<String, String> texts}) {
+  final boxes = <String, Rect>{};
+  void put(String name, Finder f) {
+    if (f.evaluate().isEmpty) return;
+    final r = tester.getRect(f.first);
+    if (!r.isEmpty) boxes[name] = r;
+  }
+
+  put('rail', _named('_NavRail'));
+  put('titlebar', find.byType(TitleBar));
+  put('pill', _named('_ActivityPill'));
+  for (final e in texts.entries) {
+    put('txt-${e.key}', _inHome(find.text(e.value)));
+  }
+  final hero = _named('_HeroCard');
+  put('hero', hero);
+  put('hero-icon', find.descendant(of: hero, matching: find.byType(InstanceIcon)));
+  put('hero-play-btn', find.descendant(of: hero, matching: find.byType(PlayButton)));
+  put('hero-picker-btn', find.descendant(of: hero, matching: _named('_InstancePicker')));
+  put('hero-failure', find.descendant(of: hero, matching: _named('LaunchFailureNote')));
+  put('no-instances', _named('_NoInstancesCard'));
+  put('session', _named('_SessionCard'));
+  put('running', _named('_RunningCard'));
+  put('servers', _named('_QuickServersCard'));
+  final recent = _named('_RecentCard');
+  for (var i = 0; i < recent.evaluate().length; i++) {
+    boxes['recent-$i'] = tester.getRect(recent.at(i));
+    final icon = find.descendant(of: recent.at(i), matching: find.byType(InstanceIcon));
+    if (icon.evaluate().isNotEmpty) boxes['recent-$i-icon'] = tester.getRect(icon);
+  }
+  for (final (name, type) in [('update-banner', UpdateBanner), ('crash-banner', CrashBanner)]) {
+    final f = find.byType(type);
+    if (f.evaluate().isNotEmpty) {
+      final r = tester.getRect(f);
+      if (r.height > 1) boxes[name] = r;
+    }
+  }
+  return boxes;
+}
+
+/// Segundos del giro de la esfera ASCII en la captura (estilo sebaspi).
+double? _sphereSeconds(WidgetTester tester) {
+  for (final w in tester.widgetList<CustomPaint>(find.byType(CustomPaint))) {
+    final p = w.painter;
+    if (p != null && p.runtimeType.toString() == '_SpherePainter') {
+      final d = p as dynamic;
+      return (d.base() as double) + (d.time.value as double);
+    }
+  }
+  return null;
+}
+
 /// Segundos del reloj del fondo animado en la captura (la escena de Slint
 /// pone el fondo quieto en ese mismo instante).
 double? _atmosphereSeconds(WidgetTester tester) {
@@ -154,6 +218,7 @@ Future<void> _capture(WidgetTester tester, String scene, Map<String, Rect> boxes
   }
   final json = {
     'atmosphere_s': _atmosphereSeconds(tester),
+    'sphere_s': _sphereSeconds(tester),
     'boxes': {
       for (final e in boxes.entries)
         e.key: [e.value.left, e.value.top, e.value.width, e.value.height]
@@ -272,5 +337,82 @@ void main() {
       ),
     );
     await _capture(tester, 'skins_offline_en', _skinsBoxes(tester, title: 'Skins', account: 'Pruebas_01'));
+  });
+
+  const homeEs = {'greeting': 'Hola, NadiaK', 'subtitle': '¿A qué jugamos hoy?', 'hero-name': 'Survival con amigos', 'recent': 'Recientes'};
+
+  testWidgets('home_es', (tester) async {
+    await pumpApp(tester, location: '/');
+    await _capture(tester, 'home_es', _homeBoxes(tester, texts: homeEs));
+  });
+
+  testWidgets('home_downloading_es', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(launchProvider.notifier).debugSet(
+          'survival-amigos',
+          const LaunchState(phase: LaunchPhase.downloading, done: 1834, total: 3920, stage: 'assets'),
+        );
+    await settle(tester);
+    await _capture(tester, 'home_downloading_es', _homeBoxes(tester, texts: homeEs));
+  });
+
+  testWidgets('home_error_es', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(launchProvider.notifier).debugSet(
+          'survival-amigos',
+          const LaunchState(
+            phase: LaunchPhase.error,
+            failure: LaunchError(
+              BridgeError(kind: 'java_required', message: 'hace falta Java 21: instálala con `lcore java install 21`'),
+            ),
+          ),
+        );
+    await settle(tester);
+    await _capture(tester, 'home_error_es', _homeBoxes(tester, texts: homeEs));
+  });
+
+  testWidgets('home_empty_en', (tester) async {
+    await pumpApp(tester, location: '/', bridge: FakeBridge(instances: [], accounts: [], language: 'en'));
+    await _capture(tester, 'home_empty_en',
+        _homeBoxes(tester, texts: {'greeting': 'Welcome', 'subtitle': 'What are we playing today?'}));
+  });
+
+  for (final style in ['graphite', 'sebaspi', 'landscape', 'aurora']) {
+    testWidgets('home_style_${style}_es', (tester) async {
+      await pumpApp(
+        tester,
+        location: '/',
+        bridge: FakeBridge()..uiPrefs = '{"first_run_done":true,"style":"$style","blur":10,"dim":0.5}',
+      );
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+      await tester.pump(const Duration(milliseconds: 100));
+      await _capture(tester, 'home_style_${style}_es', _homeBoxes(tester, texts: homeEs));
+    });
+  }
+
+  testWidgets('web_home_graphite_es', (tester) async {
+    debugHideBackdrop = true;
+    try {
+      await pumpApp(tester, location: '/', bridge: FakeBridge()..uiPrefs = '{"first_run_done":true,"style":"graphite"}');
+      await _capture(tester, 'web_home_graphite_es', _homeBoxes(tester, texts: homeEs));
+    } finally {
+      debugHideBackdrop = false;
+    }
+  });
+
+  testWidgets('crash_banner_es', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(crashNoticeProvider.notifier).debugShow(
+          CrashNotice(gameId: BigInt.two, instanceId: 'create-aeronautica', code: 1),
+        );
+    await settle(tester);
+    await _capture(tester, 'crash_banner_es', _homeBoxes(tester, texts: homeEs));
+  });
+
+  testWidgets('update_banner_es', (tester) async {
+    final c = await pumpApp(tester, location: '/');
+    c.read(updateProvider.notifier).debugSet(const UpdateState(status: UpdateStatus.available, info: appImageUpdate));
+    await settle(tester);
+    await _capture(tester, 'update_banner_es', _homeBoxes(tester, texts: homeEs));
   });
 }

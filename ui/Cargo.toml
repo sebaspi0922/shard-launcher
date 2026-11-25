@@ -20,15 +20,26 @@ slint = { version = "=1.19.0", default-features = false, features = [
     "renderer-femtovg",
     "accessibility",
     "system-tray",
+    # Redimensionar desde el borde de la ventana sin marco (drag_resize_window).
+    "unstable-winit-030",
 ] }
 tokio = { version = "1.53.2", features = ["rt-multi-thread", "sync", "time"] }
-material-colors = "=0.5.0"
+material-colors = { version = "=0.5.0", features = ["quantize"] }
+# Fondos (imagen propia, favicons de servidores) y acento desde imagen.
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
+base64 = "0.22.1"
+# Mismo tipo de mapa que `material-colors` usa en `Score::score`.
+indexmap = "2.14.2"
+ahash = { version = "0.8.13", default-features = false }
+# Glifos de la esfera ASCII del estilo «sebaspi», pintada en CPU.
+ab_glyph = "0.2.32"
+# Abrir enlaces (novedades, descarga de la versión nueva, login de Microsoft).
+webbrowser = "1.2.7"
 serde_json = "1.0.154"
 # Texturas de skin y capa.
 png = "0.18"
 tracing = "0.1.44"
-# Abrir la página del login de Microsoft y elegir el PNG de la skin.
-webbrowser = "1.2.7"
+# Elegir el PNG de la skin.
 rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
