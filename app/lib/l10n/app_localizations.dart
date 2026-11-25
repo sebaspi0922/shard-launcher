@@ -296,6 +296,12 @@ abstract class AppLocalizations {
   /// **'Microsoft'**
   String get accountMicrosoft;
 
+  /// No description provided for @accountUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'No disponible'**
+  String get accountUnavailable;
+
   /// No description provided for @accountOffline.
   ///
   /// In es, this message translates to:
@@ -349,24 +355,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Añade una cuenta para jugar'**
   String get accountNoneHint;
-
-  /// **'Cuenta Shard'**
-  String get accountShard;
-
-  /// **'Usuario'**
-  String get shardUsername;
-
-  /// **'Contraseña'**
-  String get shardPassword;
-
-  /// **'Iniciar sesión'**
-  String get shardSignIn;
-
-  /// **'Usa tu cuenta de la comunidad Shard.'**
-  String get shardAccountBody;
-
-  /// **'Gestiona las skins y capas desde el sitio donde registraste tu cuenta Shard.'**
-  String get shardSkinsBody;
 
   /// No description provided for @offlineTitle.
   ///
@@ -511,12 +499,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'La sesión de esta cuenta caducó. Vuelve a iniciar sesión.'**
   String get errAuthSessionExpired;
-
-  /// No description provided for @errAuthInvalidCredentials.
-  ///
-  /// In es, this message translates to:
-  /// **'Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).'**
-  String get errAuthInvalidCredentials;
 
   /// No description provided for @errAuthGeneric.
   ///

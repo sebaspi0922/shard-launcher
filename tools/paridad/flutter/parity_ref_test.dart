@@ -312,14 +312,6 @@ void main() {
         _dialogBoxes<OfflineAccountDialog>(tester, title: 'Offline account'));
   });
 
-  testWidgets('shard_account_es', (tester) async {
-    await pumpApp(tester, location: '/instances');
-    showShardAccount(pageContext(tester));
-    await settle(tester);
-    await _capture(tester, 'shard_account_es',
-        _dialogBoxes<AccountCredentialsDialog>(tester, title: 'Cuenta Shard'));
-  });
-
   testWidgets('skins_es', (tester) async {
     await pumpApp(tester, location: '/skins');
     await _capture(tester, 'skins_es', _skinsBoxes(tester, title: 'Skins', account: 'NadiaK', reset: 'Restablecer'));

@@ -159,7 +159,6 @@ impl shard_ui::accounts::AccountActions for NoCore {
     fn set_active(&self, _: &str) {}
     fn remove(&self, _: &str, _: &str) {}
     fn add_offline(&self, _: &str, _: u64) {}
-    fn add_shard(&self, _: &str, _: &str, _: u64) {}
     fn begin_login(&self, _: u64) {}
     fn cancel_login(&self) {}
     fn open_url(&self, _: &str) {}

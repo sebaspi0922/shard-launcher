@@ -53,12 +53,6 @@ class AccountsController extends AsyncNotifier<List<AccountView>> {
     return a;
   }
 
-  Future<AccountView> addShard(String username, String password) async {
-    final account = await _bridge.addShardAccount(username, password);
-    await refresh();
-    return account;
-  }
-
   Future<void> setActive(String id) async {
     await _bridge.setActiveAccount(id);
     await refresh();
@@ -77,10 +71,11 @@ final accountsProvider =
 
 final activeAccountProvider = Provider<AccountView?>((ref) {
   final list = ref.watch(accountsProvider).value ?? const [];
-  for (final a in list) {
+  final available = list.where((account) => !account.shard);
+  for (final a in available) {
     if (a.active) return a;
   }
-  return list.isEmpty ? null : list.first;
+  return available.firstOrNull;
 });
 
 class InstancesController extends AsyncNotifier<List<InstanceView>> {

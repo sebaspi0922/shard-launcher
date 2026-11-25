@@ -656,7 +656,6 @@ impl Skins {
         st.set_has_account(m.account.is_some());
         st.set_accounts_loading(!m.accounts_loaded);
         st.set_microsoft(m.account.as_ref().is_some_and(|a| a.microsoft));
-        st.set_shard(m.account.as_ref().is_some_and(|a| a.shard));
         match &m.profile {
             ProfileLoad::Loading => st.set_state(LoadState::Loading),
             ProfileLoad::Ready(_) => st.set_state(LoadState::Ready),

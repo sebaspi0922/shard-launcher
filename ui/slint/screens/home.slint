@@ -45,8 +45,6 @@ export global HomeState {
     in property <[InstanceItem]> running;
     in property <[ServerItem]> servers;
     in property <bool> account-microsoft;
-    // Cuenta Shard (Yggdrasil).
-    in property <bool> account-shard;
     // Cara de la cuenta pintada a 42 px (avatar de 44 con borde).
     in property <image> session-face;
     callback select(string);
@@ -60,7 +58,6 @@ export global HomeState {
     callback change-account;
     callback add-microsoft;
     callback add-offline;
-    callback add-shard;
     callback add-server;
     callback diagnose(string);
     callback show-logs(string);
@@ -229,11 +226,6 @@ component SessionCard inherits Panel {
             Rectangle { height: 8px; }
             Rectangle {
                 height: 48px;
-                OutlinedButton { text: @tr("accountShard"); clicked => { HomeState.add-shard(); } }
-            }
-            Rectangle { height: 8px; }
-            Rectangle {
-                height: 48px;
                 OutlinedButton { text: @tr("accountsAddOffline"); clicked => { HomeState.add-offline(); } }
             }
         }
@@ -262,8 +254,7 @@ component SessionCard inherits Panel {
                         color: HomeState.account-microsoft ? Palette.info : Palette.text-muted;
                     }
                     Txt {
-                        text: HomeState.account-shard ? @tr("accountShard")
-                            : HomeState.account-microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
+                        text: HomeState.account-microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
                         style: Type.body-small;
                         color: Palette.text-secondary;
                     }

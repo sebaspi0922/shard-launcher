@@ -16,8 +16,7 @@ export struct AccountItem {
     id: string,
     name: string,
     microsoft: bool,
-    // Cuenta Shard (Yggdrasil).
-    shard: bool,
+    unavailable: bool,
     active: bool,
     // Cara (de la skin o generada).
     chip: AccountChip,
@@ -44,9 +43,8 @@ export global AccountsState {
     in property <string> login-error;
     in property <string> login-error-detail;
 
-    // Cuenta offline o Shard (mismo diálogo).
+    // Cuenta offline.
     in-out property <bool> offline-open;
-    in property <bool> credentials-shard;
     in property <bool> offline-busy;
     in property <string> offline-error;
     in property <string> offline-error-detail;
@@ -64,8 +62,6 @@ export global AccountsState {
     callback open-browser;
     callback copied;
     callback offline-submit(string);
-    callback add-shard;
-    callback shard-submit(string, string);
     // Nombre offline válido (3–16 letras, dígitos o _).
     pure callback offline-valid(string) -> bool;
 }
@@ -78,15 +74,15 @@ component AccountTile inherits Rectangle {
     accessible-label: account.name;
     accessible-item-selected: account.active;
     accessible-id: "account";
-    accessible-action-default => { if !root.account.active { AccountsState.select(root.account.id); } }
+    accessible-action-default => { if !root.account.active && !root.account.unavailable { AccountsState.select(root.account.id); } }
     Rectangle {
         y: 0;
         height: 56px;
         border-radius: Theme.radius-control + 2px;
-        background: root.account.active ? Palette.accent-container.with-alpha(0.55) : ta.has-hover ? Palette.surface1 : transparent;
+        background: root.account.active ? Palette.accent-container.with-alpha(0.55) : ta.has-hover && !root.account.unavailable ? Palette.surface1 : transparent;
         ta := TouchArea {
-            mouse-cursor: root.account.active ? default : pointer;
-            clicked => { if !root.account.active { AccountsState.select(root.account.id); } }
+            mouse-cursor: root.account.active || root.account.unavailable ? default : pointer;
+            clicked => { if !root.account.active && !root.account.unavailable { AccountsState.select(root.account.id); } }
         }
         HorizontalLayout {
             padding: 8px;
@@ -100,14 +96,14 @@ component AccountTile inherits Rectangle {
                 Rectangle { height: 2px; }
                 HorizontalLayout {
                     spacing: 4px;
-                    Icon {
+                    if !root.account.unavailable: Icon {
                         glyph: root.account.microsoft ? Icons.verified : Icons.wifi-off;
                         size: 13px;
                         y: (parent.height - self.height) / 2;
                         color: root.account.microsoft ? Palette.info : Palette.text-muted;
                     }
                     Txt {
-                        text: root.account.shard ? @tr("accountShard") : root.account.microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
+                        text: root.account.unavailable ? @tr("accountUnavailable") : root.account.microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
                         style: Type.body-small;
                         color: Palette.text-secondary;
                         horizontal-stretch: 1;
@@ -222,14 +218,6 @@ export component AccountPanel inherits Rectangle {
                 clicked => {
                     AccountsState.panel-open = false;
                     AccountsState.add-microsoft();
-                }
-            }
-            ActionTile {
-                glyph: Icons.login;
-                text: @tr("accountShard");
-                clicked => {
-                    AccountsState.panel-open = false;
-                    AccountsState.add-shard();
                 }
             }
             ActionTile {
@@ -372,46 +360,24 @@ export component MicrosoftLoginDialog inherits FormDialog {
     }
 }
 
-// Cuenta offline o Shard (AccountCredentialsDialog): nombre de jugador, o
-// usuario y contraseña de la cuenta Shard.
 export component OfflineAccountDialog inherits FormDialog {
-    property <bool> shard: AccountsState.credentials-shard;
-    title: shard ? @tr("accountShard") : @tr("offlineTitle");
+    title: @tr("offlineTitle");
     icon: Icons.person;
-    // Mientras se inicia sesión en Shard no se cierra.
-    dismissible: !shard;
     accessible-role: groupbox;
     accessible-id: "offline";
     property <bool> touched;
-    property <bool> valid: shard ? name.text != "" && pass.text != "" : AccountsState.offline-valid(name.text);
+    property <bool> valid: AccountsState.offline-valid(name.text);
     property <bool> busy: AccountsState.offline-busy;
     dismissed => { AccountsState.offline-open = false; }
     init => { name.focus(); }
-    Para { text: root.shard ? @tr("shardAccountBody") : @tr("offlineBody"); color: Palette.text; }
+    Para { text: @tr("offlineBody"); color: Palette.text; }
     Rectangle { height: 16px; }
     name := LabeledField {
-        label: root.shard ? @tr("shardUsername") : @tr("offlineNameLabel");
-        helper: root.shard ? "" : @tr("offlineNameHint");
-        error: !root.shard && root.touched && !root.valid ? @tr("offlineNameInvalid") : "";
+        label: @tr("offlineNameLabel");
+        helper: @tr("offlineNameHint");
+        error: root.touched && !root.valid ? @tr("offlineNameInvalid") : "";
         prefix-icon: Icons.badge;
-        enabled: !(root.shard && root.busy);
         accessible-id: "field";
-        accepted => {
-            if root.shard {
-                pass.focus-input();
-            } else {
-                root.submit();
-            }
-        }
-    }
-    if root.shard: Rectangle { height: 12px; }
-    pass := LabeledField {
-        visible: root.shard;
-        height: root.shard ? self.preferred-height : 0;
-        label: @tr("shardPassword");
-        password: true;
-        enabled: !root.busy;
-        accessible-id: "field-2";
         accepted => { root.submit(); }
     }
     if AccountsState.offline-error != "": VerticalLayout {
@@ -426,13 +392,12 @@ export component OfflineAccountDialog inherits FormDialog {
         TextButton {
             height: 48px;
             text: @tr("cancel");
-            enabled: !(root.shard && root.busy);
             accessible-id: "cancel";
             clicked => { AccountsState.offline-open = false; }
         }
         FilledButton {
-            text: root.shard ? @tr("shardSignIn") : @tr("add");
-            enabled: !root.busy && (!root.shard || root.valid);
+            text: @tr("add");
+            enabled: !root.busy;
             accessible-id: "filled";
             clicked => { root.submit(); }
         }
@@ -440,11 +405,7 @@ export component OfflineAccountDialog inherits FormDialog {
     function submit() {
         root.touched = true;
         if root.valid && !root.busy {
-            if root.shard {
-                AccountsState.shard-submit(name.text, pass.text);
-            } else {
-                AccountsState.offline-submit(name.text);
-            }
+            AccountsState.offline-submit(name.text);
         }
     }
 }

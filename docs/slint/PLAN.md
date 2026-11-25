@@ -453,8 +453,8 @@ la sección nueva entra con fundido; la vieja se va sin él (sin golden).
 
 ## 9. Resultados de la fase 2
 
-Cuentas (panel, login de Microsoft con código, alta offline, alta Shard con
-usuario y contraseña contra `add_shard_account`, quitar con confirmación,
+Cuentas (panel, login de Microsoft con código, alta offline,
+cuentas guardadas no disponibles y quitar con confirmación,
 cuenta activa en el raíl con la cara de su skin) y Skins (visor
 3D girable con frente y espalda, cambiar skin por PNG o URL, clásica o
 delgada, restablecer, capas), con el núcleo real (`accounts_backend.rs`).
@@ -468,7 +468,6 @@ sobre Inicio como los goldens, para no depender de la fase 1.
 | accounts_panel_es | 0,9778 | 8/8 |
 | ms_login_es | 0,9727 | 8/8 |
 | offline_account_en | 0,9753 | 6/6 |
-| shard_account_es (nueva, sin golden) | 0,9742 | 7/7 |
 | skins_es | 0,9758 | 17/17 |
 | skins_offline_en | 0,9766 | 5/5 |
 
@@ -483,13 +482,8 @@ mismo número de cuadriláteros y ≤ 0,033 % de píxeles distintos en 4 casos.
 cuenta, alta offline con validación e Intro, login con cuenta atrás,
 caducidad, reintento y cancelación, skins: modelo, URL, PNG válido e
 inválido, capas, restablecer, arrastrar y doble clic en el visor, estados
-sin cuenta y offline; alta Shard: Intro pasa a la contraseña, no se cancela
-mientras inicia sesión, `auth_invalid_credentials`, refresco al terminar,
-Skins con cuenta Shard) y `tests/nucleo_cuentas.rs` (lo mismo contra `lcore`
-real en una carpeta temporal: `accounts.json` cambia como debe; Shard sin red
-da error y no guarda nada). `login_shard_real` (ignorado) hace el login real
-contra `auth.sebaspi.com` con `prueba_ui`; la contraseña va por
-`SHARD_PRUEBA_PASSWORD_FILE`, nunca en el repo.
+sin cuenta y offline, y cuentas antiguas deshabilitadas) y
+`tests/nucleo_cuentas.rs` (cuentas contra `lcore` real en una carpeta temporal).
 
 **Piezas compartidas nuevas** (para las fases siguientes):
 - `components/panels.slint`: `Panel`, `SectionTitle`, `Tag`, `ColorBadge`.

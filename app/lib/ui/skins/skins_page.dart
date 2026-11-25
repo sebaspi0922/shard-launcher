@@ -44,12 +44,6 @@ class SkinsPage extends ConsumerWidget {
                 label: Text(l.skinsAddAccount),
               ),
             );
-    } else if (account.shard) {
-      body = EmptyState(
-        icon: Symbols.checkroom_rounded,
-        title: l.accountShard,
-        body: l.shardSkinsBody,
-      );
     } else if (!account.microsoft) {
       body = EmptyState(
         icon: Symbols.no_accounts_rounded,

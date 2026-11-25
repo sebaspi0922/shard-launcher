@@ -33,8 +33,6 @@ export global SkinsState {
     in property <bool> has-account;
     in property <bool> accounts-loading;
     in property <bool> microsoft;
-    // Cuenta Shard: sus skins se gestionan en la web de la comunidad.
-    in property <bool> shard;
     in property <AccountChip> chip;
 
     // Perfil de la cuenta de Microsoft.
@@ -524,13 +522,7 @@ export component SkinsPage inherits Rectangle {
                 accessible-id: "empty";
                 act => { AccountsState.panel-open = true; }
             }
-            if SkinsState.has-account && SkinsState.shard: EmptyState {
-                icon: Icons.checkroom;
-                title: @tr("accountShard");
-                body: @tr("shardSkinsBody");
-                accessible-id: "empty";
-            }
-            if SkinsState.has-account && !SkinsState.microsoft && !SkinsState.shard: EmptyState {
+            if SkinsState.has-account && !SkinsState.microsoft: EmptyState {
                 icon: Icons.no-accounts;
                 title: @tr("skinsOfflineTitle");
                 body: @tr("skinsOfflineBody", SkinsState.chip.name);

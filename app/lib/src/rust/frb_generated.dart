@@ -83,7 +83,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1894013879;
+  int get rustContentHash => 1804354046;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -96,11 +96,6 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<AccountView> crateApiAccountsAddOfflineAccount({required String name});
-
-  Future<AccountView> crateApiAccountsAddShardAccount({
-    required String username,
-    required String password,
-  });
 
   Future<ServerView> crateApiServersAddServer({
     required String name,
@@ -482,41 +477,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiAccountsAddOfflineAccountConstMeta =>
       const TaskConstMeta(debugName: "add_offline_account", argNames: ["name"]);
-
-  @override
-  Future<AccountView> crateApiAccountsAddShardAccount({
-    required String username,
-    required String password,
-  }) {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          final serializer = SseSerializer(generalizedFrbRustBinding);
-          sse_encode_String(username, serializer);
-          sse_encode_String(password, serializer);
-          pdeCallFfi(
-            generalizedFrbRustBinding,
-            serializer,
-            funcId: 90,
-            port: port_,
-          );
-        },
-        codec: SseCodec(
-          decodeSuccessData: sse_decode_account_view,
-          decodeErrorData: sse_decode_bridge_error,
-        ),
-        constMeta: kCrateApiAccountsAddShardAccountConstMeta,
-        argValues: [username, '***'],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiAccountsAddShardAccountConstMeta =>
-      const TaskConstMeta(
-        debugName: 'add_shard_account',
-        argNames: ['username', 'password'],
-      );
 
   @override
   Future<ServerView> crateApiServersAddServer({

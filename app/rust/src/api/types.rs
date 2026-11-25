@@ -30,10 +30,12 @@ impl From<lcore::Error> for BridgeError {
 }
 
 #[derive(Debug, Clone)]
+#[flutter_rust_bridge::frb]
 pub struct AccountView {
     pub id: String,
     pub name: String,
     pub microsoft: bool,
+    #[frb(default = false)]
     pub shard: bool,
     pub skin_url: Option<String>,
     pub active: bool,

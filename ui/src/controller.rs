@@ -40,7 +40,6 @@ pub trait Actions {
     fn accounts(&self) {}
     fn add_microsoft_account(&self) {}
     fn add_offline_account(&self) {}
-    fn add_shard_account(&self) {}
     /// Añadir servidor (fase 4).
     fn add_server(&self) {}
     /// Doctor (fase 5).
@@ -205,7 +204,6 @@ impl Controller {
         on!(ctl, hs, on_change_account, |c| c.actions.accounts());
         on!(ctl, hs, on_add_microsoft, |c| c.actions.add_microsoft_account());
         on!(ctl, hs, on_add_offline, |c| c.actions.add_offline_account());
-        on!(ctl, hs, on_add_shard, |c| c.actions.add_shard_account());
         on!(ctl, hs, on_add_server, |c| c.actions.add_server());
         on!(ctl, hs, on_diagnose, |c, id| c.actions.diagnose(&id));
         on!(ctl, hs, on_show_logs, |c, id| c.actions.show_logs(&id));
@@ -446,11 +444,10 @@ impl Controller {
     }
 
     /// Tipo de la cuenta activa (tarjeta Sesión de Inicio).
-    pub fn set_account_kind(&self, microsoft: bool, shard: bool) {
+    pub fn set_account_kind(&self, microsoft: bool) {
         if let Some(ui) = self.ui.upgrade() {
             let hs = ui.global::<HomeState>();
             hs.set_account_microsoft(microsoft);
-            hs.set_account_shard(shard);
         }
     }
 

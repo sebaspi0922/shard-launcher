@@ -126,8 +126,13 @@ class LaunchController extends Notifier<Map<String, LaunchState>> {
     }
     _pending.add(instanceId);
     _set(instanceId, const LaunchState(phase: LaunchPhase.preparing));
-    final acc = account ?? ref.read(activeAccountProvider)?.id;
     try {
+      final accounts = await ref.read(accountsProvider.future);
+      if (!ref.mounted) return;
+      final acc = accounts.any((a) => !a.shard && a.id == account)
+          ? account
+          : ref.read(activeAccountProvider)?.id;
+      if (acc == null) throw const BridgeError(kind: 'account_not_found', message: '');
       final game = await ref
           .read(bridgeProvider)
           .launchInstance(instanceId, account: acc, server: server);

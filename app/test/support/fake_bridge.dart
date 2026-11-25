@@ -170,19 +170,6 @@ class FakeBridge implements LauncherBridge {
   }
 
   @override
-  Future<AccountView> addShardAccount(String username, String password) async {
-    final account = AccountView(
-      id: 'shard-$username',
-      name: username,
-      microsoft: false,
-      shard: true,
-      active: accounts.isEmpty,
-    );
-    accounts = [...accounts, account];
-    return account;
-  }
-
-  @override
   Future<void> setActiveAccount(String id) async {
     accounts = [
       for (final a in accounts)

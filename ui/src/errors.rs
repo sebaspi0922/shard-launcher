@@ -13,7 +13,6 @@ pub fn key(kind: &str) -> &'static str {
         "auth_device_code_expired" => "errAuthExpired",
         "auth_session_expired" | "auth_refresh_token_missing" => "errAuthSessionExpired",
         "auth_invalid_offline_name" => "offlineNameInvalid",
-        "auth_invalid_credentials" => "errAuthInvalidCredentials",
         "auth_msa" | "auth_unexpected" | "auth_offline_account" => "errAuthGeneric",
         "network" | "http_status" => "errNetwork",
         "offline" => "errOffline",
@@ -58,8 +57,8 @@ mod tests {
     #[test]
     fn todas_las_claves_existen_en_los_arb() {
         let kinds = [
+            "auth_declined", "auth_device_code_expired", "auth_session_expired", "auth_invalid_offline_name", "auth_msa",
             "auth_missing_client_id", "auth_app_not_approved", "auth_not_entitled", "auth_no_profile", "auth_xbox",
-            "auth_declined", "auth_device_code_expired", "auth_session_expired", "auth_invalid_offline_name", "auth_invalid_credentials", "auth_msa",
             "network", "offline", "java_required", "game_already_running", "instance_not_found", "account_not_found",
             "version_not_found", "hash_mismatch", "io", "invalid_input", "curseforge_key_missing", "secrets",
             "update_rejected", "otro",

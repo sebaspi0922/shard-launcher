@@ -1,8 +1,8 @@
-//! Cuentas de Microsoft, offline y Shard.
+//! Cuentas de Microsoft y offline, y gestión de cuentas guardadas.
 
 use std::sync::Mutex;
 
-use lcore::auth::msa::DeviceCode;
+use lcore::auth::{msa::DeviceCode, AccountKind};
 
 use crate::api::types::{AccountView, BridgeError, DeviceCodeView};
 use crate::state::{core, on_rt};
@@ -94,19 +94,20 @@ pub async fn add_offline_account(name: String) -> Result<AccountView, BridgeErro
     .await
 }
 
-pub async fn add_shard_account(username: String, password: String) -> Result<AccountView, BridgeError> {
-    let core = core()?;
-    on_rt(async move {
-        let account = core.add_shard_account(&username, &password).await?;
-        let active = core.accounts().await?.active;
-        Ok(AccountView::from_account(&account, active.as_deref()))
-    })
-    .await
-}
-
 pub async fn set_active_account(id: String) -> Result<(), BridgeError> {
     let core = core()?;
-    on_rt(async move { Ok(core.set_active_account(&id).await?) }).await
+    on_rt(async move {
+        let file = core.accounts().await?;
+        if !file
+            .accounts
+            .iter()
+            .any(|a| a.id == id && a.kind != AccountKind::Shard)
+        {
+            return Err(lcore::Error::AccountNotFound(id).into());
+        }
+        Ok(core.set_active_account(&id).await?)
+    })
+    .await
 }
 
 pub async fn remove_account(id: String) -> Result<(), BridgeError> {

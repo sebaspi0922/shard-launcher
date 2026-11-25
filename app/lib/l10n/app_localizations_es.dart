@@ -112,6 +112,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get accountMicrosoft => 'Microsoft';
 
   @override
+  String get accountUnavailable => 'No disponible';
+
+  @override
   String get accountOffline => 'Offline';
 
   @override
@@ -145,24 +148,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get accountNoneHint => 'Añade una cuenta para jugar';
-
-  @override
-  String get accountShard => 'Cuenta Shard';
-
-  @override
-  String get shardUsername => 'Usuario';
-
-  @override
-  String get shardPassword => 'Contraseña';
-
-  @override
-  String get shardSignIn => 'Iniciar sesión';
-
-  @override
-  String get shardAccountBody => 'Usa tu cuenta de la comunidad Shard.';
-
-  @override
-  String get shardSkinsBody => 'Gestiona las skins y capas desde el sitio donde registraste tu cuenta Shard.';
 
   @override
   String get offlineTitle => 'Cuenta offline';
@@ -248,10 +233,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errAuthSessionExpired =>
       'La sesión de esta cuenta caducó. Vuelve a iniciar sesión.';
-
-  @override
-  String get errAuthInvalidCredentials =>
-      'Usuario o contraseña incorrectos para la cuenta Shard (Yggdrasil).';
 
   @override
   String get errAuthGeneric => 'No se pudo iniciar sesión con Microsoft.';

@@ -443,11 +443,6 @@ class _SessionCard extends ConsumerWidget {
             ),
             const SizedBox(height: Space.x2),
             OutlinedButton(
-              onPressed: () => showShardAccount(context),
-              child: Text(l.accountShard),
-            ),
-            const SizedBox(height: Space.x2),
-            OutlinedButton(
               onPressed: () => showOfflineAccount(context),
               child: Text(l.accountsAddOffline),
             ),
@@ -473,9 +468,7 @@ class _SessionCard extends ConsumerWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            account.shard
-                                ? l.accountShard
-                                : account.microsoft
+                            account.microsoft
                                 ? l.accountMicrosoft
                                 : l.accountOffline,
                             style: context.text.bodySmall,
