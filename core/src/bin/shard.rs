@@ -592,6 +592,7 @@ enum SettingsCmd {
 
 #[derive(Clone, Copy, ValueEnum)]
 enum SettingKey {
+    /// Obsoleto: se acepta para no romper scripts; el login SISU no lo usa.
     MsaClientId,
     Language,
     CloseBehavior,
@@ -2103,11 +2104,7 @@ fn print_profile(p: &Profile) {
 }
 
 fn print_settings(s: &Settings) {
-    let client_id = match s.effective_msa_client_id() {
-        Some(id) => id,
-        None => "(sin configurar)".into(),
-    };
-    println!("msa-client-id:            {client_id}");
+    println!("msa-client-id:            (obsoleto; SISU usa la app oficial)");
     println!(
         "language:                 {}",
         s.language.as_deref().unwrap_or("(sistema)")

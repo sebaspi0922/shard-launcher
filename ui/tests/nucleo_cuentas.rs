@@ -139,11 +139,19 @@ fn cuentas_con_el_nucleo_real() {
     assert!(ui.global::<SkinsState>().get_has_account());
     assert!(!ui.global::<SkinsState>().get_microsoft());
 
-    // Login de Microsoft sin red: termina en error, no se queda colgado.
+    // Login de Microsoft: no se queda pidiendo el código. Desde el login
+    // SISU el núcleo pide el código aunque esté en modo sin red, así que
+    // vale el error (sin red) o el código (con red); cancelar lo cierra.
     ui.global::<AccountsState>().invoke_add_microsoft();
     let s = ui.as_weak();
-    wait("error del login", move || s.unwrap().global::<AccountsState>().get_login_phase() == LoginPhase::Failed);
-    assert!(!ui.global::<AccountsState>().get_login_error().is_empty());
+    wait("respuesta del login", move || {
+        matches!(s.unwrap().global::<AccountsState>().get_login_phase(), LoginPhase::Failed | LoginPhase::Code)
+    });
+    if ui.global::<AccountsState>().get_login_phase() == LoginPhase::Failed {
+        assert!(!ui.global::<AccountsState>().get_login_error().is_empty());
+    } else {
+        assert!(!ui.global::<AccountsState>().get_user_code().is_empty());
+    }
     click(&ui, "Cancelar");
     assert!(!ui.global::<AccountsState>().get_login_open());
 
