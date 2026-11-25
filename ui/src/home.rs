@@ -39,6 +39,11 @@ pub struct Status {
     pub players_online: u32,
     pub players_max: u32,
     pub favicon_png_base64: Option<String>,
+    /// Lo que usa Servidores (fase 4): versión, MOTD sin colores y nombres
+    /// de jugadores de muestra.
+    pub version_name: String,
+    pub motd: String,
+    pub sample: Vec<String>,
 }
 
 impl From<lcore::servers::ServerStatus> for Status {
@@ -49,6 +54,9 @@ impl From<lcore::servers::ServerStatus> for Status {
             players_online: s.players_online,
             players_max: s.players_max,
             favicon_png_base64: s.favicon_png_base64,
+            version_name: s.version_name,
+            motd: s.motd_plain,
+            sample: s.sample,
         }
     }
 }
@@ -131,7 +139,7 @@ mod tests {
 
     #[test]
     fn linea_de_estado() {
-        let s = Status { online: true, latency_ms: 118, players_online: 31_842, players_max: 200_000, favicon_png_base64: None };
+        let s = Status { online: true, latency_ms: 118, players_online: 31_842, players_max: 200_000, ..Default::default() };
         assert_eq!(status_line("es", Some(&s)), "31,8\u{a0}mil / 200\u{a0}mil · 118 ms");
         assert_eq!(status_line("en", Some(&s)), "31.8K / 200K · 118 ms");
         assert_eq!(status_line("es", Some(&Status::default())), "Sin conexión");

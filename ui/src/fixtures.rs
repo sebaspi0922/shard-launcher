@@ -97,17 +97,20 @@ pub fn sample_servers() -> Vec<crate::home::Server> {
 
 /// `sampleStatuses()` (sin favicon: se ve el paisaje de la dirección).
 pub fn sample_statuses() -> Vec<(String, crate::home::Status)> {
-    let st = |latency_ms, players_online, players_max| crate::home::Status {
+    let st = |latency_ms, players_online, players_max, version: &str, motd: &str, sample: &[&str]| crate::home::Status {
         online: true,
         latency_ms,
         players_online,
         players_max,
         favicon_png_base64: None,
+        version_name: version.into(),
+        motd: motd.into(),
+        sample: sample.iter().map(|s| (*s).into()).collect(),
     };
     vec![
-        ("mc.amigos.example".into(), st(23, 3, 20)),
-        ("mc.hypixel.net".into(), st(118, 31_842, 200_000)),
-        ("create.smp.example:25570".into(), st(64, 0, 12)),
+        ("mc.amigos.example".into(), st(23, 3, 20, "1.21.4", "Temporada 4 · ¡Nueva aldea en el spawn!", &["NadiaK", "Rulo", "Mai"])),
+        ("mc.hypixel.net".into(), st(118, 31_842, 200_000, "Requires MC 1.8 / 1.21", "Hypixel Network  [1.8-1.21]", &[])),
+        ("create.smp.example:25570".into(), st(64, 0, 12, "1.20.1", "Create SMP — trenes, molinos y mucha paciencia", &[])),
     ]
 }
 
@@ -242,5 +245,148 @@ impl SkinActions for Recorder {
     }
     fn cape(&self, account: &str, id: Option<&str>) {
         self.push(format!("cape {account} {}", id.unwrap_or("-")));
+    }
+}
+
+// --- Contenido y servidores (fase 4) -----------------------------------------
+
+use crate::content::{ContentActions, Filters, InstallRequest, Installed, Page, Project, Rgba, Version, VersionsQuery};
+
+/// Base de las URLs de los iconos de ejemplo (`kFixtureIconBase`): se sirven
+/// desde `ui/tests/data/icons/<slug>.png`, sin red.
+pub const ICON_BASE: &str = "https://cdn.modrinth.com/data/test/";
+
+fn project(id: &str, title: &str, author: &str, description: &str, downloads: u64, kind: &str, categories: &[&str]) -> Project {
+    let slug = if id == "complementary" { "complementary-reimagined" } else { id };
+    Project {
+        source: "modrinth".into(),
+        id: id.into(),
+        slug: id.into(),
+        kind: Some(kind.into()),
+        title: title.into(),
+        description: description.into(),
+        author: Some(author.into()),
+        icon_url: Some(format!("{ICON_BASE}{slug}.png")),
+        downloads,
+        follows: downloads / 90,
+        categories: categories.iter().map(|c| (*c).into()).collect(),
+    }
+}
+
+/// `sampleProjects()`.
+pub fn sample_projects() -> Vec<Project> {
+    vec![
+        project("sodium", "Sodium", "jellysquid3", "El motor de renderizado más rápido para Minecraft, con muchas más imágenes por segundo.", 98_400_000, "mod", &["optimización"]),
+        project("lithium", "Lithium", "jellysquid3", "Optimiza la física, la IA de las criaturas y la generación sin cambiar el juego.", 51_200_000, "mod", &["optimización"]),
+        project("iris", "Iris Shaders", "coderbot", "Shaders modernos compatibles con OptiFine y con Sodium.", 77_300_000, "mod", &["decoración"]),
+        project("entityculling", "Entity Culling", "tr7zw", "Deja de dibujar entidades y bloques que no se ven.", 31_900_000, "mod", &["optimización"]),
+        project("modmenu", "Mod Menu", "Prospector", "Añade un menú de mods para ver y configurar lo que tienes instalado.", 64_100_000, "mod", &["utilidad"]),
+        project("ferrite-core", "FerriteCore", "malte0811", "Reduce el uso de memoria del juego.", 45_800_000, "mod", &["optimización"]),
+        project("fresh-animations", "Fresh Animations", "FreshLX", "Animaciones nuevas para las criaturas del juego.", 12_300_000, "resourcepack", &["animaciones"]),
+        project("complementary", "Complementary Shaders", "EminGT", "Shaders bonitos y equilibrados.", 18_800_000, "shader", &["realista"]),
+        project("terralith", "Terralith", "Starmute", "Más de 95 biomas nuevos sin bloques nuevos.", 9_100_000, "datapack", &["generación"]),
+        project("fabulously-optimized", "Fabulously Optimized", "robotkoer", "Modpack de rendimiento con buenos gráficos.", 13_200_000, "modpack", &["optimización"]),
+    ]
+}
+
+/// `FakeBridge.searchContent`: por tipo y título.
+pub fn search_page(f: &Filters, offset: u32, limit: u32) -> Page {
+    let text = f.text.trim().to_lowercase();
+    let all: Vec<Project> = sample_projects()
+        .into_iter()
+        .filter(|p| p.kind() == f.kind)
+        .filter(|p| text.is_empty() || p.title.to_lowercase().contains(&text))
+        .collect();
+    let total = all.len() as u32;
+    Page { items: all.into_iter().skip(offset as usize).take(limit as usize).collect(), total }
+}
+
+/// `sampleVersions()`: cuatro versiones a 4, 26, 41 y 63 días del 11 oct 2026.
+pub fn sample_versions(project: &str, mc: Option<&str>, loader: Option<&str>) -> Vec<Version> {
+    let dates = ["2026-10-07", "2026-09-15", "2026-08-31", "2026-08-09"];
+    [("0.6.14", "release"), ("0.6.13", "release"), ("0.6.12-beta.2", "beta"), ("0.6.11", "release")]
+        .iter()
+        .enumerate()
+        .map(|(i, (v, rel))| Version {
+            id: format!("{project}-v{i}"),
+            version_number: (*v).into(),
+            mc_versions: vec![mc.unwrap_or("1.21.4").into()],
+            loaders: vec![loader.unwrap_or("fabric").into()],
+            release: (*rel).into(),
+            date_published: format!("{}T00:00:00.000", dates[i]),
+            file_url: Some(format!("https://cdn.modrinth.com/data/{project}/{v}.jar")),
+            file_size: 1_200_000 - i as u64 * 40_000,
+        })
+        .collect()
+}
+
+/// Lo instalado en `survival-amigos` (`sampleContent()`): el proyecto es lo
+/// que va antes del primer `-`, `_` o `.` del archivo.
+pub fn sample_installed() -> Vec<Installed> {
+    let c = |file: &str, version: Option<&str>, known: bool| Installed {
+        project_id: known.then(|| file.split(['-', '_', '.']).next().unwrap_or(file).to_owned()),
+        version_number: version.map(Into::into),
+        file: file.into(),
+    };
+    vec![
+        c("fabric-api-0.119.2+1.21.4.jar", Some("0.119.2+1.21.4"), true),
+        c("sodium-fabric-0.6.13+mc1.21.4.jar", Some("0.6.13+mc1.21.4"), true),
+        c("iris-fabric-1.8.8+mc1.21.4.jar", Some("1.8.8+mc1.21.4"), true),
+        c("lithium-fabric-0.14.7+mc1.21.4.jar", Some("0.14.7"), true),
+        c("journeymap-1.21.4-6.0.0.jar", Some("6.0.0"), true),
+        c("appleskin-fabric-mc1.21.4-3.0.6.jar", Some("3.0.6"), true),
+        c("mi-mod-casero.jar", None, false),
+        c("FreshAnimations_v1.9.3.zip", Some("1.9.3"), true),
+        c("ComplementaryReimagined_r5.4.zip", Some("r5.4"), true),
+    ]
+}
+
+/// Icono de ejemplo de una URL (`fixtureIconPath`), o `None` (iniciales).
+pub fn sample_icon(url: &str) -> Option<Rgba> {
+    let name = url.strip_prefix(ICON_BASE)?;
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/icons").join(name);
+    crate::content::decode_icon(&std::fs::read(path).ok()?)
+}
+
+impl ContentActions for Recorder {
+    fn search(&self, f: &Filters, offset: u32, generation: u64) {
+        self.push(format!("search {} {} «{}» {offset} g{generation}", f.source, f.kind, f.text));
+    }
+    fn versions(&self, q: &VersionsQuery, seq: u64) {
+        self.push(format!("versions {} {:?} {:?} s{seq}", q.project, q.mc, q.loader));
+    }
+    fn install(&self, r: &InstallRequest) {
+        self.push(format!("install {} {} {:?} {:?}", r.instance_id, r.project, r.version, r.world));
+    }
+    fn load_installed(&self, instance_id: &str) {
+        self.push(format!("installed {instance_id}"));
+    }
+    fn load_worlds(&self, instance_id: &str) {
+        self.push(format!("worlds {instance_id}"));
+    }
+    fn load_releases(&self) {
+        self.push("releases".into());
+    }
+    fn load_icon(&self, url: &str) {
+        self.push(format!("icon {url}"));
+    }
+    fn pick_modpack(&self, _: &str) {
+        self.push("pick-modpack".into());
+    }
+    fn install_modpack(&self, source: &str, name: Option<&str>, attempt: u64) {
+        self.push(format!("modpack {source} {name:?} a{attempt}"));
+    }
+}
+
+impl crate::curseforge::KeyActions for Recorder {
+    fn check(&self) {
+        self.push("check-key".into());
+    }
+    fn set(&self, key: &str) {
+        // Solo el largo: una clave no se apunta.
+        self.push(format!("set-key ({} caracteres)", key.chars().count()));
+    }
+    fn clear(&self) {
+        self.push("clear-key".into());
     }
 }

@@ -51,7 +51,7 @@ export component TextField inherits Rectangle {
         width: parent.width - self.x - root.trail;
         height: parent.height;
         font-family: "Inter";
-        font-size: Type.body-medium.size;
+        font-size: Type.body-large.size;
         color: Palette.text;
         selection-background-color: Palette.accent.with-alpha(0.35);
         selection-foreground-color: Palette.text;
@@ -160,8 +160,9 @@ export component LabeledField inherits VerticalLayout {
             width: parent.width - self.x - 14px;
             height: parent.height;
             font-family: "Inter";
-            font-size: Type.body-medium.size;
-            color: Palette.text;
+            font-size: Type.body-large.size;
+            // Deshabilitado: el texto al 38 % (Material).
+            color: root.enabled ? Palette.text : Palette.text.with-alpha(0.38);
             selection-background-color: Palette.accent.with-alpha(0.35);
             selection-foreground-color: Palette.text;
             vertical-alignment: center;

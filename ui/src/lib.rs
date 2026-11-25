@@ -11,6 +11,7 @@ pub mod arb;
 pub mod art;
 pub mod backdrop;
 pub mod backend;
+pub mod content;
 pub mod controller;
 pub mod curseforge;
 pub mod errors;

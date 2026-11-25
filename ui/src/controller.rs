@@ -273,6 +273,12 @@ impl Controller {
         ctl
     }
 
+    /// Acciones fuera de la UI (otras pantallas las usan para abrir una
+    /// instancia, etc.).
+    pub fn actions(&self) -> &dyn Actions {
+        &*self.actions
+    }
+
     /// Llama a `f` cada vez que cambia el modelo (bandeja, etc.).
     pub fn on_refresh(&self, f: impl Fn(&instances::Model) + 'static) {
         self.listeners.borrow_mut().push(Box::new(f));
@@ -512,7 +518,7 @@ impl Controller {
 
     /// Paisaje de bloques (art.dart) a un tamaño lógico, pintado a la escala
     /// de la ventana y guardado para no repetirlo.
-    fn landscape(&self, seed: &str, block: f64, width: f32, height: f32) -> Image {
+    pub fn landscape(&self, seed: &str, block: f64, width: f32, height: f32) -> Image {
         let scale = self.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0) as f64;
         let (w, h) = ((width as f64).max(1.0), (height as f64).max(1.0));
         let key = (seed.to_owned(), (block * 10.0) as u32, (w * scale).round() as u32, (h * scale).round() as u32);
@@ -609,7 +615,7 @@ impl Controller {
     }
 
     /// Favicon PNG en base64 del ping (`faviconProvider`).
-    fn favicon(&self, b64: &str) -> Option<Image> {
+    pub fn favicon(&self, b64: &str) -> Option<Image> {
         if let Some(img) = self.favicons.borrow().get(b64) {
             return Some(img.clone());
         }

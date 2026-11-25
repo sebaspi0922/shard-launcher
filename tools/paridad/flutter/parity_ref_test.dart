@@ -8,6 +8,7 @@
 // Las escenas usan el mismo FakeBridge y el mismo arranque que
 // test/goldens_test.dart; las que repiten un golden deben dar el mismo PNG.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,6 +18,14 @@ import 'package:shard/app.dart';
 import 'package:shard/core/bridge.dart';
 import 'package:shard/core/crash_notice.dart';
 import 'package:shard/core/launch.dart';
+import 'package:shard/core/content_search.dart';
+import 'package:shard/core/tasks.dart';
+import 'package:shard/ui/content/content_page.dart';
+import 'package:shard/ui/content/modpack_dialog.dart';
+import 'package:shard/ui/content/project_sheet.dart';
+import 'package:shard/ui/servers/server_dialog.dart';
+import 'package:shard/ui/servers/server_widgets.dart';
+import 'package:shard/ui/servers/servers_page.dart';
 import 'package:shard/ui/accounts/account_dialogs.dart';
 import 'package:shard/ui/accounts/account_panel.dart';
 import 'package:shard/core/updates.dart';
@@ -30,6 +39,7 @@ import 'package:shard/ui/skins/skin_viewer.dart';
 import 'package:shard/ui/skins/skins_page.dart';
 import 'package:shard/ui/widgets/art.dart';
 import 'package:shard/ui/widgets/common.dart';
+import 'package:shard/ui/widgets/media.dart';
 import 'package:shard/ui/widgets/play_button.dart';
 
 import 'support/fake_bridge.dart';
@@ -208,6 +218,65 @@ double? _atmosphereSeconds(WidgetTester tester) {
     }
   }
   return null;
+}
+
+/// Primer elemento cuyo tipo empieza por `prefix` (genéricos: `SelectButton<String?>`).
+Finder _typeStarts(String prefix) =>
+    find.byWidgetPredicate((w) => w.runtimeType.toString().startsWith(prefix));
+
+/// Cajas de Contenido (fase 4). `card-i-play`: botón «Instalar» o insignia
+/// «Instalado» de la tarjeta (anclados a la derecha).
+Map<String, Rect> _contentBoxes(WidgetTester tester, {required String title, required String subtitle, String? results}) {
+  final boxes = <String, Rect>{};
+  Finder inPage(Finder f) => find.descendant(of: find.byType(ContentPage), matching: f);
+  void put(String name, Finder f) => _put(tester, boxes, name, f);
+  put('rail', _named('_NavRail'));
+  put('txt-title', inPage(find.text(title)));
+  put('txt-subtitle', inPage(find.text(subtitle)));
+  put('source', inPage(_typeStarts('SegmentedButton')));
+  put('import', inPage(find.byType(OutlinedButton)));
+  put('target', inPage(_named('_TargetBanner')));
+  put('search', inPage(find.byType(TextField)));
+  final selects = inPage(_typeStarts('SelectButton'));
+  for (var i = 0; i < selects.evaluate().length; i++) {
+    put('filter-$i', selects.at(i));
+  }
+  final pills = inPage(_named('_Pill'));
+  for (var i = 0; i < pills.evaluate().length; i++) {
+    put('kind-$i', pills.at(i));
+  }
+  if (results != null) put('txt-results', inPage(find.text(results)));
+  put('empty', inPage(find.byType(EmptyState)));
+  put('empty-action', find.descendant(of: inPage(find.byType(EmptyState)), matching: find.byType(FilledButton)));
+  final cards = inPage(find.byType(ProjectCard));
+  for (var i = 0; i < cards.evaluate().length; i++) {
+    final card = cards.at(i);
+    put('card-$i', card);
+    put('card-$i-icon', find.descendant(of: card, matching: find.byType(ProjectIcon)));
+    final btn = find.descendant(of: card, matching: find.byType(FilledButton));
+    put('card-$i-play', btn.evaluate().isNotEmpty ? btn : find.descendant(of: card, matching: find.byType(ColorBadge)));
+  }
+  return boxes;
+}
+
+/// Cajas de Servidores (fase 4).
+Map<String, Rect> _serversBoxes(WidgetTester tester, {required String title, required String subtitle, required String add}) {
+  final boxes = <String, Rect>{};
+  Finder inPage(Finder f) => find.descendant(of: find.byType(ServersPage), matching: f);
+  void put(String name, Finder f) => _put(tester, boxes, name, f);
+  put('rail', _named('_NavRail'));
+  put('txt-title', inPage(find.text(title)));
+  put('txt-subtitle', inPage(find.text(subtitle)));
+  put('import', inPage(find.byType(OutlinedButton)));
+  put('add', find.ancestor(of: inPage(find.text(add)), matching: find.byType(FilledButton)));
+  final cards = inPage(_named('_ServerCard'));
+  for (var i = 0; i < cards.evaluate().length; i++) {
+    final card = cards.at(i);
+    put('server-$i', card);
+    put('server-$i-icon', find.descendant(of: card, matching: find.byType(ServerFavicon)));
+    put('server-$i-play', find.descendant(of: card, matching: find.byType(FilledButton)));
+  }
+  return boxes;
 }
 
 Future<void> _capture(WidgetTester tester, String scene, Map<String, Rect> boxes) async {
@@ -406,5 +475,92 @@ void main() {
     c.read(updateProvider.notifier).debugSet(const UpdateState(status: UpdateStatus.available, info: appImageUpdate));
     await settle(tester);
     await _capture(tester, 'update_banner_es', _homeBoxes(tester, texts: homeEs));
+  });
+  // Fase 4: contenido y servidores (mismas escenas que los goldens).
+  const contentEs = (title: 'Contenido', subtitle: 'Mods, paquetes de recursos, shaders, datapacks y modpacks.');
+
+  testWidgets('content_search_es', (tester) async {
+    await pumpApp(tester, location: '/content');
+    await _capture(tester, 'content_search_es',
+        _contentBoxes(tester, title: contentEs.title, subtitle: contentEs.subtitle, results: '6 resultados'));
+  });
+
+  testWidgets('content_target_es', (tester) async {
+    await pumpApp(tester, location: '/content?instance=survival-amigos&kind=mod');
+    await _capture(tester, 'content_target_es',
+        _contentBoxes(tester, title: contentEs.title, subtitle: contentEs.subtitle, results: '6 resultados'));
+  });
+
+  testWidgets('content_curseforge_en', (tester) async {
+    final c = await pumpApp(tester, location: '/content', bridge: FakeBridge(language: 'en'));
+    final n = c.read(contentSearchProvider.notifier);
+    n.setFilters(c.read(contentSearchProvider).filters.copyWith(source: 'curseforge'));
+    await settle(tester);
+    await _capture(tester, 'content_curseforge_en',
+        _contentBoxes(tester, title: 'Content', subtitle: 'Mods, resource packs, shaders, datapacks and modpacks.'));
+  });
+
+  testWidgets('project_sheet_es', (tester) async {
+    final bridge = FakeBridge();
+    await pumpApp(tester, location: '/content?instance=survival-amigos&kind=mod', bridge: bridge);
+    showProjectSheet(pageContext(tester), bridge.searchResults.first);
+    await settle(tester);
+    final boxes = <String, Rect>{};
+    void put(String name, Finder f) => _put(tester, boxes, name, f);
+    final sheet = find.byType(ProjectSheet);
+    Finder inSheet(Finder f) => find.descendant(of: sheet, matching: f);
+    put('rail', _named('_NavRail'));
+    put('sheet', sheet);
+    put('sheet-icon', inSheet(find.byType(ProjectIcon)));
+    put('txt-sheet-title', inSheet(find.text('Sodium')));
+    put('sheet-select', inSheet(_typeStarts('SelectButton')));
+    put('txt-installed', inSheet(find.text('Ya está instalado en esta instancia (0.6.13+mc1.21.4).')));
+    put('txt-versions', inSheet(find.text('Versiones compatibles')));
+    put('latest-play', inSheet(find.byType(FilledButton)));
+    final rows = inSheet(_named('_VersionRow'));
+    for (var i = 0; i < rows.evaluate().length; i++) {
+      put('version-$i', rows.at(i));
+      put('version-$i-play', find.descendant(of: rows.at(i), matching: find.byType(OutlinedButton)));
+    }
+    await _capture(tester, 'project_sheet_es', boxes);
+  });
+
+  testWidgets('modpack_installing_es', (tester) async {
+    final bridge = FakeBridge()..modpackCompleter = Completer();
+    final c = await pumpApp(tester, location: '/content', bridge: bridge);
+    showModpackInstall(
+      pageContext(tester),
+      source: 'https://cdn.modrinth.com/data/fo/pack.mrpack',
+      name: 'Fabulously Optimized',
+    );
+    await settle(tester);
+    await tester.tap(find.text('Instalar modpack').last);
+    c.read(tasksProvider.notifier).debugSet(
+          TaskProgress(id: BigInt.from(9), stage: 'modpack', done: 87, total: 212, bytes: false),
+        );
+    await settle(tester);
+    await _capture(tester, 'modpack_installing_es',
+        _dialogBoxes<ModpackDialog>(tester, title: 'Instalar «Fabulously Optimized»'));
+  });
+
+  testWidgets('servers_es', (tester) async {
+    await pumpApp(tester, location: '/servers');
+    await _capture(tester, 'servers_es',
+        _serversBoxes(tester, title: 'Servidores', subtitle: '4 servidores · 3 en línea', add: 'Añadir servidor'));
+  });
+
+  testWidgets('server_dialog_en', (tester) async {
+    await pumpApp(tester, location: '/servers', bridge: FakeBridge(language: 'en'));
+    showServerDialog(pageContext(tester));
+    await settle(tester);
+    // `code` y `outlined` caen en el icono y el botón del desplegable: van como select-*.
+    final boxes = _dialogBoxes<ServerDialog>(tester, title: 'Add server')
+      ..remove('code')
+      ..remove('outlined');
+    final selects = find.descendant(of: find.byType(ServerDialog), matching: _typeStarts('SelectButton'));
+    for (var i = 0; i < selects.evaluate().length; i++) {
+      _put(tester, boxes, 'select-$i', selects.at(i));
+    }
+    await _capture(tester, 'server_dialog_en', boxes);
   });
 }

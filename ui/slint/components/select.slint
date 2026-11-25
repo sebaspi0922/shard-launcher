@@ -11,7 +11,8 @@
 //       value: "1.21.4";
 //       changed(v) => { … }
 //   }
-// `value` "" sin opción "" = nada elegido: se ve `placeholder` (o «—»).
+// `value` "" = nada elegido: se ve `placeholder` (si hay una opción "", deja
+// `placeholder` vacío y se ve su texto).
 
 import { Palette, Theme, Type } from "../theme.slint";
 import { Txt, Icon } from "base.slint";
@@ -140,6 +141,8 @@ export component SelectButton inherits Rectangle {
     callback changed(string);
     property <int> owner;
     // Recoge la elección del menú si es suya.
+    // (Ojo: ningún layout puede ser hijo directo del botón fuera de `lay`: le
+    // pasaría su ancho máximo.)
     property <int> serial: SelectMenu.serial;
     changed serial => {
         if SelectMenu.picked-owner == root.owner && SelectMenu.picked != root.value {
@@ -151,9 +154,11 @@ export component SelectButton inherits Rectangle {
     height: 48px;
     preferred-width: lay.preferred-width;
     min-width: lay.min-width;
+    // En una fila mide lo que su contenido (quien quiera, lo estira).
+    horizontal-stretch: 0;
     accessible-role: combobox;
     accessible-label: prefix;
-    accessible-value: placeholder-txt.text != "" ? placeholder-txt.text : root.value;
+    accessible-value: root.value == "" && root.placeholder != "" ? root.placeholder : root.value;
     accessible-enabled: enabled;
     accessible-expandable: true;
     accessible-expanded: SelectMenu.open && SelectMenu.owner == root.owner;
@@ -170,55 +175,54 @@ export component SelectButton inherits Rectangle {
     lay := HorizontalLayout {
         padding-left: 12px;
         padding-right: 12px;
-        // Icono de la opción elegida o, si no tiene, el del botón.
+        // Icono de la opción elegida y/o el del botón (`icon`; no se usan juntos).
         for o in root.options: HorizontalLayout {
             if o.value == root.value && (o.lead-initials != "" || o.lead-image.width > 0): HorizontalLayout {
                 Lead { option: o; y: (parent.height - self.height) / 2; }
                 Rectangle { width: 8px; }
             }
         }
-        if root.icon != "" && !root.has-lead: HorizontalLayout {
+        if root.icon != "": HorizontalLayout {
             Icon { glyph: root.icon; size: 18px; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
             Rectangle { width: 8px; }
         }
-        if root.prefix != "": Txt {
-            text: root.prefix + "  ";
-            style: { size: Type.label-large.size, weight: 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
-            color: Palette.text-muted;
-            y: (parent.height - self.height) / 2;
+        // (Un `Txt` dentro de `if`/`for` pierde su ancho preferido en el
+        // layout: va envuelto en un HorizontalLayout.)
+        if root.prefix != "": HorizontalLayout {
+            Txt {
+                text: root.prefix;
+                style: { size: Type.label-large.size, weight: 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+                color: Palette.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+            // Los dos espacios de «Versión  » (Flutter los mide algo menos).
+            Rectangle { width: 6px; }
         }
         // Valor: solo la opción elegida tiene texto.
         HorizontalLayout {
             horizontal-stretch: 1;
-            for o in root.options: Txt {
-                text: o.value == root.value ? o.label : "";
-                style: Type.label-large;
-                color: root.enabled ? Palette.text : Palette.text-muted;
+            for o in root.options: HorizontalLayout {
                 horizontal-stretch: o.value == root.value ? 1 : 0;
-                y: (parent.height - self.height) / 2;
+                if o.value == root.value: HorizontalLayout {
+                    Txt {
+                        text: o.label;
+                        style: Type.label-large;
+                        color: root.enabled ? Palette.text : Palette.text-muted;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
             }
-            placeholder-txt := Txt {
-                text: root.value == "" ? (root.placeholder != "" ? root.placeholder : root.has-empty ? "" : "—") : "";
-                style: Type.label-large;
-                color: root.enabled ? Palette.text : Palette.text-muted;
-                y: (parent.height - self.height) / 2;
+            if root.value == "" && root.placeholder != "": HorizontalLayout {
+                Txt {
+                    text: root.placeholder;
+                    style: Type.label-large;
+                    color: root.enabled ? Palette.text : Palette.text-muted;
+                    y: (parent.height - self.height) / 2;
+                }
             }
         }
         Rectangle { width: 4px; }
         Icon { glyph: "\u{e5cf}"; size: 18px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
-    }
-    // ¿Hay icono de opción? ¿Hay una opción ""? (para el respaldo)
-    property <bool> has-lead: lead-probe.preferred-width > 0;
-    property <bool> has-empty: empty-probe.preferred-width > 0;
-    lead-probe := HorizontalLayout {
-        visible: false;
-        for o in root.options: Rectangle {
-            width: o.value == root.value && (o.lead-initials != "" || o.lead-image.width > 0) ? 1px : 0;
-        }
-    }
-    empty-probe := HorizontalLayout {
-        visible: false;
-        for o in root.options: Rectangle { width: o.value == "" ? 1px : 0; }
     }
     ta := TouchArea {
         enabled: root.enabled;

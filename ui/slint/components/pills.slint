@@ -1,0 +1,86 @@
+// Píldoras seleccionables (PillTabs de media.dart): una fila de píldoras con
+// icono y contador opcionales; la elegida con el contenedor del acento.
+//
+//   PillTabs {
+//       items: [{ value: "mod", label: "Mods", icon: Icons.extension, count: -1 }, …];
+//       selected: "mod";
+//       changed(v) => { … }
+//   }
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon } from "base.slint";
+
+export struct PillItem {
+    value: string,
+    label: string,
+    // "" = sin icono.
+    icon: string,
+    // < 0 = sin contador.
+    count: int,
+}
+
+component Pill inherits Rectangle {
+    in property <PillItem> item;
+    in property <bool> on;
+    callback clicked;
+    height: 36px;
+    // El texto de Slint mide medio píxel más que el de Flutter.
+    width: row.preferred-width + 1.5px;
+    border-radius: self.height / 2;
+    background: on ? Palette.accent-container : Palette.surface1;
+    border-width: 1px;
+    border-color: on ? Palette.accent.with-alpha(0.45) : Palette.border;
+    animate background, border-color { duration: Theme.fast; easing: cubic-bezier(0.16, 1, 0.3, 1); }
+    accessible-role: tab;
+    accessible-label: item.label;
+    accessible-checkable: true;
+    accessible-checked: on;
+    accessible-action-default => { clicked(); }
+    // Container con borde: el contenido va 1 px dentro.
+    row := HorizontalLayout {
+        x: 1px;
+        padding-left: 14px;
+        padding-right: 14px;
+        if root.item.icon != "": HorizontalLayout {
+            Icon { glyph: root.item.icon; size: 16px; color: root.on ? Palette.accent : Palette.text-muted; y: (parent.height - self.height) / 2; }
+            Rectangle { width: 6px; }
+        }
+        Txt {
+            text: root.item.label;
+            style: { size: Type.label-large.size, weight: root.on ? 600 : 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+            color: root.on ? Palette.on-accent-container : Palette.text-secondary;
+            y: (parent.height - self.height) / 2;
+        }
+        if root.item.count >= 0: HorizontalLayout {
+            Rectangle { width: 6px; }
+            Txt {
+                text: root.item.count;
+                style: Type.label-medium;
+                family: "Inter Tnum";
+                color: root.on ? Palette.accent : Palette.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+export component PillTabs inherits HorizontalLayout {
+    in property <[PillItem]> items;
+    in-out property <string> selected;
+    callback changed(string);
+    spacing: 8px;
+    alignment: start;
+    accessible-role: tab-list;
+    for it in root.items: Pill {
+        item: it;
+        on: it.value == root.selected;
+        accessible-id: "kind-pill";
+        clicked => {
+            if root.selected != it.value {
+                root.selected = it.value;
+                root.changed(it.value);
+            }
+        }
+    }
+}
