@@ -6,5 +6,5 @@
 - GPU: Intel Corporation Alder Lake-P GT1 [UHD Graphics] (rev 0c)
 - backend de las apps: x11; Slint: software (por defecto)
 - sesión: XDG_SESSION_TYPE=? XDG_CURRENT_DESKTOP=? WAYLAND_DISPLAY= DISPLAY=:8
-- Slint: /home/born/proyectos/shard-gpui-spike/shard-slint-f0/target/release-ui/shard-ui (b33855e)
+- Slint: <checkout>/shard-slint-f0/target/release-ui/shard-ui (b33855e)
 - Flutter: ../shard-launcher/app/build/linux/x64/release/bundle
