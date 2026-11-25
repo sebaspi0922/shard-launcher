@@ -3,6 +3,22 @@
 import { LaunchState, LaunchPhase } from "components/buttons.slint";
 
 export global Fmt {
+    // Separador decimal del idioma (Rust lo pone al cambiar de idioma).
+    in property <string> decimal: ",";
+
+    // Número con un decimal como mucho (NumberFormat('0.#')).
+    public pure function one-decimal(v: float) -> string {
+        let tenths = round(v * 10);
+        let whole = floor(tenths / 10);
+        let frac = mod(tenths, 10);
+        return frac == 0 ? whole : whole + decimal + frac;
+    }
+
+    // formatMemory: MB → «4 GB», «1,5 GB».
+    public pure function memory(mb: int) -> string {
+        return @tr("memoryGb", one-decimal(mb / 1024));
+    }
+
     // formatPlaytime: segundos → «86 h 12 min».
     public pure function playtime(seconds: int) -> string {
         let h = floor(seconds / 3600);

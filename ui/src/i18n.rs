@@ -100,3 +100,8 @@ mod tests {
         assert_eq!(text("en", "loaderCustom"), "Custom");
     }
 }
+
+/// Separador decimal del idioma (`NumberFormat` de intl).
+pub fn decimal(lang: &str) -> &'static str {
+    if lang == "es" { "," } else { "." }
+}

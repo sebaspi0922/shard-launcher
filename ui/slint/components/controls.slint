@@ -1,0 +1,292 @@
+// Controles de formulario con el tema de app_theme.dart: interruptor,
+// deslizador, botón segmentado de texto, caja de valor y deslizador de
+// memoria (memory_slider.dart). Compartidos por Ajustes, la pestaña Ajustes
+// de la instancia, Contenido y Copias.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Fmt } from "../fmt.slint";
+import { Txt, Icon } from "base.slint";
+import { Icons } from "../icons.slint";
+
+// Switch de Material 3 (switchTheme): pista de 52 × 32 en un área de 60 × 48
+// (MaterialTapTargetSize.padded). Apagado: pista superficie 2 con borde
+// fuerte y pulgar de 16 en texto secundario; encendido: pista del acento y
+// pulgar de 24 en `on-accent`; al pulsar, pulgar de 28.
+export component Switch inherits Rectangle {
+    in-out property <bool> checked;
+    in property <bool> enabled: true;
+    // Nombre accesible (el título de la fila).
+    in property <string> label;
+    callback toggled(bool);
+    width: 60px;
+    height: 48px;
+    accessible-role: switch;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-enabled: enabled;
+    accessible-action-default => { toggle(); }
+    property <length> knob: ta.pressed ? 28px : checked ? 24px : 16px;
+    Rectangle {
+        x: 4px;
+        y: (parent.height - 32px) / 2;
+        width: 52px;
+        height: 32px;
+        border-radius: 16px;
+        background: root.checked ? Palette.accent : Palette.surface2;
+        border-width: root.checked ? 0 : 2px;
+        border-color: Palette.border-strong;
+        opacity: root.enabled ? 1 : 0.38;
+        animate background { duration: Theme.motion ? Theme.fast : 0ms; }
+        Rectangle {
+            width: root.knob;
+            height: root.knob;
+            x: (root.checked ? parent.width - 16px : 16px) - self.width / 2;
+            y: (parent.height - self.height) / 2;
+            border-radius: self.width / 2;
+            background: root.checked ? Palette.on-accent : Palette.text-secondary;
+            animate x, width, height { duration: Theme.motion ? Theme.fast : 0ms; easing: ease-out; }
+        }
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.toggle(); }
+    }
+    function toggle() {
+        if !enabled { return; }
+        checked = !checked;
+        toggled(checked);
+    }
+}
+
+// Slider de Material (sliderTheme, forma de 2023): 48 de alto, pista de 4
+// (6 la parte activa) a 24 de cada borde, pulgar de 20. `step` > 0 = valores
+// discretos (divisions). `tint` cambia el color activo (aviso de memoria).
+// Desactivado: los colores por defecto de Material (texto al 38 % / 12 % y
+// pulgar opaco sobre el fondo). Sin la etiqueta flotante al arrastrar.
+export component Slider inherits Rectangle {
+    in-out property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 1;
+    in property <float> step: 0;
+    in property <bool> enabled: true;
+    in property <color> tint: Palette.accent;
+    in property <string> label;
+    // Cada cambio al arrastrar, hacer clic o con el teclado (ya en pasos).
+    callback changed(float);
+    height: 48px;
+    min-width: 64px;
+    horizontal-stretch: 1;
+    accessible-role: slider;
+    accessible-label: label;
+    accessible-value: value;
+    accessible-value-minimum: minimum;
+    accessible-value-maximum: maximum;
+    accessible-value-step: step > 0 ? step : (maximum - minimum) / 100;
+    accessible-enabled: enabled;
+    accessible-action-increment => { set(value + nudge); }
+    accessible-action-decrement => { set(value - nudge); }
+    property <float> nudge: step > 0 ? step : (maximum - minimum) / 20;
+    property <length> inset: 24px;
+    property <length> span: max(1px, root.width - 2 * inset);
+    property <float> fraction: maximum > minimum ? clamp((value - minimum) / (maximum - minimum), 0, 1) : 0;
+    property <length> thumb-x: inset + fraction * span;
+    // Pista inactiva y activa (6 de alto) encima.
+    Rectangle {
+        x: root.inset;
+        y: (parent.height - 4px) / 2;
+        width: root.span;
+        height: 4px;
+        border-radius: 2px;
+        background: root.enabled ? Palette.surface3 : Palette.text.with-alpha(0.12);
+    }
+    Rectangle {
+        x: root.inset;
+        y: (parent.height - 6px) / 2;
+        width: root.thumb-x - root.inset;
+        height: 6px;
+        border-radius: 3px;
+        background: root.enabled ? root.tint : Palette.text.with-alpha(0.38);
+    }
+    // Halo al pasar el ratón, arrastrar o con foco (overlayColor, radio 24).
+    if root.enabled && (ta.has-hover || ta.pressed || fs.has-focus): Rectangle {
+        x: root.thumb-x - 24px;
+        y: (parent.height - 48px) / 2;
+        width: 48px;
+        height: 48px;
+        border-radius: 24px;
+        background: root.tint.with-alpha(0.12);
+    }
+    Rectangle {
+        x: root.thumb-x - 10px;
+        y: (parent.height - 20px) / 2;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: root.enabled ? root.tint : Theme.blend(Palette.text.with-alpha(0.38), Palette.background);
+    }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                fs.focus();
+                root.at(self.mouse-x);
+            }
+        }
+        moved => {
+            if self.pressed { root.at(self.mouse-x); }
+        }
+    }
+    fs := FocusScope {
+        enabled: root.enabled;
+        key-pressed(e) => {
+            if e.text == Key.LeftArrow || e.text == Key.DownArrow {
+                root.set(root.value - root.nudge);
+                return accept;
+            }
+            if e.text == Key.RightArrow || e.text == Key.UpArrow {
+                root.set(root.value + root.nudge);
+                return accept;
+            }
+            reject
+        }
+    }
+    function at(x: length) {
+        set(minimum + clamp((x - inset) / span, 0, 1) * (maximum - minimum));
+    }
+    function set(v: float) {
+        let c = clamp(v, minimum, maximum);
+        let s = step > 0 ? clamp(minimum + round((c - minimum) / step) * step, minimum, maximum) : c;
+        if s != value {
+            value = s;
+            changed(s);
+        }
+    }
+}
+
+// SegmentedButton de texto (segmentedButtonTheme, densidad compacta): 32 de
+// alto en 40, todos los segmentos del ancho del más ancho, sin icono de
+// elegido. Hasta 5 opciones.
+export component SegmentedButton inherits Rectangle {
+    in property <[string]> options;
+    in-out property <int> selected;
+    in property <string> label;
+    callback changed(int);
+    property <length> pad: 12px;
+    property <length> seg: max(m0.preferred-width, m1.preferred-width, m2.preferred-width, m3.preferred-width, m4.preferred-width) + 2 * pad + 2px;
+    width: options.length * seg;
+    height: 40px;
+    accessible-role: groupbox;
+    accessible-label: label;
+    // Medidas de los textos (ocultas).
+    m0 := Txt { visible: false; style: Type.label-medium; text: root.options[0]; }
+    m1 := Txt { visible: false; style: Type.label-medium; text: root.options[1]; }
+    m2 := Txt { visible: false; style: Type.label-medium; text: root.options[2]; }
+    m3 := Txt { visible: false; style: Type.label-medium; text: root.options[3]; }
+    m4 := Txt { visible: false; style: Type.label-medium; text: root.options[4]; }
+    Rectangle {
+        y: 4px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+        for text[i] in root.options: Rectangle {
+            x: i * root.seg;
+            width: root.seg;
+            background: i == root.selected ? Palette.accent-container : seg-ta.has-hover ? Palette.surface2 : Palette.surface1;
+            animate background { duration: Theme.fast; }
+            accessible-role: button;
+            accessible-label: text;
+            accessible-checkable: true;
+            accessible-checked: i == root.selected;
+            accessible-action-default => { root.pick(i); }
+            if i > 0: Rectangle { x: 0; width: 1px; background: Palette.border; }
+            Txt {
+                x: root.pad;
+                width: parent.width - 2 * root.pad;
+                y: (parent.height - self.height) / 2;
+                text: text;
+                style: Type.label-medium;
+                horizontal-alignment: center;
+                color: i == root.selected ? Palette.on-accent-container : Palette.text-secondary;
+            }
+            seg-ta := TouchArea { mouse-cursor: pointer; clicked => { root.pick(i); } }
+        }
+    }
+    function pick(i: int) {
+        if selected != i {
+            selected = i;
+            changed(i);
+        }
+    }
+}
+
+// Caja con el valor de un deslizador: 76 de ancho, relleno 8 + borde 1.
+export component ValueBox inherits Rectangle {
+    in property <string> text;
+    in property <color> tint: Palette.text;
+    width: 76px;
+    height: 36px;
+    border-radius: Theme.radius-control;
+    background: Palette.surface2;
+    border-width: 1px;
+    border-color: Palette.border;
+    Txt {
+        y: (parent.height - self.height) / 2;
+        width: parent.width;
+        text: root.text;
+        style: Type.title-small;
+        family: "Inter Tnum";
+        color: root.tint;
+        horizontal-alignment: center;
+    }
+}
+
+// MemorySlider (memory_slider.dart): pasos de 512 MB desde 1 GB hasta la RAM
+// del equipo (redondeada a pasos), caja con el valor, límites debajo y aviso
+// al pasar del 75 % de la RAM.
+export component MemorySlider inherits VerticalLayout {
+    in property <int> value-mb;
+    in property <int> total-mb;
+    in property <string> label;
+    // Cada cambio (MB, ya en pasos).
+    callback changed(int);
+    property <int> step: 512;
+    property <int> low: 1024;
+    property <int> high: max(low + step, floor(total-mb / step) * step);
+    property <int> shown: clamp(value-mb, low, high);
+    property <bool> warn: total-mb > 0 && shown > total-mb * 0.75;
+    HorizontalLayout {
+        spacing: 12px;
+        Slider {
+            minimum: root.low;
+            maximum: root.high;
+            step: root.step;
+            value: root.shown;
+            tint: root.warn ? Palette.warning : Palette.accent;
+            label: root.label;
+            changed(v) => { root.changed(round(v)); }
+        }
+        ValueBox {
+            y: (parent.height - self.height) / 2;
+            text: Fmt.memory(root.shown);
+            tint: root.warn ? Palette.warning : Palette.text;
+        }
+    }
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        Txt { text: Fmt.memory(root.low); style: Type.body-small; color: Palette.text-secondary; }
+        Rectangle { horizontal-stretch: 1; }
+        Txt { text: Fmt.memory(root.high); style: Type.body-small; color: Palette.text-secondary; }
+    }
+    if root.warn: HorizontalLayout {
+        padding-top: 12px;
+        spacing: 8px;
+        Icon { glyph: Icons.warning; size: 16px; color: Palette.warning; }
+        Txt { text: @tr("isMemoryWarning", Fmt.memory(root.total-mb)); style: Type.body-small; color: Palette.warning; horizontal-stretch: 1; }
+    }
+}

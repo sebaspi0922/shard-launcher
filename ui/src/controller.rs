@@ -19,7 +19,7 @@ use crate::launch::{self, Failure};
 use crate::notices::{CrashNotice, Crashes, Update, UpdateStatus, UpdateView};
 use crate::prefs::UiPrefs;
 use crate::{
-    AccountChip, Activity, HomeState, InstanceItem, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
+    AccountChip, Activity, Fmt, HomeState, InstanceItem, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
     Notices, Route, ServerItem, UpdatePhase, art, errors, face, i18n,
 };
 
@@ -168,6 +168,7 @@ impl Controller {
             crashes: RefCell::default(),
             appearance: Appearance::new(ui),
         });
+        ui.global::<Fmt>().set_decimal(i18n::decimal(lang).into());
         let st = ui.global::<InstancesState>();
         st.set_items(ModelRc::from(ctl.items.clone()));
         on!(ctl, st, on_search, |c, q| {
@@ -383,6 +384,9 @@ impl Controller {
     pub fn set_language(&self, lang: &str) {
         *self.lang.borrow_mut() = lang.to_owned();
         i18n::select(lang);
+        if let Some(ui) = self.ui.upgrade() {
+            ui.global::<Fmt>().set_decimal(i18n::decimal(lang).into());
+        }
         self.refresh();
         self.refresh_notices();
     }
