@@ -98,6 +98,9 @@ export struct TextStyle {
     weight: int,
     line-height: float,
     letter-spacing: length,
+    // Corrección vertical del glifo (medida con el arnés a escala 1): el
+    // rasterizador de Slint deja los pesos 400/500 algo más abajo que Skia.
+    nudge: length,
 }
 
 export global Type {
@@ -108,9 +111,9 @@ export global Type {
     out property <TextStyle> title-medium: { size: 15px, weight: 600, line-height: 1.35, letter-spacing: -0.1px };
     out property <TextStyle> title-small: { size: 13px, weight: 600, line-height: 1.35, letter-spacing: 0 };
     out property <TextStyle> body-large: { size: 15px, weight: 400, line-height: 1.5, letter-spacing: 0 };
-    out property <TextStyle> body-medium: { size: 13.5px, weight: 400, line-height: 1.5, letter-spacing: 0 };
-    out property <TextStyle> body-small: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0 };
+    out property <TextStyle> body-medium: { size: 13.5px, weight: 400, line-height: 1.5, letter-spacing: 0, nudge: -2px };
+    out property <TextStyle> body-small: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0, nudge: -1px };
     out property <TextStyle> label-large: { size: 13.5px, weight: 600, line-height: 1.35, letter-spacing: 0 };
-    out property <TextStyle> label-medium: { size: 12px, weight: 500, line-height: 1.35, letter-spacing: 0 };
-    out property <TextStyle> label-small: { size: 11px, weight: 600, line-height: 1.35, letter-spacing: 0.4px };
+    out property <TextStyle> label-medium: { size: 12px, weight: 500, line-height: 1.35, letter-spacing: 0, nudge: -1px };
+    out property <TextStyle> label-small: { size: 11px, weight: 600, line-height: 1.35, letter-spacing: 0.4px, nudge: -1px };
 }

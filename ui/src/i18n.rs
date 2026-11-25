@@ -45,6 +45,11 @@ pub fn text(lang: &str, key: &str) -> String {
     table(lang).get(key).cloned().unwrap_or_else(|| key.to_owned())
 }
 
+/// Separador decimal del idioma (`NumberFormat` de intl).
+pub fn decimal(lang: &str) -> &'static str {
+    if lang == "es" { "," } else { "." }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

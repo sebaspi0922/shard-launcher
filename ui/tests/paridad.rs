@@ -20,6 +20,8 @@ use shard_ui::controller::{Actions, Controller};
 use shard_ui::fixtures;
 use shard_ui::instances::Phase;
 use shard_ui::accounts::Accounts;
+use shard_ui::content::Content;
+use shard_ui::servers::Servers;
 use shard_ui::launch::Failure;
 use shard_ui::notices::CrashNotice;
 use shard_ui::prefs::UiPrefs;
@@ -44,6 +46,8 @@ struct Ctx<'a> {
     ctl: &'a Controller,
     acc: &'a Accounts,
     skins: &'a Skins,
+    content: &'a Content,
+    servers: &'a Servers,
 }
 
 /// Una escena: idioma y qué hacer después de cargar los datos de ejemplo.
@@ -75,6 +79,41 @@ fn home(c: &Controller, ui: &MainWindow) {
 fn styled(c: &Controller, ui: &MainWindow, style: Style) {
     c.set_prefs(UiPrefs { style, blur: 10.0, dim: 0.5, first_run_done: Some(true), ..Default::default() });
     home(c, ui);
+}
+
+/// Contenido con la búsqueda respondida (FakeBridge) y los iconos cargados.
+fn content_ready(c: &Ctx) {
+    c.ui.set_route(Route::Content);
+    c.content.shown();
+    answer_search(c);
+}
+
+/// Responde la búsqueda en curso con los datos de ejemplo.
+fn answer_search(c: &Ctx) {
+    let s = c.content.search_state();
+    c.content.page(s.generation(), Ok(fixtures::search_page(&s.filters, 0, shard_ui::content::PAGE)));
+    for p in fixtures::sample_projects() {
+        let url = p.icon_url.unwrap();
+        c.content.icon_loaded(&url, fixtures::sample_icon(&url));
+    }
+}
+
+/// `/content?instance=survival-amigos&kind=mod`: como en Flutter, el destino
+/// se configura antes de que lleguen las instancias (filtros sin versión).
+fn content_target(c: &Ctx) {
+    c.content.open_for("survival-amigos", Some("mod"), None);
+    c.ctl.set_instances(fixtures::sample_instances());
+    c.content.installed_loaded("survival-amigos", fixtures::sample_installed());
+    c.content.shown();
+    answer_search(c);
+}
+
+/// Servidores con la lista y los estados de `FakeBridge`.
+fn servers_ready(c: &Ctx) {
+    c.ctl.set_instances(fixtures::sample_instances());
+    c.ctl.set_servers(fixtures::sample_servers());
+    c.ctl.set_statuses(fixtures::sample_statuses_all());
+    c.ui.set_route(Route::Servers);
 }
 
 const SCENES: &[Scene] = &[
@@ -217,6 +256,48 @@ const SCENES: &[Scene] = &[
             c.update_checked(Some(fixtures::sample_update()), false);
         },
     },
+    // Fase 4: contenido y servidores.
+    Scene { name: "content_search_es", lang: "es", setup: content_ready },
+    Scene { name: "content_target_es", lang: "es", setup: content_target },
+    Scene {
+        name: "content_curseforge_en",
+        lang: "en",
+        setup: |c| {
+            c.content.key_state(false);
+            content_ready(c);
+            let f = shard_ui::content::Filters { source: "curseforge".into(), ..c.content.filters() };
+            c.content.set_filters(f, false);
+        },
+    },
+    Scene {
+        name: "project_sheet_es",
+        lang: "es",
+        setup: |c| {
+            content_target(c);
+            c.content.open_sheet("sodium");
+            c.content.versions_loaded(c.content.versions_seq(), Ok(fixtures::sample_versions("sodium", Some("1.21.4"), Some("fabric"))));
+        },
+    },
+    Scene {
+        name: "modpack_installing_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            content_ready(c);
+            c.content.open_modpack(Some("https://cdn.modrinth.com/data/fo/pack.mrpack".into()), "Fabulously Optimized");
+            by_id(c.ui, "filled")[0].mock_single_click(PointerEventButton::Left);
+            c.content.set_modpack_progress(87, 212);
+        },
+    },
+    Scene { name: "servers_es", lang: "es", setup: servers_ready },
+    Scene {
+        name: "server_dialog_en",
+        lang: "en",
+        setup: |c| {
+            servers_ready(c);
+            c.servers.open_dialog(None);
+        },
+    },
 ];
 
 fn by_label(ui: &MainWindow, label: &str) -> ElementHandle {
@@ -259,6 +340,9 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
         // Fase 2.
         "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "field-2", "code", "outlined", "filled", "cancel",
         "progress", "chip", "empty-action", "viewer", "change", "source", "reset", "apply", "capes",
+        // Fase 4.
+        "txt-subtitle", "import", "target", "txt-results", "sheet", "sheet-icon", "txt-sheet-title", "sheet-select",
+        "txt-installed", "txt-versions", "latest-play", "add",
     ] {
         if let Some(e) = by_id(ui, name).first() {
             let r = rect(e);
@@ -268,12 +352,17 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
             }
         }
     }
+    for (kind, name) in [("filter", "filter"), ("select", "select"), ("kind-pill", "kind")] {
+        for (i, e) in by_id(ui, kind).iter().enumerate() {
+            out.insert(format!("{name}-{i}"), rect(e));
+        }
+    }
     for kind in ["account", "action", "stage", "model", "cape"] {
         for (i, e) in by_id(ui, kind).iter().enumerate() {
             out.insert(format!("{kind}-{i}"), rect(e));
         }
     }
-    for kind in ["card", "row", "recent"] {
+    for kind in ["card", "row", "recent", "version", "server"] {
         let items = by_id(ui, kind);
         let icons = by_id(ui, &format!("{kind}-icon"));
         let plays = by_id(ui, &format!("{kind}-play"));
@@ -316,11 +405,17 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     ctl.appearance.set_sphere_time(Some(ref_clock(refs, scene.name, "sphere_s").unwrap_or(0.0)));
     let rec = fixtures::Recorder::default();
     let acc = Accounts::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| 0));
-    let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
+    let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec.clone()));
+    let content = Content::new(&ui, ctl.clone(), Box::new(rec.clone()));
+    let servers = Servers::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
+    {
+        let s = servers.clone();
+        ctl.on_refresh(move |_| s.refresh());
+    }
     acc.set_accounts(Ok(fixtures::sample_accounts()));
     ui.set_route(Route::Instances);
     ui.show().unwrap();
-    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins });
+    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers });
     // El fondo animado de Flutter va quieto en el modo de la escena.
     ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.

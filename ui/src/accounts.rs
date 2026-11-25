@@ -270,14 +270,16 @@ impl Accounts {
     }
 
     /// Cara de la cuenta: la de su skin si ya está, si no la generada.
-    fn chip(&self, a: Option<&Account>) -> AccountChip {
-        let Some(a) = a else { return AccountChip::default() };
-        let face = a
-            .skin_url
+    pub fn face(&self, a: &Account) -> slint::Image {
+        a.skin_url
             .as_ref()
             .and_then(|u| self.faces.borrow().get(u).cloned().flatten())
-            .unwrap_or_else(|| face::generated_face_image(&a.name));
-        AccountChip { present: true, name: a.name.as_str().into(), face }
+            .unwrap_or_else(|| face::generated_face_image(&a.name))
+    }
+
+    fn chip(&self, a: Option<&Account>) -> AccountChip {
+        let Some(a) = a else { return AccountChip::default() };
+        AccountChip { present: true, name: a.name.as_str().into(), face: self.face(a) }
     }
 
     /// Lista del núcleo (o el error al leerla: sin cuentas, como Flutter).

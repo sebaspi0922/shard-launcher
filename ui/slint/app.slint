@@ -15,10 +15,17 @@ import { HomePage, HomeState, ServerItem } from "screens/home.slint";
 import { LaunchFailure } from "components/feedback.slint";
 import { Notices, UpdatePhase, UpdateBanner, CrashBanner } from "components/banners.slint";
 import { TipLayer, Tips } from "components/common.slint";
+import { SelectMenuLayer, SelectMenu, SelectOption } from "components/select.slint";
+import { CurseforgeKey, CurseforgeKeyLayer } from "components/curseforge_key.slint";
+import { ContentPage, ContentLayer, ContentState, ProjectItem, SheetVersion, ModpackPhase } from "screens/content.slint";
+import { ServersPage, ServersLayer, ServersState, ServerCard, ServerMenu } from "screens/servers.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase,
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
 export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
+export { SelectMenu, SelectOption }
+export { ContentState, ProjectItem, SheetVersion, ModpackPhase, CurseforgeKey }
+export { ServersState, ServerCard, ServerMenu }
 
 // Fondo de la app (backdrop.dart): el del estilo o una imagen propia.
 export enum BackdropKind {
@@ -178,8 +185,10 @@ export component MainWindow inherits Window {
             if root.route == Route.home: PageFade { HomePage { account: root.account; } }
             if root.route == Route.instances: PageFade { InstancesPage { } }
             if root.route == Route.skins: PageFade { SkinsPage { } }
+            if root.route == Route.content: PageFade { ContentPage { } }
+            if root.route == Route.servers: PageFade { ServersPage { } }
             // Pantallas de fases siguientes: solo su título por ahora.
-            if root.route != Route.instances && root.route != Route.home && root.route != Route.skins: EmptyState {
+            if root.route != Route.instances && root.route != Route.home && root.route != Route.skins && root.route != Route.content && root.route != Route.servers: EmptyState {
                 icon: root.route == Route.content ? Icons.extension
                     : root.route == Route.servers ? Icons.dns
                     : root.route == Route.skins ? Icons.checkroom : Icons.settings;
@@ -203,6 +212,8 @@ export component MainWindow inherits Window {
     }
     AccountsLayer { }
     SkinsLayer { }
+    ContentLayer { }
+    ServersLayer { }
     Snackbar {
         x: (parent.width - self.width) / 2;
         y: parent.height - self.height - 24px;
@@ -241,6 +252,9 @@ export component MainWindow inherits Window {
             }
         }
     }
+    CurseforgeKeyLayer { }
+    // Menú de un SelectButton abierto (encima de diálogos y paneles).
+    SelectMenuLayer { }
     TipLayer { }
     // Bordes para redimensionar (sin marco no los pone el sistema).
     if root.resizable && !root.is-maximized: Rectangle {

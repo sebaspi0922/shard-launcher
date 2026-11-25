@@ -1,0 +1,1100 @@
+// Contenido (content_page.dart, project_sheet.dart, modpack_dialog.dart):
+// buscador de Modrinth y CurseForge con filtros y scroll infinito, destino
+// al entrar desde una instancia, ficha lateral con versiones e instalación,
+// e importación de modpacks con progreso. Rust (`content.rs`) es la fuente
+// de verdad: aquí solo hay vista.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Wrapped, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, OutlinedButton, TextButton } from "../components/buttons.slint";
+import { TextField, LabeledField } from "../components/inputs.slint";
+import { EmptyState, ErrorNote, FormDialog, DialogActions, CloseButton } from "../components/feedback.slint";
+import { Tag, TipArea } from "../components/common.slint";
+import { ColorBadge } from "../components/panels.slint";
+import { SelectButton, SelectOption } from "../components/select.slint";
+import { PillTabs, PillItem } from "../components/pills.slint";
+import { CurseforgeKey } from "../components/curseforge_key.slint";
+import { InstanceIcon, InstanceItem, LoadState } from "instances.slint";
+
+// Un proyecto de la búsqueda listo para pintar.
+export struct ProjectItem {
+    id: string,
+    title: string,
+    // «de jellysquid3» o "".
+    author: string,
+    description: string,
+    downloads: string,
+    follows: string,
+    cat1: string,
+    cat2: string,
+    has-icon: bool,
+    icon: image,
+    initials: string,
+    icon-from: color,
+    icon-to: color,
+    // Ya está en la instancia de destino.
+    installed: bool,
+    // Instalándose desde su tarjeta.
+    busy: bool,
+    pack: bool,
+}
+
+// Una versión de la ficha.
+export struct SheetVersion {
+    id: string,
+    number: string,
+    // release, beta o alpha.
+    release: string,
+    meta: string,
+    busy: bool,
+    enabled: bool,
+}
+
+export enum ModpackPhase { form, installing, done }
+
+export global ContentState {
+    // Filtros (valores del núcleo; "" = cualquiera).
+    in property <string> source: "modrinth";
+    in property <string> kind: "mod";
+    in property <string> mc;
+    in property <string> loader;
+    in property <string> sort: "relevance";
+    // Texto del buscador (estado de vista: Rust no lo pisa).
+    in-out property <string> text;
+    in property <bool> uses-loader: true;
+    in property <string> search-hint;
+    in property <[SelectOption]> mc-options;
+    in property <[SelectOption]> loader-options;
+    in property <[SelectOption]> sort-options;
+    // CurseForge sin clave.
+    in property <bool> needs-key;
+    in property <bool> started;
+    in property <bool> loading;
+    in property <bool> has-error;
+    in property <string> error-message;
+    in property <string> error-detail;
+    in property <int> total;
+    in property <bool> has-more;
+    in property <[ProjectItem]> items;
+    // Al cambiar los filtros, la lista vuelve arriba.
+    in property <int> scroll-serial;
+    // Destino (desde una instancia).
+    in property <bool> has-target;
+    in property <InstanceItem> target;
+    in property <string> target-line;
+    in property <string> target-world;
+
+    // Ficha.
+    in property <bool> sheet-open;
+    in property <ProjectItem> sheet-project;
+    in property <bool> sheet-has-icon;
+    in property <image> sheet-icon;
+    in property <string> sheet-kind;
+    in property <string> sheet-kind-label;
+    in property <string> sheet-source-label;
+    in property <[string]> sheet-categories;
+    in property <bool> sheet-pack;
+    in property <[SelectOption]> sheet-instance-options;
+    in property <string> sheet-instance;
+    in property <bool> sheet-has-worlds;
+    in property <[SelectOption]> sheet-world-options;
+    in property <string> sheet-world;
+    // «Ya está instalado…» o "".
+    in property <string> sheet-installed;
+    in property <LoadState> sheet-state: LoadState.loading;
+    in property <string> sheet-error-message;
+    in property <string> sheet-error-detail;
+    // < 0 = aún sin lista.
+    in property <int> sheet-count: -1;
+    in property <string> sheet-empty-text;
+    in property <bool> sheet-can-latest;
+    in property <bool> sheet-latest-busy;
+    in property <[SheetVersion]> sheet-versions;
+
+    // Modpack.
+    in property <bool> modpack-open;
+    in property <bool> modpack-fixed;
+    in property <string> modpack-title;
+    in property <string> modpack-file;
+    in property <ModpackPhase> modpack-phase;
+    in property <int> modpack-done-count;
+    in property <int> modpack-total;
+    in property <float> modpack-progress: -1;
+    in property <bool> modpack-has-error;
+    in property <string> modpack-error-message;
+    in property <string> modpack-error-detail;
+    in property <InstanceItem> modpack-instance;
+    in property <string> modpack-instance-line;
+    in property <string> modpack-done-body;
+    in property <[string]> modpack-warnings;
+    in-out property <bool> modpack-from-url;
+    in-out property <string> modpack-url;
+    in-out property <string> modpack-name;
+
+    callback shown();
+    callback source-changed(string);
+    callback kind-changed(string);
+    callback mc-changed(string);
+    callback loader-changed(string);
+    callback sort-changed(string);
+    callback text-edited(string);
+    callback retry();
+    callback load-more();
+    // Píxeles que quedan por debajo de lo visible.
+    callback scrolled(float);
+    callback open(string);
+    callback install(string);
+    callback import-modpack();
+    callback back-to-instance();
+    callback clear-target();
+    callback add-key();
+    callback sheet-close();
+    callback sheet-pick-instance(string);
+    callback sheet-pick-world(string);
+    // "" = la última compatible.
+    callback sheet-install(string);
+    callback modpack-from(bool);
+    callback modpack-pick();
+    callback modpack-install(string, string);
+    callback modpack-close();
+    callback modpack-open-instance();
+}
+
+// Icono de un proyecto (ProjectIcon): la imagen descargada con esquinas
+// redondeadas sobre superficie 2 o, sin ella, las iniciales.
+component ProjectIcon inherits Rectangle {
+    in property <bool> has-icon;
+    in property <image> icon;
+    in property <string> id;
+    in property <string> title;
+    in property <string> initials;
+    in property <color> from;
+    in property <color> to;
+    in property <length> size: 64px;
+    width: size;
+    height: size;
+    accessible-role: image;
+    accessible-label: title;
+    if root.has-icon: Rectangle {
+        border-radius: root.size * 0.26;
+        clip: true;
+        background: Palette.surface2;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: root.icon;
+            image-fit: cover;
+            accessible-role: none;
+        }
+    }
+    if !root.has-icon: InstanceIcon {
+        size: root.size;
+        item: { id: root.id, name: root.title, initials: root.initials, icon-from: root.from, icon-to: root.to };
+    }
+}
+
+// FilledButton.tonalIcon de la tarjeta: 32 visibles en un área de 48.
+component TonalButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> busy;
+    callback clicked;
+    height: 48px;
+    width: lay.preferred-width;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-enabled: !busy;
+    accessible-action-default => { if !busy { clicked(); } }
+    Rectangle {
+        y: 8px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        background: root.busy ? Palette.text.with-alpha(0.12)
+            : ta.has-hover ? Theme.blend(Palette.on-accent-container.with-alpha(0.08), Palette.accent-container) : Palette.accent-container;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        alignment: center;
+        if root.busy: Spinner { size: 14px; stroke: 2px; tint: Palette.text-muted; y: (parent.height - self.height) / 2; }
+        if !root.busy: Icon { glyph: root.icon; size: 16px; color: Palette.on-accent-container; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.label-large; color: root.busy ? Palette.text.with-alpha(0.38) : Palette.on-accent-container; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { enabled: !root.busy; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Categoría (_Category): píldora tenue.
+component Category inherits Rectangle {
+    in property <string> text;
+    height: 19px;
+    preferred-width: t.preferred-width + 14px;
+    min-width: 0;
+    border-radius: self.height / 2;
+    background: Palette.surface2;
+    t := Txt {
+        x: 7px;
+        y: 2px;
+        width: parent.width - 14px;
+        text: root.text;
+        style: Type.label-small;
+        color: Palette.text-secondary;
+    }
+}
+
+// Tarjeta de un proyecto (ProjectCard).
+component ProjectCard inherits Rectangle {
+    in property <ProjectItem> item;
+    callback open;
+    callback install;
+    height: 148px;
+    border-radius: Theme.radius-card;
+    background: Palette.card(Palette.surface1);
+    border-width: 1px;
+    border-color: Palette.border;
+    clip: true;
+    accessible-role: list-item;
+    accessible-label: item.title;
+    accessible-id: "card";
+    accessible-action-default => { open(); }
+    Rectangle {
+        background: ta.has-hover ? Palette.text.with-alpha(0.04) : transparent;
+        animate background { duration: Theme.fast; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.open(); } }
+    ProjectIcon {
+        x: 16px;
+        y: 16px;
+        has-icon: root.item.has-icon;
+        icon: root.item.icon;
+        id: root.item.id;
+        title: root.item.title;
+        initials: root.item.initials;
+        from: root.item.icon-from;
+        to: root.item.icon-to;
+        accessible-id: "card-icon";
+    }
+    col := Rectangle {
+        x: 96px;
+        y: 16px;
+        width: parent.width - 96px - 16px;
+        height: parent.height - 32px;
+        // Título y autor en una línea (Text.rich): misma línea base.
+        HorizontalLayout {
+            y: 0;
+            height: 20px;
+            title := Txt { text: root.item.title; style: Type.title-medium; horizontal-stretch: 0; }
+            // Los dos espacios de «  de autor» (Slint los mide un poco más).
+            if root.item.author != "": Rectangle { width: 6px; }
+            if root.item.author != "": Txt {
+                // Línea base de bodySmall alineada con la de titleMedium.
+                y: 3.3px;
+                text: root.item.author;
+                style: Type.body-small;
+                color: Palette.text-muted;
+                horizontal-stretch: 1;
+            }
+        }
+        Wrapped {
+            spaced: true;
+            y: 24px;
+            width: parent.width;
+            text: root.item.description;
+            style: Type.body-small;
+            max-lines: 2;
+        }
+        // Fila inferior: 48 de alto con el botón, 23 con la insignia (el medio
+        // píxel del centrado va hacia abajo, como en Flutter).
+        HorizontalLayout {
+            property <length> row-h: root.item.installed ? 23px : 48px;
+            y: parent.height - self.row-h;
+            height: self.row-h;
+            Icon { glyph: Icons.download; size: 15px; color: Palette.text-muted; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+            Rectangle { width: 4px; }
+            Txt { horizontal-stretch: 0; text: root.item.downloads; style: Type.label-medium; color: Palette.text-secondary; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+            Rectangle { width: 12px; }
+            Icon { glyph: Icons.favorite; size: 14px; color: Palette.text-muted; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+            Rectangle { width: 4px; }
+            Txt { horizontal-stretch: 0; text: root.item.follows; style: Type.label-medium; color: Palette.text-secondary; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+            Rectangle { width: 12px; }
+            HorizontalLayout {
+                horizontal-stretch: 1;
+                alignment: start;
+                if root.item.cat1 != "": HorizontalLayout {
+                    Category { text: root.item.cat1; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+                    Rectangle { width: 4px; }
+                }
+                if root.item.cat2 != "": HorizontalLayout {
+                    Category { text: root.item.cat2; y: ceil((parent.height - self.height) / 2 / 1px) * 1px; }
+                    Rectangle { width: 4px; }
+                }
+            }
+            Rectangle { width: 8px; }
+            if root.item.installed: ColorBadge {
+                text: @tr("contentInstalled");
+                icon: Icons.check;
+                tint: Palette.success;
+                accessible-id: "card-play";
+            }
+            if !root.item.installed: TonalButton {
+                text: root.item.pack ? @tr("modpackInstall") : @tr("install");
+                icon: root.item.pack ? Icons.add-box : Icons.download;
+                busy: root.item.busy;
+                accessible-id: "card-play";
+                clicked => { root.install(); }
+            }
+        }
+    }
+}
+
+// Modrinth | CurseForge (SegmentedButton compacto, sin marca): segmentos
+// iguales, el elegido con el contenedor del acento.
+component Segments inherits Rectangle {
+    in property <[{ value: string, label: string, icon: string }]> options;
+    in property <string> selected;
+    in property <bool> enabled: true;
+    callback changed(string);
+    property <length> pad: 12px;
+    property <length> seg: max(m0.preferred-width, m1.preferred-width) + 2 * pad + (options[0].icon != "" ? 24px : 0);
+    width: options.length * seg;
+    height: 40px;
+    accessible-role: groupbox;
+    m0 := Txt { visible: false; style: Type.label-medium; text: root.options[0].label; }
+    m1 := Txt { visible: false; style: Type.label-medium; text: root.options[1].label; }
+    box := Rectangle {
+        y: 4px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: Palette.border;
+        clip: true;
+        for o[i] in root.options: Rectangle {
+            property <bool> on: o.value == root.selected;
+            x: i * root.seg;
+            width: root.seg;
+            background: on ? Palette.accent-container : seg-ta.has-hover && root.enabled ? Palette.surface2 : Palette.surface1;
+            animate background { duration: Theme.fast; }
+            accessible-role: button;
+            accessible-label: o.label;
+            accessible-checkable: true;
+            accessible-checked: on;
+            accessible-id: "segment";
+            accessible-action-default => { root.pick(o.value); }
+            if i > 0: Rectangle { x: 0; width: 1px; background: Palette.border; }
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                if o.icon != "": Icon { glyph: o.icon; size: 16px; color: on ? Palette.on-accent-container : Palette.text-secondary; y: (parent.height - self.height) / 2; }
+                Txt {
+                    text: o.label;
+                    style: on ? Type.title-small : Type.label-medium;
+                    color: on ? Palette.on-accent-container : Palette.text-secondary;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+            seg-ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.pick(o.value); } }
+        }
+    }
+    function pick(v: string) {
+        if root.selected != v {
+            root.changed(v);
+        }
+    }
+}
+
+// IconButton estándar (40 visibles en 48) con globo.
+component IconAction inherits Rectangle {
+    in property <string> icon;
+    in property <length> icon-size: 18px;
+    in property <string> tooltip;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover ? Palette.surface2 : transparent;
+        Icon { glyph: root.icon; size: root.icon-size; }
+    }
+    ta := TipArea { tip: root.tooltip; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Aviso de destino (_TargetBanner): «Añadiendo a X · 1.21.4 · Fabric».
+component TargetBanner inherits Rectangle {
+    height: 66px;
+    border-radius: Theme.radius-card;
+    background: Palette.accent-container.with-alpha(0.4);
+    border-width: 1px;
+    border-color: Palette.accent.with-alpha(0.35);
+    accessible-role: groupbox;
+    accessible-id: "target";
+    HorizontalLayout {
+        x: 1px;
+        width: parent.width - 2px;
+        padding-left: 12px;
+        padding-right: 8px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        VerticalLayout {
+            alignment: center;
+            InstanceIcon { item: ContentState.target; size: 32px; }
+        }
+        Rectangle { width: 12px; }
+        HorizontalLayout {
+            horizontal-stretch: 1;
+            alignment: start;
+            Txt { text: @tr("contentTargetPrefix"); style: Type.body-medium; y: (parent.height - self.height) / 2; }
+            Txt { text: ContentState.target.name; style: { size: Type.body-medium.size, weight: 600, line-height: Type.body-medium.line-height, letter-spacing: 0, nudge: Type.body-medium.nudge }; y: (parent.height - self.height) / 2; }
+            Txt { text: ContentState.target-line + ContentState.target-world; style: Type.body-medium; color: Palette.text-secondary; y: (parent.height - self.height) / 2; horizontal-stretch: 1; }
+        }
+        VerticalLayout {
+            alignment: center;
+            TextButton {
+                text: @tr("contentBackToInstance");
+                icon: Icons.arrow-back;
+                height: 48px;
+                accessible-id: "back-to-instance";
+                clicked => { ContentState.back-to-instance(); }
+            }
+        }
+        IconAction { icon: Icons.close; tooltip: @tr("contentClearTarget"); accessible-id: "clear-target"; clicked => { ContentState.clear-target(); } }
+    }
+}
+
+export component ContentPage inherits Rectangle {
+    property <length> pad: 32px;
+    property <length> top: 4px;
+    property <length> avail: root.width - 2 * pad;
+    // Cabecera: 31 + 4 + 20.
+    property <length> header-h: 55px;
+    property <length> target-h: ContentState.has-target ? 66px + 16px : 0;
+    property <length> search-y: top + header-h + 16px + target-h;
+    property <length> pills-y: search-y + 48px + 12px;
+    property <length> body-y: pills-y + 36px + 16px;
+    // SliverGridDelegateWithMaxCrossAxisExtent(640, 148, 12, 12).
+    property <int> cols: max(1, ceil(avail / (640px + 12px)));
+    property <length> card-w: (avail - (cols - 1) * 12px) / cols;
+    property <int> rows: ceil(ContentState.items.length / cols);
+    init => { ContentState.shown(); }
+
+    Txt {
+        x: root.pad;
+        y: root.top;
+        text: @tr("contentTitle");
+        style: Type.headline-medium;
+        accessible-id: "txt-title";
+    }
+    Txt {
+        x: root.pad;
+        y: root.top + 35px;
+        text: @tr("contentSubtitle");
+        color: Palette.text-secondary;
+        accessible-id: "txt-subtitle";
+    }
+    HorizontalLayout {
+        x: root.width - root.pad - self.width;
+        y: root.top + root.header-h - 48px;
+        width: self.preferred-width;
+        height: 48px;
+        VerticalLayout {
+            alignment: end;
+            Segments {
+                options: [{ value: "modrinth", label: "Modrinth" }, { value: "curseforge", label: "CurseForge" }];
+                selected: ContentState.source;
+                accessible-id: "source";
+                changed(v) => { ContentState.source-changed(v); }
+            }
+        }
+        Rectangle { width: 12px; }
+        OutlinedButton {
+            text: @tr("modpackImport");
+            icon: Icons.upload-file;
+            visible-height: 42px;
+            accessible-id: "import";
+            clicked => { ContentState.import-modpack(); }
+        }
+    }
+    if ContentState.has-target: TargetBanner {
+        x: root.pad;
+        y: root.top + root.header-h + 16px;
+        width: root.avail;
+    }
+    HorizontalLayout {
+        x: root.pad;
+        y: root.search-y;
+        width: root.avail;
+        height: 48px;
+        TextField {
+            // Expanded: lo que sobra tras los filtros.
+            horizontal-stretch: 1;
+            preferred-width: 0;
+            min-width: 0;
+            placeholder: ContentState.search-hint;
+            prefix-icon: Icons.search;
+            clearable: true;
+            clear-label: @tr("consoleClear");
+            text <=> ContentState.text;
+            accessible-id: "search";
+            edited(q) => { ContentState.text-edited(q); }
+        }
+        Rectangle { width: 12px; }
+        SelectButton {
+            icon: Icons.deployed-code;
+            prefix: @tr("filterVersion");
+            options: ContentState.mc-options;
+            value: ContentState.mc;
+            accessible-id: "filter";
+            changed(v) => { ContentState.mc-changed(v); }
+        }
+        if ContentState.uses-loader: HorizontalLayout {
+            horizontal-stretch: 0;
+            Rectangle { width: 8px; }
+            SelectButton {
+                icon: Icons.memory;
+                prefix: @tr("filterLoader");
+                options: ContentState.loader-options;
+                value: ContentState.loader;
+                accessible-id: "filter";
+                changed(v) => { ContentState.loader-changed(v); }
+            }
+        }
+        Rectangle { width: 8px; }
+        SelectButton {
+            icon: Icons.sort;
+            options: ContentState.sort-options;
+            value: ContentState.sort;
+            accessible-id: "filter";
+            changed(v) => { ContentState.sort-changed(v); }
+        }
+    }
+    PillTabs {
+        x: root.pad;
+        y: root.pills-y;
+        height: 36px;
+        items: [
+            { value: "mod", label: @tr("kindMods"), icon: Icons.extension, count: -1 },
+            { value: "resourcepack", label: @tr("kindResourcepacks"), icon: Icons.palette, count: -1 },
+            { value: "shader", label: @tr("kindShaders"), icon: Icons.wb-sunny, count: -1 },
+            { value: "datapack", label: @tr("kindDatapacks"), icon: Icons.data-object, count: -1 },
+            { value: "modpack", label: @tr("kindModpacks"), icon: Icons.inventory-2, count: -1 },
+        ];
+        selected: ContentState.kind;
+        changed(v) => { ContentState.kind-changed(v); }
+    }
+    if ContentState.started && !ContentState.has-error && !ContentState.needs-key: Txt {
+        x: root.width - root.pad - self.width;
+        y: root.pills-y + (36px - self.height) / 2;
+        width: self.preferred-width;
+        text: ContentState.total == 1 ? @tr("contentResults" | "contentResults" % 1) : @tr("contentResults" | "contentResults" % ContentState.total);
+        style: Type.body-small;
+        color: Palette.text-muted;
+        accessible-id: "txt-results";
+    }
+
+    // Cuerpo.
+    Rectangle {
+        x: root.pad;
+        y: root.body-y;
+        width: root.avail;
+        height: root.height - root.body-y;
+        if ContentState.needs-key: EmptyState {
+            icon: Icons.key;
+            title: @tr("cfKeyNeededTitle");
+            body: @tr("cfKeyNeededBody");
+            action: @tr("cfKeyAdd");
+            action-icon: Icons.key;
+            action-icon-size: 18px;
+            accessible-id: "empty";
+            act => { ContentState.add-key(); }
+        }
+        if !ContentState.needs-key && ContentState.items.length == 0 && ContentState.has-error: HorizontalLayout {
+            alignment: center;
+            VerticalLayout {
+                alignment: center;
+                width: min(520px, root.avail);
+                spacing: 16px;
+                ErrorNote {
+                    message: ContentState.error-message;
+                    detail: ContentState.error-detail;
+                    details-label: @tr("details");
+                    accessible-id: "error";
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    OutlinedButton { text: @tr("retry"); accessible-id: "retry"; clicked => { ContentState.retry(); } }
+                }
+            }
+        }
+        if !ContentState.needs-key && ContentState.items.length == 0 && !ContentState.has-error && (ContentState.loading || !ContentState.started): Spinner {
+            accessible-id: "loading";
+        }
+        if !ContentState.needs-key && ContentState.items.length == 0 && !ContentState.has-error && ContentState.started && !ContentState.loading: EmptyState {
+            icon: Icons.search-off;
+            title: @tr("contentNoResultsTitle");
+            body: @tr("contentNoResultsBody");
+            accessible-id: "empty";
+        }
+        if !ContentState.needs-key && ContentState.items.length > 0: list := Flickable {
+            property <length> grid-h: root.rows * (148px + 12px) - 12px;
+            property <int> serial: ContentState.scroll-serial;
+            changed serial => { self.content-y = 0; }
+            content-height: grid-h + 24px + 24px + 17px;
+            changed content-y => { ContentState.scrolled((self.content-height + self.content-y - self.height) / 1px); }
+            changed content-height => { ContentState.scrolled((self.content-height + self.content-y - self.height) / 1px); }
+            for it[i] in ContentState.items: ProjectCard {
+                x: mod(i, root.cols) * (root.card-w + 12px);
+                y: floor(i / root.cols) * (148px + 12px);
+                width: root.card-w;
+                item: it;
+                open => { ContentState.open(it.id); }
+                install => { ContentState.install(it.id); }
+            }
+            // Pie: ruedita, «Reintentar» o «No hay más resultados».
+            Rectangle {
+                y: parent.grid-h + 24px;
+                height: ContentState.loading ? 24px : 17px;
+                if ContentState.loading: Spinner { size: 24px; stroke: 2.5px; }
+                if !ContentState.loading && ContentState.has-error: TextButton {
+                    text: @tr("retry");
+                    clicked => { ContentState.load-more(); }
+                }
+                if !ContentState.loading && !ContentState.has-error && !ContentState.has-more: Txt {
+                    width: self.preferred-width;
+                    text: @tr("contentEnd");
+                    style: Type.body-small;
+                    color: Palette.text-muted;
+                    accessible-id: "txt-end";
+                }
+            }
+        }
+    }
+}
+
+// Etiqueta de una versión (Estable / Beta / Alfa) con su color.
+component ReleaseBadge inherits ColorBadge {
+    in property <string> release;
+    text: release == "beta" ? @tr("releaseBeta") : release == "alpha" ? @tr("releaseAlpha") : @tr("releaseStable");
+    tint: release == "beta" ? Palette.warning : release == "alpha" ? Palette.danger : Palette.success;
+}
+
+// Fila de una versión (_VersionRow).
+component VersionRow inherits Rectangle {
+    in property <SheetVersion> version;
+    in property <bool> pack;
+    callback install;
+    height: 66px;
+    border-radius: Theme.radius-control;
+    background: Palette.surface1;
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: list-item;
+    accessible-label: version.number;
+    accessible-id: "version";
+    HorizontalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        padding-left: 12px;
+        padding-right: 8px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            HorizontalLayout {
+                alignment: start;
+                Txt { text: root.version.number; style: Type.title-small; y: (parent.height - self.height) / 2; }
+                Rectangle { width: 8px; }
+                ReleaseBadge { release: root.version.release; y: (parent.height - self.height) / 2; }
+            }
+            Rectangle { height: 2px; }
+            Txt { text: root.version.meta; style: Type.body-small; color: Palette.text-muted; }
+        }
+        Rectangle { width: 8px; }
+        // OutlinedButton compacto (32 visibles, relleno 12).
+        btn := Rectangle {
+            width: blay.preferred-width;
+            accessible-role: button;
+            accessible-label: root.pack ? @tr("modpackInstall") : @tr("install");
+            accessible-enabled: root.version.enabled;
+            accessible-id: "version-play";
+            accessible-action-default => { if root.version.enabled { root.install(); } }
+            Rectangle {
+                y: 8px;
+                height: 32px;
+                border-radius: Theme.radius-control;
+                border-width: 1px;
+                border-color: root.version.enabled ? Palette.border-strong : Palette.border;
+                background: !root.version.enabled ? transparent : bta.has-hover ? Palette.surface2 : Palette.surface1;
+            }
+            blay := HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                alignment: center;
+                if root.version.busy: Spinner { size: 14px; stroke: 2px; y: (parent.height - self.height) / 2; }
+                if !root.version.busy: Txt {
+                    text: root.pack ? @tr("modpackInstall") : @tr("install");
+                    style: Type.label-large;
+                    color: root.version.enabled ? Palette.text : Palette.text-muted;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+            bta := TouchArea { enabled: root.version.enabled; mouse-cursor: pointer; clicked => { root.install(); } }
+        }
+    }
+}
+
+// Color de cada tipo de contenido (contentKindColor).
+global KindStyle {
+    public pure function tint(kind: string) -> color {
+        if kind == "mod" { return #7DD3FC; }
+        if kind == "resourcepack" { return #F0ABFC; }
+        if kind == "shader" { return #FCD34D; }
+        if kind == "datapack" { return #86EFAC; }
+        if kind == "modpack" { return #FDA4AF; }
+        return #A0A0A0;
+    }
+    public pure function icon(kind: string) -> string {
+        if kind == "mod" { return Icons.extension; }
+        if kind == "resourcepack" { return Icons.palette; }
+        if kind == "shader" { return Icons.wb-sunny; }
+        if kind == "datapack" { return Icons.data-object; }
+        if kind == "modpack" { return Icons.inventory-2; }
+        return Icons.description;
+    }
+}
+
+// Ficha del proyecto (ProjectSheet): panel de 580 a la derecha, sobre un
+// velo; entra deslizándose.
+component ProjectSheet inherits Rectangle {
+    property <ProjectItem> p: ContentState.sheet-project;
+    property <bool> shown;
+    init => { shown = true; }
+    background: #00000073;
+    opacity: shown ? 1 : 0;
+    animate opacity { duration: Theme.motion ? Theme.medium : 0ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
+    accessible-role: none;
+    TouchArea { clicked => { ContentState.sheet-close(); } }
+    panel := Rectangle {
+        x: parent.width - 580px + (root.shown ? 0 : 145px);
+        animate x { duration: Theme.motion ? Theme.medium : 0ms; easing: cubic-bezier(0.16, 1, 0.3, 1); }
+        width: 580px;
+        background: Theme.blend(Palette.surface2, Palette.background);
+        accessible-role: groupbox;
+        accessible-label: root.p.title;
+        accessible-id: "sheet";
+        TouchArea { }
+        Rectangle { x: 0; width: 1px; background: Palette.border-strong; }
+        VerticalLayout {
+            // Cabecera: icono, título, autor, etiquetas y cerrar.
+            HorizontalLayout {
+                padding-left: 24px;
+                padding-top: 24px;
+                padding-right: 16px;
+                VerticalLayout {
+                    alignment: start;
+                    ProjectIcon {
+                        size: 76px;
+                        has-icon: ContentState.sheet-has-icon;
+                        icon: ContentState.sheet-icon;
+                        id: root.p.id;
+                        title: root.p.title;
+                        initials: root.p.initials;
+                        from: root.p.icon-from;
+                        to: root.p.icon-to;
+                        accessible-id: "sheet-icon";
+                    }
+                }
+                Rectangle { width: 16px; }
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: start;
+                    Txt { text: root.p.title; style: Type.headline-small; accessible-id: "txt-sheet-title"; }
+                    if root.p.author != "": Txt { text: root.p.author; style: Type.body-small; color: Palette.text-secondary; }
+                    Rectangle { height: 8px; }
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 8px;
+                        ColorBadge {
+                            text: ContentState.sheet-kind-label;
+                            icon: KindStyle.icon(ContentState.sheet-kind);
+                            tint: KindStyle.tint(ContentState.sheet-kind);
+                            y: (parent.height - self.height) / 2;
+                        }
+                        Tag { text: root.p.downloads; icon: Icons.download; }
+                        Tag { text: root.p.follows; icon: Icons.favorite; }
+                        Tag { text: ContentState.sheet-source-label; }
+                    }
+                }
+                VerticalLayout {
+                    alignment: start;
+                    IconAction { icon: Icons.close; icon-size: 24px; tooltip: @tr("close"); accessible-id: "sheet-close"; clicked => { ContentState.sheet-close(); } }
+                }
+            }
+            HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 16px;
+                Wrapped {
+            spaced: true; text: root.p.description; style: Type.body-medium; }
+            }
+            if ContentState.sheet-categories.length > 0: HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 12px;
+                alignment: start;
+                spacing: 4px;
+                for c in ContentState.sheet-categories: Tag { text: c; }
+            }
+            Rectangle { height: 20px; }
+            Rectangle { height: 1px; background: Palette.border; }
+            // Destino.
+            if !ContentState.sheet-pack: VerticalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 16px;
+                Txt { text: @tr("installIn"); style: Type.label-large; }
+                Rectangle { height: 8px; }
+                SelectButton {
+                    options: ContentState.sheet-instance-options;
+                    value: ContentState.sheet-instance;
+                    menu-min-width: 472px;
+                    accessible-id: "sheet-select";
+                    changed(v) => { if v != "" { ContentState.sheet-pick-instance(v); } }
+                }
+                if ContentState.sheet-kind == "datapack": VerticalLayout {
+                    Rectangle { height: 12px; }
+                    Txt { text: @tr("installInWorld"); style: Type.label-large; }
+                    Rectangle { height: 8px; }
+                    if !ContentState.sheet-has-worlds: Txt { text: @tr("worldsNone"); style: Type.body-small; color: Palette.text-secondary; }
+                    if ContentState.sheet-has-worlds: SelectButton {
+                        icon: Icons.public;
+                        options: ContentState.sheet-world-options;
+                        value: ContentState.sheet-world;
+                        accessible-id: "world-select";
+                        changed(v) => { if v != "" { ContentState.sheet-pick-world(v); } }
+                    }
+                }
+            }
+            if ContentState.sheet-installed != "": HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 12px;
+                spacing: 8px;
+                Icon { glyph: Icons.check-circle; size: 16px; color: Palette.success; y: (parent.height - self.height) / 2; }
+                Txt { text: ContentState.sheet-installed; style: Type.body-small; color: Palette.success; horizontal-stretch: 1; accessible-id: "txt-installed"; }
+            }
+            // «Versiones compatibles» y «Instalar la última».
+            HorizontalLayout {
+                padding-left: 24px;
+                padding-right: 24px;
+                padding-top: 20px;
+                padding-bottom: 8px;
+                height: 48px + 28px;
+                Txt { text: @tr("versionsCompatible"); style: Type.title-medium; y: 20px + (48px - self.height) / 2; horizontal-stretch: 0; accessible-id: "txt-versions"; }
+                Rectangle { width: 8px; }
+                if ContentState.sheet-count >= 0: Tag { text: ContentState.sheet-count; y: 20px + (48px - self.height) / 2; }
+                Rectangle { horizontal-stretch: 1; }
+                if !ContentState.sheet-pack: FilledButton {
+                    text: @tr("installLatest");
+                    icon: Icons.download;
+                    icon-size: 18px;
+                    enabled: ContentState.sheet-can-latest;
+                    busy: ContentState.sheet-latest-busy;
+                    accessible-id: "latest-play";
+                    clicked => { ContentState.sheet-install(""); }
+                }
+            }
+            Rectangle {
+                vertical-stretch: 1;
+                if ContentState.sheet-state == LoadState.loading: Spinner { }
+                if ContentState.sheet-state == LoadState.failed: VerticalLayout {
+                    padding: 24px;
+                    alignment: start;
+                    ErrorNote { message: ContentState.sheet-error-message; detail: ContentState.sheet-error-detail; details-label: @tr("details"); }
+                }
+                if ContentState.sheet-state == LoadState.ready && ContentState.sheet-versions.length == 0: VerticalLayout {
+                    padding: 24px;
+                    alignment: start;
+                    Wrapped {
+            spaced: true; text: ContentState.sheet-empty-text; style: Type.body-medium; accessible-id: "txt-no-versions"; }
+                }
+                if ContentState.sheet-state == LoadState.ready && ContentState.sheet-versions.length > 0: Flickable {
+                    content-height: ContentState.sheet-versions.length * 70px - 4px + 24px;
+                    for v[i] in ContentState.sheet-versions: VersionRow {
+                        x: 16px;
+                        y: i * 70px;
+                        width: parent.width - 32px;
+                        version: v;
+                        pack: ContentState.sheet-pack;
+                        install => { ContentState.sheet-install(v.id); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// StageProgress (backups_tab.dart): texto, cuenta y barra de 6.
+component StageProgress inherits VerticalLayout {
+    in property <string> label;
+    in property <int> done;
+    in property <int> total;
+    // < 0 = indeterminada.
+    in property <float> progress: -1;
+    HorizontalLayout {
+        Txt { text: root.label; style: Type.body-medium; color: Palette.text; horizontal-stretch: 1; }
+        if root.total > 0: HorizontalLayout {
+            horizontal-stretch: 0;
+            Txt { text: root.done + " / " + root.total; style: Type.body-small; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+        }
+    }
+    Rectangle { height: 8px; }
+    Rectangle {
+        height: 6px;
+        border-radius: 4px;
+        clip: true;
+        background: Palette.surface2;
+        accessible-role: progress-indicator;
+        accessible-value: root.progress < 0 ? "" : round(root.progress * 100) + " %";
+        accessible-id: "progress";
+        if root.progress >= 0: Rectangle {
+            x: 0;
+            width: parent.width * root.progress;
+            background: Palette.accent;
+        }
+        // Indeterminada: un tramo que recorre la barra.
+        if root.progress < 0: Rectangle {
+            property <float> t: Theme.motion ? mod(animation-tick() / 1800ms, 1) : 0.3;
+            x: (t * 1.4 - 0.4) * parent.width;
+            width: parent.width * 0.4;
+            background: Palette.accent;
+        }
+    }
+}
+
+// Instalar un modpack (ModpackDialog): formulario, progreso y resultado.
+component ModpackDialog inherits Rectangle {
+    property <bool> busy: ContentState.modpack-phase == ModpackPhase.installing;
+    property <bool> can-install: ContentState.modpack-fixed
+        || (ContentState.modpack-from-url ? ContentState.modpack-url != "" : ContentState.modpack-file != "");
+    if ContentState.modpack-phase != ModpackPhase.done: FormDialog {
+        title: ContentState.modpack-title;
+        icon: Icons.inventory-2;
+        panel-width: 500px;
+        dismissible: false;
+        accessible-id: "modpack-dialog";
+        Wrapped {
+            spaced: true; text: @tr("modpackBody"); style: Type.body-medium; color: Palette.text; }
+        Rectangle { height: 16px; }
+        if !ContentState.modpack-fixed: VerticalLayout {
+            HorizontalLayout {
+                alignment: start;
+                Segments {
+                    options: [
+                        { value: "file", label: @tr("modpackFromFile"), icon: Icons.folder-open },
+                        { value: "url", label: @tr("modpackFromUrl"), icon: Icons.link },
+                    ];
+                    selected: ContentState.modpack-from-url ? "url" : "file";
+                    enabled: !root.busy;
+                    accessible-id: "modpack-from";
+                    changed(v) => { ContentState.modpack-from(v == "url"); }
+                }
+            }
+            Rectangle { height: 12px; }
+            if !ContentState.modpack-from-url: OutlinedButton {
+                text: ContentState.modpack-file != "" ? ContentState.modpack-file : @tr("modpackChooseFile");
+                icon: Icons.upload-file;
+                accessible-id: "modpack-file";
+                clicked => { if !root.busy { ContentState.modpack-pick(); } }
+            }
+            if ContentState.modpack-from-url: LabeledField {
+                label: "URL";
+                placeholder: "https://cdn.modrinth.com/…/pack.mrpack";
+                prefix-icon: Icons.link;
+                enabled: !root.busy;
+                text <=> ContentState.modpack-url;
+                accessible-id: "modpack-url";
+            }
+            Rectangle { height: 12px; }
+        }
+        LabeledField {
+            label: @tr("modpackName");
+            placeholder: @tr("modpackNameHint");
+            enabled: !root.busy;
+            text <=> ContentState.modpack-name;
+            accessible-id: "field";
+        }
+        if root.busy: VerticalLayout {
+            Rectangle { height: 16px; }
+            StageProgress {
+                label: @tr("modpackInstalling");
+                done: ContentState.modpack-done-count;
+                total: ContentState.modpack-total;
+                progress: ContentState.modpack-progress;
+            }
+            Rectangle { height: 8px; }
+            Txt { text: @tr("modpackInstallingHint"); style: Type.body-small; color: Palette.text-secondary; }
+        }
+        if ContentState.modpack-has-error: VerticalLayout {
+            Rectangle { height: 12px; }
+            ErrorNote { message: ContentState.modpack-error-message; detail: ContentState.modpack-error-detail; details-label: @tr("details"); accessible-id: "error"; }
+        }
+        DialogActions {
+            TextButton {
+                text: @tr("cancel");
+                height: 48px;
+                enabled: !root.busy;
+                accessible-id: "cancel";
+                clicked => { ContentState.modpack-close(); }
+            }
+            FilledButton {
+                text: @tr("modpackInstall");
+                enabled: !root.busy && root.can-install;
+                accessible-id: "filled";
+                clicked => { ContentState.modpack-install(ContentState.modpack-url, ContentState.modpack-name); }
+            }
+        }
+    }
+    if ContentState.modpack-phase == ModpackPhase.done: FormDialog {
+        title: @tr("modpackDoneTitle");
+        icon: Icons.check-circle;
+        accessible-id: "modpack-done";
+        dismissed => { ContentState.modpack-close(); }
+        HorizontalLayout {
+            InstanceIcon { item: ContentState.modpack-instance; size: 48px; }
+            Rectangle { width: 12px; }
+            VerticalLayout {
+                alignment: center;
+                horizontal-stretch: 1;
+                Txt { text: ContentState.modpack-instance.name; style: Type.title-medium; }
+                Txt { text: ContentState.modpack-instance-line; style: Type.body-small; color: Palette.text-secondary; }
+            }
+        }
+        Rectangle { height: 12px; }
+        Wrapped {
+            spaced: true; text: ContentState.modpack-done-body; style: Type.body-medium; color: Palette.text; }
+        for w in ContentState.modpack-warnings: VerticalLayout {
+            Rectangle { height: 4px; }
+            Wrapped {
+            spaced: true; text: w; style: Type.body-small; color: Palette.warning; }
+        }
+        DialogActions {
+            TextButton { text: @tr("close"); height: 48px; accessible-id: "cancel"; clicked => { ContentState.modpack-close(); } }
+            FilledButton { text: @tr("modpackOpenInstance"); accessible-id: "filled"; clicked => { ContentState.modpack-open-instance(); } }
+        }
+    }
+}
+
+// Lo que va encima de toda la ventana: la ficha y el diálogo del modpack.
+export component ContentLayer inherits Rectangle {
+    if ContentState.sheet-open: ProjectSheet { }
+    if ContentState.modpack-open: ModpackDialog { }
+}

@@ -69,20 +69,24 @@ export component FilledButton inherits Rectangle {
 export component OutlinedButton inherits Rectangle {
     in property <string> text;
     in property <string> icon;
+    // Alto visible (42 con icono de 18 y labelLarge, como OutlinedButton.icon).
+    in property <length> visible-height: 44px;
+    in property <bool> enabled: true;
     callback clicked;
     height: 48px;
     preferred-width: lay.preferred-width;
     min-width: lay.min-width;
     accessible-role: button;
     accessible-label: text;
-    accessible-action-default => { clicked(); }
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
     Rectangle {
-        y: 2px;
-        height: 44px;
+        y: (parent.height - root.visible-height) / 2;
+        height: root.visible-height;
         border-radius: Theme.radius-control;
         border-width: 1px;
-        border-color: Palette.border-strong;
-        background: ta.has-hover ? Palette.surface2 : Palette.surface1;
+        border-color: root.enabled ? Palette.border-strong : Palette.border;
+        background: !root.enabled ? transparent : ta.has-hover ? Palette.surface2 : Palette.surface1;
         animate background { duration: Theme.fast; }
     }
     lay := HorizontalLayout {
@@ -90,10 +94,10 @@ export component OutlinedButton inherits Rectangle {
         padding-right: 16px;
         spacing: 8px;
         alignment: center;
-        if icon != "": Icon { glyph: icon; size: 18px; y: (parent.height - self.height) / 2; color: Palette.text; }
-        Txt { text: root.text; style: Type.label-large; y: (parent.height - self.height) / 2; }
+        if icon != "": Icon { glyph: icon; size: 18px; y: (parent.height - self.height) / 2; color: root.enabled ? Palette.text : Palette.text-muted; }
+        Txt { text: root.text; style: Type.label-large; color: root.enabled ? Palette.text : Palette.text-muted; y: (parent.height - self.height) / 2; }
     }
-    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
 // TextButton(.icon): solo texto secundario. `icon`, `tint` (color) y

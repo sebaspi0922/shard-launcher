@@ -36,9 +36,9 @@ export component EmptyState inherits VerticalLayout {
                 }
             }
             Rectangle { height: 20px; }
-            Wrapped { text: root.title; style: Type.title-large; color: Palette.text; horizontal-alignment: center; }
+            Wrapped { text: root.title; style: Type.title-large; color: Palette.text; horizontal-alignment: center; spaced: true; }
             Rectangle { height: 8px; }
-            Wrapped { text: root.body; horizontal-alignment: center; }
+            Wrapped { text: root.body; horizontal-alignment: center; spaced: true; }
             if root.action != "": VerticalLayout {
                 Rectangle { height: 20px; }
                 HorizontalLayout {

@@ -19,7 +19,7 @@ use crate::launch::{self, Failure};
 use crate::notices::{CrashNotice, Crashes, Update, UpdateStatus, UpdateView};
 use crate::prefs::UiPrefs;
 use crate::{
-    AccountChip, Activity, HomeState, InstanceItem, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
+    AccountChip, Activity, Fmt, HomeState, InstanceItem, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
     Notices, Route, ServerItem, UpdatePhase, art, errors, face, i18n,
 };
 
@@ -168,6 +168,7 @@ impl Controller {
             crashes: RefCell::default(),
             appearance: Appearance::new(ui),
         });
+        ui.global::<Fmt>().set_decimal(i18n::decimal(lang).into());
         let st = ui.global::<InstancesState>();
         st.set_items(ModelRc::from(ctl.items.clone()));
         on!(ctl, st, on_search, |c, q| {
@@ -272,6 +273,12 @@ impl Controller {
         ctl
     }
 
+    /// Acciones fuera de la UI (otras pantallas las usan para abrir una
+    /// instancia, etc.).
+    pub fn actions(&self) -> &dyn Actions {
+        &*self.actions
+    }
+
     /// Llama a `f` cada vez que cambia el modelo (bandeja, etc.).
     pub fn on_refresh(&self, f: impl Fn(&instances::Model) + 'static) {
         self.listeners.borrow_mut().push(Box::new(f));
@@ -301,8 +308,8 @@ impl Controller {
         }
     }
 
-    /// «Entrar» de un servidor rápido.
-    fn join(&self, server_id: &str) {
+    /// «Entrar» de un servidor (Inicio y Servidores).
+    pub fn join(&self, server_id: &str) {
         let server = self.servers.borrow().as_ref().and_then(|l| l.iter().find(|s| s.id == server_id).cloned());
         let Some(s) = server else { return };
         let Some(id) = s.instance_id.clone() else { return };
@@ -383,6 +390,9 @@ impl Controller {
     pub fn set_language(&self, lang: &str) {
         *self.lang.borrow_mut() = lang.to_owned();
         i18n::select(lang);
+        if let Some(ui) = self.ui.upgrade() {
+            ui.global::<Fmt>().set_decimal(i18n::decimal(lang).into());
+        }
         self.refresh();
         self.refresh_notices();
     }
@@ -461,6 +471,28 @@ impl Controller {
         self.refresh();
     }
 
+    /// Servidores guardados (`None` mientras no se han leído).
+    pub fn servers(&self) -> Option<Vec<Server>> {
+        self.servers.borrow().clone()
+    }
+
+    /// Último estado conocido de una dirección.
+    pub fn status(&self, address: &str) -> Option<Status> {
+        self.statuses.borrow().get(address).cloned()
+    }
+
+    /// Olvida los estados (se vuelven a consultar: se ve «Consultando…»).
+    pub fn clear_statuses(&self) {
+        self.statuses.borrow_mut().clear();
+        self.refresh();
+    }
+
+    /// Instancia de Inicio (la elegida o la última jugada).
+    pub fn home_instance_id(&self) -> Option<String> {
+        let selected = self.selected.borrow().clone();
+        home::home_instance(&self.model.borrow().all, selected.as_deref()).map(|r| r.id.clone())
+    }
+
     /// Direcciones de los servidores rápidos (para el ping).
     pub fn server_addresses(&self) -> Vec<String> {
         self.servers.borrow().iter().flatten().map(|s| s.address.clone()).collect()
@@ -508,7 +540,7 @@ impl Controller {
 
     /// Paisaje de bloques (art.dart) a un tamaño lógico, pintado a la escala
     /// de la ventana y guardado para no repetirlo.
-    fn landscape(&self, seed: &str, block: f64, width: f32, height: f32) -> Image {
+    pub fn landscape(&self, seed: &str, block: f64, width: f32, height: f32) -> Image {
         let scale = self.ui.upgrade().map(|u| u.window().scale_factor()).unwrap_or(1.0) as f64;
         let (w, h) = ((width as f64).max(1.0), (height as f64).max(1.0));
         let key = (seed.to_owned(), (block * 10.0) as u32, (w * scale).round() as u32, (h * scale).round() as u32);
@@ -605,7 +637,7 @@ impl Controller {
     }
 
     /// Favicon PNG en base64 del ping (`faviconProvider`).
-    fn favicon(&self, b64: &str) -> Option<Image> {
+    pub fn favicon(&self, b64: &str) -> Option<Image> {
         if let Some(img) = self.favicons.borrow().get(b64) {
             return Some(img.clone());
         }

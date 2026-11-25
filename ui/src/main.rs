@@ -15,7 +15,11 @@ use shard_ui::accounts::Accounts;
 use shard_ui::accounts_backend::{CoreAccounts, CoreSkins};
 use shard_ui::backend::{self, Backend, CoreActions};
 use shard_ui::skins::Skins;
+use shard_ui::content::Content;
+use shard_ui::content_backend::CoreContent;
 use shard_ui::controller::Controller;
+use shard_ui::servers::{CoreServers, Servers};
+use shard_ui::curseforge::{CoreKeys, Keys, NoKeys};
 use shard_ui::window::Shell;
 use shard_ui::{MainWindow, i18n, prefs};
 use slint::ComponentHandle;
@@ -110,6 +114,49 @@ fn main() {
     let clock = Instant::now();
     let accounts = Accounts::new(&ui, ctl.clone(), acc_actions, Box::new(move || clock.elapsed().as_millis() as u64));
     let _skins = Skins::new(&ui, ctl.clone(), accounts.clone(), skin_actions);
+    // Clave de CurseForge (Contenido y Ajustes).
+    let key_actions: Box<dyn shard_ui::curseforge::KeyActions> = match &backend {
+        Some(b) => Box::new(CoreKeys { backend: b.clone(), lang: lang.to_owned() }),
+        None => Box::new(NoKeys),
+    };
+    let keys = Keys::new(&ui, ctl.clone(), key_actions);
+    // Contenido (Modrinth y CurseForge).
+    let content_actions: Box<dyn shard_ui::content::ContentActions> = match &backend {
+        Some(b) => Box::new(CoreContent { backend: b.clone(), lang: lang.to_owned() }),
+        None => Box::new(NoCore),
+    };
+    let content = Content::new(&ui, ctl.clone(), content_actions);
+    {
+        let weak = std::rc::Rc::downgrade(&content);
+        keys.on_change(move |has| {
+            if let Some(c) = weak.upgrade() {
+                c.key_state(has);
+            }
+        });
+        if let Some(has) = keys.has_key() {
+            content.key_state(has);
+        }
+        let weak = std::rc::Rc::downgrade(&content);
+        ctl.on_refresh(move |_| {
+            if let Some(c) = weak.upgrade() {
+                c.refresh();
+            }
+        });
+    }
+    // Servidores (la lista y los estados los lleva el controlador).
+    let server_actions: Box<dyn shard_ui::servers::ServerActions> = match &backend {
+        Some(b) => Box::new(CoreServers { backend: b.clone(), lang: lang.to_owned() }),
+        None => Box::new(NoCore),
+    };
+    let servers = Servers::new(&ui, ctl.clone(), accounts.clone(), server_actions);
+    {
+        let weak = std::rc::Rc::downgrade(&servers);
+        ctl.on_refresh(move |_| {
+            if let Some(s) = weak.upgrade() {
+                s.refresh();
+            }
+        });
+    }
     let shell = Shell::new(&ui, settings.close_behavior, backend.clone());
     {
         let shell = shell.clone();
@@ -173,6 +220,31 @@ impl shard_ui::skins::SkinActions for NoCore {
     fn apply(&self, _: &str, _: &shard_ui::skins::Apply) {}
     fn reset(&self, _: &str) {}
     fn cape(&self, _: &str, _: Option<&str>) {}
+}
+
+impl shard_ui::content::ContentActions for NoCore {
+    fn search(&self, _: &shard_ui::content::Filters, _: u32, generation: u64) {
+        let page = shard_ui::content::Page { items: Vec::new(), total: 0 };
+        shard_ui::content::post(move |c| c.page(generation, Ok(page)));
+    }
+    fn versions(&self, _: &shard_ui::content::VersionsQuery, seq: u64) {
+        shard_ui::content::post(move |c| c.versions_loaded(seq, Ok(Vec::new())));
+    }
+    fn install(&self, _: &shard_ui::content::InstallRequest) {}
+    fn load_installed(&self, _: &str) {}
+    fn load_worlds(&self, _: &str) {}
+    fn load_releases(&self) {}
+    fn load_icon(&self, _: &str) {}
+    fn pick_modpack(&self, _: &str) {}
+    fn install_modpack(&self, _: &str, _: Option<&str>, _: u64) {}
+}
+
+impl shard_ui::servers::ServerActions for NoCore {
+    fn save(&self, _: &shard_ui::servers::Draft) {}
+    fn remove(&self, _: &str, _: &str) {}
+    fn move_to(&self, _: &str, _: usize) {}
+    fn import(&self, _: &str, _: &str) {}
+    fn reload(&self) {}
 }
 
 /// `SHARD_FIRST_FRAME unix_ms=…` tras pintar el primer fotograma (el

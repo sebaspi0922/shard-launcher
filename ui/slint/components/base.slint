@@ -33,7 +33,7 @@ export component Txt {
         // del bloque con el reparto proporcional. (Flutter pone todo el
         // redondeo encima de la línea base, pero con el rasterizador de Slint
         // centrarlo queda más cerca: probado con el arnés.)
-        y: (parent.height - root.block) / 2 + (root.block - root.style.size * InterMetrics.natural) * InterMetrics.ascent-share;
+        y: (parent.height - root.block) / 2 + (root.block - root.style.size * InterMetrics.natural) * InterMetrics.ascent-share + root.style.nudge;
         height: root.style.size * InterMetrics.natural;
         text: root.text;
         font-family: root.family;
@@ -75,19 +75,29 @@ export component Wrapped {
     in property <float> natural: InterMetrics.natural;
     in property <int> max-lines: 0;
     in property <TextHorizontalAlignment> horizontal-alignment: left;
-    property <length> line: style.size * natural;
+    // `true` = todas las líneas con el interlineado de Flutter
+    // (line-height-factor), no solo la primera.
+    in property <bool> spaced;
+    // Flutter redondea el alto de cada línea (12 × 1,45 = 17,4 → 17).
+    property <length> block: round(style.size * style.line-height / 1px) * 1px;
+    property <float> factor: spaced ? block / (style.size * natural) : 1;
+    property <length> line: style.size * natural * factor;
     property <int> lines: max(1, round(t.preferred-height / line));
     property <int> shown: max-lines > 0 ? min(lines, max-lines) : lines;
-    property <length> block: style.size * style.line-height;
-    height: round(shown * block / 1px) * 1px;
+    height: shown * block;
     min-width: 0;
     accessible-role: AccessibleRole.text;
     accessible-label: text;
     t := Text {
         x: 0;
-        y: (root.block - root.line) * InterMetrics.ascent-share;
+        // El glifo va donde lo pone Flutter en un bloque sin redondear.
+        // Con `spaced`, Slint reparte el interlineado extra mitad arriba y
+        // mitad abajo y Flutter en proporción al ascendente: se corrige aquí.
+        y: (root.spaced ? (root.style.size * root.style.line-height - root.style.size * root.natural) * (InterMetrics.ascent-share - 0.5)
+            : (root.style.size * root.style.line-height - root.style.size * root.natural) * InterMetrics.ascent-share) + root.style.nudge;
         width: parent.width;
         height: root.shown * root.line;
+        line-height-factor: root.factor;
         text: root.text;
         font-family: root.font-family;
         font-size: root.style.size;
