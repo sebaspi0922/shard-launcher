@@ -55,6 +55,13 @@ fn click(ui: &MainWindow, label: &str) {
     by_label(ui, label).mock_single_click(PointerEventButton::Left);
 }
 
+/// Abre el alta Shard y deja que el diálogo se cree y tome el foco.
+fn open_shard(ui: &MainWindow) {
+    ui.global::<AccountsState>().invoke_add_shard();
+    let w = ui.as_weak();
+    wait("diálogo Shard", move || w.unwrap().global::<AccountsState>().get_offline_open());
+}
+
 fn type_line(ui: &MainWindow, text: &str) {
     for ch in text.chars().chain(['\n']) {
         let t: slint::SharedString = ch.to_string().into();
@@ -195,9 +202,10 @@ fn login_shard_real() {
     ui.show().unwrap();
 
     // Contraseña mala primero: el error de credenciales.
-    ui.global::<AccountsState>().invoke_add_shard();
+    open_shard(&ui);
     type_line(&ui, "prueba_ui");
     type_line(&ui, "no-es-la-clave");
+    assert!(ui.global::<AccountsState>().get_offline_busy(), "no se envió el formulario");
     let s = ui.as_weak();
     wait("credenciales malas", move || !s.unwrap().global::<AccountsState>().get_offline_error().is_empty());
     assert_eq!(
@@ -207,7 +215,7 @@ fn login_shard_real() {
     click(&ui, "Cancelar");
 
     // La buena.
-    ui.global::<AccountsState>().invoke_add_shard();
+    open_shard(&ui);
     type_line(&ui, "prueba_ui");
     type_line(&ui, &password);
     let w = ui.as_weak();
