@@ -75,27 +75,30 @@ export component Wrapped {
     in property <float> natural: InterMetrics.natural;
     in property <int> max-lines: 0;
     in property <TextHorizontalAlignment> horizontal-alignment: left;
-    // `true` = interlineado de Flutter en todas las líneas (line-height-factor
-    // de Slint, que reparte el espacio extra mitad arriba y mitad abajo: se
-    // corrige con `y` al reparto proporcional). `false` = como hasta F3.
-    in property <bool> exact-lines;
-    property <length> natural-line: style.size * natural;
-    property <length> line: exact-lines ? style.size * style.line-height : natural-line;
+    // `true` = todas las líneas con el interlineado de Flutter
+    // (line-height-factor), no solo la primera.
+    in property <bool> spaced;
+    // Flutter redondea el alto de cada línea (12 × 1,45 = 17,4 → 17).
+    property <length> block: round(style.size * style.line-height / 1px) * 1px;
+    property <float> factor: spaced ? block / (style.size * natural) : 1;
+    property <length> line: style.size * natural * factor;
     property <int> lines: max(1, round(t.preferred-height / line));
     property <int> shown: max-lines > 0 ? min(lines, max-lines) : lines;
-    property <length> block: style.size * style.line-height;
-    // Flutter no redondea el alto de un párrafo de varias líneas.
-    height: exact-lines ? shown * block : round(shown * block / 1px) * 1px;
+    height: shown * block;
     min-width: 0;
     accessible-role: AccessibleRole.text;
     accessible-label: text;
     t := Text {
         x: 0;
-        y: (root.exact-lines ? (root.block - root.natural-line) * (InterMetrics.ascent-share - 0.5) : (root.block - root.line) * InterMetrics.ascent-share) + root.style.nudge;
+        // El glifo va donde lo pone Flutter en un bloque sin redondear.
+        // Con `spaced`, Slint reparte el interlineado extra mitad arriba y
+        // mitad abajo y Flutter en proporción al ascendente: se corrige aquí.
+        y: (root.spaced ? (root.style.size * root.style.line-height - root.style.size * root.natural) * (InterMetrics.ascent-share - 0.5)
+            : (root.style.size * root.style.line-height - root.style.size * root.natural) * InterMetrics.ascent-share) + root.style.nudge;
         width: parent.width;
         height: root.shown * root.line;
+        line-height-factor: root.factor;
         text: root.text;
-        line-height-factor: root.exact-lines ? root.style.line-height / root.natural : 1;
         font-family: root.font-family;
         font-size: root.style.size;
         font-weight: root.style.weight;

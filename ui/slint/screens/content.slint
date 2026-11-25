@@ -298,7 +298,7 @@ component ProjectCard inherits Rectangle {
             }
         }
         Wrapped {
-            exact-lines: true;
+            spaced: true;
             y: 24px;
             width: parent.width;
             text: root.item.description;
@@ -843,7 +843,7 @@ component ProjectSheet inherits Rectangle {
                 padding-right: 24px;
                 padding-top: 16px;
                 Wrapped {
-            exact-lines: true; text: root.p.description; style: Type.body-medium; }
+            spaced: true; text: root.p.description; style: Type.body-medium; }
             }
             if ContentState.sheet-categories.length > 0: HorizontalLayout {
                 padding-left: 24px;
@@ -853,9 +853,7 @@ component ProjectSheet inherits Rectangle {
                 spacing: 4px;
                 for c in ContentState.sheet-categories: Tag { text: c; }
             }
-            // 20 en Flutter, que deja la línea medio píxel más arriba que Slint
-            // (alturas fraccionarias de texto): 19,5 la pone en la misma fila.
-            Rectangle { height: 19.5px; }
+            Rectangle { height: 20px; }
             Rectangle { height: 1px; background: Palette.border; }
             // Destino.
             if !ContentState.sheet-pack: VerticalLayout {
@@ -926,7 +924,7 @@ component ProjectSheet inherits Rectangle {
                     padding: 24px;
                     alignment: start;
                     Wrapped {
-            exact-lines: true; text: ContentState.sheet-empty-text; style: Type.body-medium; accessible-id: "txt-no-versions"; }
+            spaced: true; text: ContentState.sheet-empty-text; style: Type.body-medium; accessible-id: "txt-no-versions"; }
                 }
                 if ContentState.sheet-state == LoadState.ready && ContentState.sheet-versions.length > 0: Flickable {
                     content-height: ContentState.sheet-versions.length * 70px - 4px + 24px;
@@ -994,7 +992,7 @@ component ModpackDialog inherits Rectangle {
         dismissible: false;
         accessible-id: "modpack-dialog";
         Wrapped {
-            exact-lines: true; text: @tr("modpackBody"); style: Type.body-medium; color: Palette.text; }
+            spaced: true; text: @tr("modpackBody"); style: Type.body-medium; color: Palette.text; }
         Rectangle { height: 16px; }
         if !ContentState.modpack-fixed: VerticalLayout {
             HorizontalLayout {
@@ -1082,11 +1080,11 @@ component ModpackDialog inherits Rectangle {
         }
         Rectangle { height: 12px; }
         Wrapped {
-            exact-lines: true; text: ContentState.modpack-done-body; style: Type.body-medium; color: Palette.text; }
+            spaced: true; text: ContentState.modpack-done-body; style: Type.body-medium; color: Palette.text; }
         for w in ContentState.modpack-warnings: VerticalLayout {
             Rectangle { height: 4px; }
             Wrapped {
-            exact-lines: true; text: w; style: Type.body-small; color: Palette.warning; }
+            spaced: true; text: w; style: Type.body-small; color: Palette.warning; }
         }
         DialogActions {
             TextButton { text: @tr("close"); height: 48px; accessible-id: "cancel"; clicked => { ContentState.modpack-close(); } }
