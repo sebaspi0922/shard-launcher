@@ -72,7 +72,7 @@ impl Backend {
         Self { core, rt, pending_update: Arc::default() }
     }
 
-    /// Instancias, cuenta activa, partidas en marcha y servidores.
+    /// Instancias, cuenta activa y servidores.
     pub fn load(&self) {
         let core = self.core.clone();
         let me = self.clone();
@@ -92,10 +92,19 @@ impl Backend {
                 c.set_account(active.as_ref().map(|a| a.name.as_str()));
                 c.set_account_microsoft(active.as_ref().is_some_and(|a| a.kind == lcore::auth::AccountKind::Msa));
             });
+            me.load_servers();
+        });
+    }
+
+    /// Partidas que siguen abiertas al arrancar la app (`_restore`). Solo
+    /// una vez: después mandan los eventos del núcleo; recargar la lista a
+    /// cada cambio pisaría «Iniciando» o resucitaría una partida ya cerrada.
+    pub fn restore_games(&self) {
+        let core = self.core.clone();
+        self.rt.spawn(async move {
             for g in core.running_games().await {
                 post(move |c| c.restore_game(&g.instance_id, g.game_id));
             }
-            me.load_servers();
         });
     }
 

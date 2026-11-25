@@ -127,11 +127,13 @@ impl Launches {
     /// `Core::launch` devolvió la partida.
     pub fn launched(&mut self, id: &str, game_id: u64) -> Vec<Timer> {
         self.finish_pending(id);
-        self.games.insert(game_id, id.to_owned());
-        // GameStarted puede haber llegado antes; no retroceder de «En juego».
-        if self.phase(id) == Phase::Running {
+        // Los eventos del juego pueden llegar antes que esta respuesta:
+        // GameStarted (ya en «Iniciando» o «En juego») o, si cerró muy
+        // rápido, GameCrashed/GameExited. Solo se avanza desde la preparación.
+        if !matches!(self.phase(id), Phase::Preparing | Phase::Downloading { .. }) {
             return vec![];
         }
+        self.games.insert(game_id, id.to_owned());
         self.starting(id, game_id)
     }
 
@@ -352,6 +354,21 @@ mod tests {
         l.running("b");
         assert_eq!(l.launched("b", 4), vec![]);
         assert_eq!(l.phase("b"), Phase::Running);
+    }
+
+    #[test]
+    fn un_cierre_que_llega_antes_que_la_respuesta_no_se_pisa() {
+        let mut l = Launches::default();
+        l.begin("a");
+        l.on_event(&Event::GameStarted { game_id: 5, instance_id: "a".into(), pid: None });
+        l.on_event(&Event::GameExited { game_id: 5, instance_id: "a".into(), code: Some(1), seconds_played: 0 });
+        assert_eq!(l.launched("a", 5), vec![]);
+        assert_eq!(l.phase("a"), Phase::Error);
+        // Cierre normal antes de la respuesta: queda inactiva.
+        l.begin("a");
+        l.on_event(&Event::GameExited { game_id: 6, instance_id: "a".into(), code: Some(0), seconds_played: 0 });
+        assert_eq!(l.launched("a", 6), vec![]);
+        assert_eq!(l.phase("a"), Phase::Idle);
     }
 
     #[test]
