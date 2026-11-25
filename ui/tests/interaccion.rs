@@ -282,6 +282,9 @@ fn hero_phase(ui: &MainWindow) -> LaunchPhase {
 
 fn inicio_y_cambiar_instancia() {
     let a = home_app("es");
+    a.ctl.set_account_kind(false, true);
+    settle();
+    by_label(&a.ui, "Cuenta Shard");
     assert_eq!(a.ui.get_route(), Route::Home);
     assert_eq!(by_id(&a.ui, "txt-greeting")[0].accessible_label().as_deref(), Some("Hola, NadiaK"));
     // La tarjeta grande es la última jugada; las recientes, las tres siguientes.
@@ -444,6 +447,9 @@ fn sin_cuenta_ni_instancias() {
     settle();
     assert_eq!(by_id(&a.ui, "txt-greeting")[0].accessible_label().as_deref(), Some("Welcome"));
     assert_eq!(by_id(&a.ui, "no-instances").len(), 1);
+    // Sin cuenta: Microsoft, Shard (Yggdrasil) u offline.
+    by_label(&a.ui, "Shard account");
+    by_label(&a.ui, "Add offline account");
     click(&by_label(&a.ui, "New instance"));
     assert_eq!(a.log.0.borrow().last().unwrap(), "new");
 }

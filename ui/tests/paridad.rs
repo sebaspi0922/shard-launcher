@@ -47,7 +47,7 @@ struct Scene {
 /// Microsoft, servidores con su estado).
 fn home(c: &Controller, ui: &MainWindow) {
     ui.set_route(Route::Home);
-    c.set_account_microsoft(true);
+    c.set_account_kind(true, false);
     c.set_instances(fixtures::sample_instances());
     c.set_servers(fixtures::sample_servers());
     c.set_statuses(fixtures::sample_statuses());
