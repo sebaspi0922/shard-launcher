@@ -96,18 +96,6 @@ impl Backend {
         });
     }
 
-    /// Partidas que siguen abiertas al arrancar la app (`_restore`). Solo
-    /// una vez: después mandan los eventos del núcleo; recargar la lista a
-    /// cada cambio pisaría «Iniciando» o resucitaría una partida ya cerrada.
-    pub fn restore_games(&self) {
-        let core = self.core.clone();
-        self.rt.spawn(async move {
-            for g in core.running_games().await {
-                post(move |c| c.restore_game(&g.instance_id, g.game_id));
-            }
-        });
-    }
-
     /// Servidores guardados y, después, su estado (ping en paralelo; el núcleo
     /// guarda 30 s el resultado).
     pub fn load_servers(&self) {
@@ -130,10 +118,17 @@ impl Backend {
     /// Reenvía a la UI los eventos que cambian lo que se ve. De las líneas de
     /// registro solo pasan las que dicen que el juego ya abrió (la consola,
     /// fase 3, las agrupará como hace el bridge).
+    ///
+    /// Antes, las partidas que siguen abiertas al arrancar (`_restore`), en
+    /// la misma tarea y ya suscrita: un cierre posterior llega a la UI
+    /// después y no lo pisa la lista vieja.
     pub fn pump_events(&self) {
         let mut rx = self.core.subscribe();
         let me = self.clone();
         self.rt.spawn(async move {
+            for g in me.core.running_games().await {
+                post(move |c| c.restore_game(&g.instance_id, g.game_id));
+            }
             loop {
                 match rx.recv().await {
                     Ok(Event::GameLog { ref line, .. }) if !is_ready_line(line) => {}
@@ -173,9 +168,14 @@ impl Backend {
     async fn check_update(&self, manual: bool) {
         match self.core.check_update(PACKAGE_VERSION, &Package::detect()).await {
             Ok(info) => {
-                let view = info.as_ref().map(UpdateView::from);
-                *self.pending_update.lock().expect("candado de actualización") = info;
-                post(move |c| c.update_checked(view, manual));
+                // La versión a instalar se guarda solo si la UI acepta el
+                // resultado (no lo acepta durante una instalación).
+                let pending = self.pending_update.clone();
+                post(move |c| {
+                    if c.update_checked(info.as_ref().map(UpdateView::from), manual) {
+                        *pending.lock().expect("candado de actualización") = info;
+                    }
+                });
             }
             Err(e) => {
                 tracing::info!(error = %e, "no se pudo consultar si hay versión nueva");
