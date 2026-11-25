@@ -5,6 +5,7 @@ import { Palette, Theme, Type } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { Txt, Icon, Spinner } from "base.slint";
 import { LaunchPhase } from "buttons.slint";
+import { TipArea, TipSide } from "common.slint";
 
 struct Shape { x: float, fx: float, y: float, fy: float, sx: float, lx: float, sy: float, ly: float, size: float, c: color, radius: float, outline: bool }
 
@@ -100,11 +101,20 @@ export component PlayerAvatar inherits Rectangle {
     border-radius: size * 0.24;
     clip: true;
     background: account.present ? transparent : Palette.surface2;
-    if account.present: Image {
-        width: root.size;
-        height: root.size;
-        source: root.account.face;
-        image-rendering: pixelated;
+    // Container con borde: la cara va 1 px dentro (el borde queda sobre el fondo).
+    if account.present: Rectangle {
+        x: 1px;
+        y: 1px;
+        width: root.size - 2px;
+        height: root.size - 2px;
+        border-radius: root.size * 0.24;
+        clip: true;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: root.account.face;
+            image-rendering: pixelated;
+        }
     }
     if !account.present: Icon { glyph: Icons.person; size: root.size * 0.55; color: Palette.text-muted; }
     Rectangle {
@@ -152,7 +162,7 @@ component RailItem inherits Rectangle {
             color: root.selected ? Palette.on-accent-container : Palette.text-secondary;
         }
     }
-    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    ta := TipArea { tip: root.label; side: TipSide.right; mouse-cursor: pointer; clicked => { root.clicked(); } }
 }
 
 // Raíl de navegación (_NavRail).
@@ -175,6 +185,15 @@ export component NavRail inherits Rectangle {
                 TouchArea { double-clicked => { root.toggle-max(); } }
             }
             BrandMark { size: 30px; }
+            TipArea {
+                x: (parent.width - 30px) / 2;
+                y: (parent.height - 30px) / 2;
+                width: 30px;
+                height: 30px;
+                tip: "Shard";
+                side: TipSide.right;
+                double-clicked => { root.toggle-max(); }
+            }
         }
         Rectangle { height: 8px; }
         RailItem { glyph: Icons.home; label: @tr("navHome"); selected: route == Route.home; clicked => { navigate(Route.home); } }
@@ -213,7 +232,14 @@ export component NavRail inherits Rectangle {
                 border-color: Palette.background-deep;
                 Icon { glyph: Icons.add; size: 11px; color: Palette.on-accent; }
             }
-            account-ta := TouchArea { mouse-cursor: pointer; clicked => { root.account-clicked(); } }
+            account-ta := TipArea {
+                x: (parent.width - 52px) / 2;
+                width: 52px;
+                tip: root.account.present ? root.account.name : @tr("accountNone");
+                side: TipSide.right;
+                mouse-cursor: pointer;
+                clicked => { root.account-clicked(); }
+            }
         }
     }
 }
@@ -286,22 +312,27 @@ export component TitleBar inherits Rectangle {
             width: parent.width * root.activity.progress;
             background: Palette.accent.with-alpha(0.18);
         }
+        // En Flutter la fila va en un Stack sin posicionar dentro de los 28
+        // de alto: queda arriba (16 de alto), no centrada.
         row := HorizontalLayout {
+            y: 0;
+            height: 16px;
             padding-left: 12px;
             padding-right: 12px;
             spacing: 8px;
             if root.activity.phase == LaunchPhase.running: Rectangle {
                 width: 7px;
                 height: 7px;
-                y: (28px - 7px) / 2;
+                y: (16px - 7px) / 2;
                 border-radius: 3.5px;
                 background: Palette.success;
             }
-            if root.activity.phase != LaunchPhase.running: Spinner { size: 12px; stroke: 1.6px; y: 8px; }
+            if root.activity.phase != LaunchPhase.running: Spinner { size: 12px; stroke: 1.6px; y: 2px; }
             Txt { text: root.activity.name; style: Type.label-medium; }
             Txt {
                 text: root.activity-label;
                 style: Type.label-medium;
+                family: "Inter Tnum";
                 color: root.activity.phase == LaunchPhase.running ? Palette.success : Palette.text-secondary;
             }
         }

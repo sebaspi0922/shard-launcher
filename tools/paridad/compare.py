@@ -9,7 +9,8 @@ Por escena:
 - Cajas de elementos clave: x, y, ancho y alto con tolerancia ±--px. Dos
   excepciones, porque su ancho sale del motor de texto y no del layout:
   `txt-*` (textos) compara x, y y alto; `*-play` (botón «Jugar», anclado a la
-  derecha y tan ancho como su texto) compara borde derecho, y y alto.
+  derecha y tan ancho como su texto) compara borde derecho, y y alto; `*-btn`
+  (botón anclado a la izquierda y tan ancho como su texto) compara x, y y alto.
 - Imagen Flutter | Slint | diferencias (rojo = canal con ΔE > 10 en sRGB).
 Escribe informe.md, informe.html e informe.json y sale con 1 si algo falla.
 Necesita numpy, pillow y scikit-image.
@@ -26,7 +27,13 @@ from skimage.metrics import structural_similarity
 
 
 def load_rgb(path):
-    return np.asarray(Image.open(path).convert("RGB"), dtype=np.uint8)
+    """RGB tal como se ve: lo transparente (captura para la web) se compone
+    sobre negro. Sin esto se comparan los RGB de píxeles semitransparentes,
+    que Skia y Slint guardan distinto aunque se vean igual. En las capturas
+    opacas no cambia nada."""
+    im = Image.open(path).convert("RGBA")
+    base = Image.new("RGBA", im.size, (0, 0, 0, 255))
+    return np.asarray(Image.alpha_composite(base, im).convert("RGB"), dtype=np.uint8)
 
 
 def compare_boxes(ref, got, tol):
@@ -37,7 +44,7 @@ def compare_boxes(ref, got, tol):
         if g is None:
             rows.append((name, "falta", r, None, None))
             continue
-        if name.startswith("txt-"):
+        if name.startswith("txt-") or name.endswith("-btn"):
             worst = max(abs(r[i] - g[i]) for i in (0, 1, 3))
         elif name.endswith("-play"):
             worst = max(abs((r[0] + r[2]) - (g[0] + g[2])), abs(r[1] - g[1]), abs(r[3] - g[3]))
@@ -128,7 +135,7 @@ def fmt_box(b):
 
 def write_md(a, results):
     lines = [f"# Paridad Flutter → Slint", "",
-             f"Umbral: SSIM ≥ {a.ssim}, cajas ±{a.px} px (textos: x, y, alto; botones Jugar: borde derecho, y, alto).", "",
+             f"Umbral: SSIM ≥ {a.ssim}, cajas ±{a.px} px (textos y botones `-btn`: x, y, alto; botones Jugar: borde derecho, y, alto).", "",
              "| escena | SSIM | cajas | píxeles ΔE>10 | estado |", "|---|---|---|---|---|"]
     for r in results:
         if "error" in r:
