@@ -1,6 +1,5 @@
 //! Análisis de la salida de consola del juego: niveles, hilos, continuaciones
 //! (stack traces), ruta del crash report y un anillo de líneas recientes.
-//! Comportamiento documentado en `research/06-lanzamiento.md` §6.
 
 use std::collections::VecDeque;
 use std::path::PathBuf;

@@ -1,4 +1,4 @@
-//! Mundos, datapacks y capturas de una instancia (research/06-lanzamiento.md §8).
+//! Mundos, datapacks y capturas de una instancia.
 //!
 //! `saves/<carpeta>/level.dat` es NBT con gzip; se lee y se reescribe como
 //! `fastnbt::Value` para conservar las etiquetas que no se tocan. Los campos

@@ -1,6 +1,6 @@
 # App Flutter: diseño (spec H4, 2026-10-11)
 
-Reimplementa el flujo de Roxy (`research/03-ui-pantallas.md`) sin su cuenta, su ecosistema ni sus assets, con diseño propio. La app solo pinta y gestiona estado. Todo lo demás lo hace `shard` a través del puente (D7).
+Reimplementa el flujo de Roxy sin su cuenta, su ecosistema ni sus assets, con diseño propio. La app solo pinta y gestiona estado. Todo lo demás lo hace `shard` a través del puente (D7).
 
 ## 1. Estructura
 

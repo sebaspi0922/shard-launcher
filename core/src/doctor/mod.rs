@@ -1,5 +1,5 @@
 //! Doctor: diagnóstico de instancias que no arrancan o se cierran solas.
-//! Comportamiento documentado en `research/06-lanzamiento.md` §7. `analyze` es
+//! `analyze` es
 //! una función pura sobre texto (se prueba sin disco); `Core::diagnose` reúne
 //! los datos y `Core::apply_fix` (en `fixes`) aplica los arreglos.
 
