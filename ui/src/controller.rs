@@ -470,9 +470,11 @@ impl Controller {
         self.appearance.set_prefs(p);
     }
 
-    pub fn update_checked(&self, info: Option<UpdateView>, manual: bool) {
-        self.update.borrow_mut().checked(info, manual);
+    /// `false` si el resultado se descarta (hay una instalación en marcha).
+    pub fn update_checked(&self, info: Option<UpdateView>, manual: bool) -> bool {
+        let accepted = self.update.borrow_mut().checked(info, manual);
         self.refresh_notices();
+        accepted
     }
 
     pub fn update_check_failed(&self, error: (String, String), manual: bool) {
