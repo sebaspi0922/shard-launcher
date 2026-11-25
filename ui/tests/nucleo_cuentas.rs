@@ -57,9 +57,21 @@ fn click(ui: &MainWindow, label: &str) {
 
 /// Abre el alta Shard y deja que el diálogo se cree y tome el foco.
 fn open_shard(ui: &MainWindow) {
-    ui.global::<AccountsState>().invoke_add_shard();
+    open_dialog(ui, true);
+}
+
+/// Abre el alta (offline o Shard) desde el panel de cuentas, con un clic.
+fn open_dialog(ui: &MainWindow, shard: bool) {
+    ui.global::<AccountsState>().set_panel_open(true);
     let w = ui.as_weak();
-    wait("diálogo Shard", move || w.unwrap().global::<AccountsState>().get_offline_open());
+    wait("panel", move || w.unwrap().global::<AccountsState>().get_panel_open());
+    let label = if shard { "Cuenta Shard" } else { "Añadir cuenta offline" };
+    let item = ElementHandle::find_by_accessible_label(ui, label)
+        .find(|e| e.accessible_id().as_deref() == Some("action"))
+        .unwrap_or_else(|| panic!("no hay «{label}» en el panel"));
+    item.mock_single_click(PointerEventButton::Left);
+    let w = ui.as_weak();
+    wait("diálogo de alta", move || w.unwrap().global::<AccountsState>().get_offline_open());
 }
 
 fn type_line(ui: &MainWindow, text: &str) {
@@ -86,7 +98,7 @@ fn cuentas_con_el_nucleo_real() {
             ..Default::default()
         }))
         .unwrap();
-    let backend = Backend { core: core.clone(), rt: rt.handle().clone() };
+    let backend = Backend::new(core.clone(), rt.handle().clone());
 
     let ui = MainWindow::new().unwrap();
     ui.window().set_size(slint::LogicalSize::new(1280.0, 800.0));
@@ -104,8 +116,7 @@ fn cuentas_con_el_nucleo_real() {
 
     // Alta offline desde el panel, con teclado.
     for name in ["Steve_01", "Alex"] {
-        ui.global::<AccountsState>().set_panel_open(true);
-        click(&ui, "Añadir cuenta offline");
+        open_dialog(&ui, false);
         type_line(&ui, name);
         let (w, n) = (ui.as_weak(), name.to_owned());
         wait("cuenta añadida", move || w.unwrap().get_toast_message() == format!("Cuenta «{n}» añadida"));
@@ -119,8 +130,7 @@ fn cuentas_con_el_nucleo_real() {
     assert_eq!(ui.get_account().name, active.as_str());
 
     // Nombre inválido: el núcleo no se toca.
-    ui.global::<AccountsState>().set_panel_open(true);
-    click(&ui, "Añadir cuenta offline");
+    open_dialog(&ui, false);
     type_line(&ui, "no vale");
     assert!(ui.global::<AccountsState>().get_offline_open());
     click(&ui, "Cancelar");
@@ -156,8 +166,7 @@ fn cuentas_con_el_nucleo_real() {
     assert!(!ui.global::<AccountsState>().get_login_open());
 
     // Shard sin red: error en el diálogo, sin cuenta nueva.
-    ui.global::<AccountsState>().set_panel_open(true);
-    click(&ui, "Cuenta Shard");
+    open_shard(&ui);
     type_line(&ui, "prueba_ui");
     type_line(&ui, "x");
     let s = ui.as_weak();
@@ -201,7 +210,7 @@ fn login_shard_real() {
             ..Default::default()
         }))
         .unwrap();
-    let backend = Backend { core: core.clone(), rt: rt.handle().clone() };
+    let backend = Backend::new(core.clone(), rt.handle().clone());
     let ui = MainWindow::new().unwrap();
     ui.window().set_size(slint::LogicalSize::new(1280.0, 800.0));
     let ctl = Controller::new(&ui, "es", Box::new(|| 0), Box::new(NoActions));

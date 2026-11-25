@@ -360,6 +360,7 @@ export component MicrosoftLoginDialog inherits FormDialog {
     }
     DialogActions {
         TextButton {
+            height: 48px;
             text: @tr("cancel");
             accessible-id: "cancel";
             clicked => { AccountsState.login-cancel(); }
@@ -423,6 +424,7 @@ export component OfflineAccountDialog inherits FormDialog {
     }
     DialogActions {
         TextButton {
+            height: 48px;
             text: @tr("cancel");
             enabled: !(root.shard && root.busy);
             accessible-id: "cancel";

@@ -8,7 +8,7 @@ use lcore::settings::CloseBehavior;
 use slint::ComponentHandle;
 
 use crate::backend::Backend;
-use crate::{MainWindow, ShardTray};
+use crate::{MainWindow, ResizeEdge, ShardTray};
 
 pub struct Shell {
     ui: slint::Weak<MainWindow>,
@@ -44,6 +44,12 @@ impl Shell {
         ui.on_close_chosen(move |quit, remember| {
             if let Some(s) = s.upgrade() {
                 s.chosen(quit, remember);
+            }
+        });
+        let weak = ui.as_weak();
+        ui.on_resize_start(move |edge| {
+            if let Some(u) = weak.upgrade() {
+                drag_resize(&u, edge);
             }
         });
         // El cierre del sistema (Alt+F4, botón del gestor) pasa por lo mismo.
@@ -165,6 +171,28 @@ pub fn tray_host_available() -> bool {
     }
     #[cfg(not(target_os = "linux"))]
     true
+}
+
+/// Redimensionar desde un borde: lo hace el sistema (winit
+/// `drag_resize_window`), sin marco no hay bordes propios.
+fn drag_resize(ui: &MainWindow, edge: ResizeEdge) {
+    use slint::winit_030::WinitWindowAccessor;
+    use slint::winit_030::winit::window::ResizeDirection as D;
+    let dir = match edge {
+        ResizeEdge::N => D::North,
+        ResizeEdge::S => D::South,
+        ResizeEdge::E => D::East,
+        ResizeEdge::W => D::West,
+        ResizeEdge::Ne => D::NorthEast,
+        ResizeEdge::Nw => D::NorthWest,
+        ResizeEdge::Se => D::SouthEast,
+        ResizeEdge::Sw => D::SouthWest,
+    };
+    ui.window().with_winit_window(|w| {
+        if let Err(e) = w.drag_resize_window(dir) {
+            tracing::debug!(error = %e, "no se pudo redimensionar desde el borde");
+        }
+    });
 }
 
 pub fn quit() {

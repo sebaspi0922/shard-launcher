@@ -78,6 +78,51 @@ pub async fn seed(core: &lcore::Core) -> lcore::Result<()> {
     Ok(())
 }
 
+/// `sampleServers()` (el cuarto no tiene instancia).
+pub fn sample_servers() -> Vec<crate::home::Server> {
+    let s = |id: &str, name: &str, address: &str, instance: Option<&str>| crate::home::Server {
+        id: id.into(),
+        name: name.into(),
+        address: address.into(),
+        instance_id: instance.map(Into::into),
+        account_id: None,
+    };
+    vec![
+        s("s1", "Servidor de los amigos", "mc.amigos.example", Some("survival-amigos")),
+        s("s2", "Hypixel", "mc.hypixel.net", Some("vanilla-puro")),
+        s("s3", "Create SMP", "create.smp.example:25570", Some("create-aeronautica")),
+        s("s4", "Servidor de pruebas", "localhost", None),
+    ]
+}
+
+/// `sampleStatuses()` (sin favicon: se ve el paisaje de la dirección).
+pub fn sample_statuses() -> Vec<(String, crate::home::Status)> {
+    let st = |latency_ms, players_online, players_max| crate::home::Status {
+        online: true,
+        latency_ms,
+        players_online,
+        players_max,
+        favicon_png_base64: None,
+    };
+    vec![
+        ("mc.amigos.example".into(), st(23, 3, 20)),
+        ("mc.hypixel.net".into(), st(118, 31_842, 200_000)),
+        ("create.smp.example:25570".into(), st(64, 0, 12)),
+    ]
+}
+
+/// `appImageUpdate` de test/support/updates.dart.
+pub fn sample_update() -> crate::notices::UpdateView {
+    crate::notices::UpdateView {
+        version: "0.2.0.r40".into(),
+        current: "0.1.0.r27".into(),
+        notes: Some("Actualizador integrado y arreglos de la bandeja.".into()),
+        notes_url: Some("https://shardlauncher.com/novedades".into()),
+        can_install: true,
+        download_url: "https://dl.shardlauncher.com/linux/0.2.0.r40/Shard-0.2.0.r40-x86_64.AppImage".into(),
+    }
+}
+
 // --- Cuentas y skins (fase 2) ------------------------------------------------
 
 use std::cell::RefCell;

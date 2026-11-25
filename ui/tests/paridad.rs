@@ -20,8 +20,12 @@ use shard_ui::controller::{Actions, Controller};
 use shard_ui::fixtures;
 use shard_ui::instances::Phase;
 use shard_ui::accounts::Accounts;
+use shard_ui::launch::Failure;
+use shard_ui::notices::CrashNotice;
+use shard_ui::prefs::UiPrefs;
 use shard_ui::skins::Skins;
-use shard_ui::{AccountsState, InstancesState, MainWindow, Route};
+use shard_ui::theme::Style;
+use shard_ui::{AccountsState, Backdrop, InstancesState, MainWindow, Route};
 use slint::ComponentHandle;
 use slint::platform::{PointerEventButton, WindowEvent};
 
@@ -55,6 +59,22 @@ fn sample_skins(c: &Ctx) {
     for url in [fixtures::SKIN_URL, fixtures::CAPE_1_URL, fixtures::CAPE_2_URL] {
         c.skins.texture_loaded(url, Some(fixtures::sample_texture(url)));
     }
+}
+
+/// Inicio con los datos de ejemplo de los goldens (instancias, cuenta de
+/// Microsoft, servidores con su estado).
+fn home(c: &Controller, ui: &MainWindow) {
+    ui.set_route(Route::Home);
+    c.set_account_kind(true, false);
+    c.set_instances(fixtures::sample_instances());
+    c.set_servers(fixtures::sample_servers());
+    c.set_statuses(fixtures::sample_statuses());
+}
+
+/// `home_style_*`: el estilo con el desenfoque y oscurecido del golden.
+fn styled(c: &Controller, ui: &MainWindow, style: Style) {
+    c.set_prefs(UiPrefs { style, blur: 10.0, dim: 0.5, first_run_done: Some(true), ..Default::default() });
+    home(c, ui);
 }
 
 const SCENES: &[Scene] = &[
@@ -142,6 +162,69 @@ const SCENES: &[Scene] = &[
             c.ui.set_route(Route::Skins);
         },
     },
+    Scene { name: "home_es", lang: "es", setup: |x| home(x.ctl, x.ui) },
+    Scene {
+        name: "home_downloading_es",
+        lang: "es",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            home(c, ui);
+            c.set_phase("survival-amigos", Phase::Downloading { done: 1834, total: 3920 });
+        },
+    },
+    Scene {
+        name: "home_error_es",
+        lang: "es",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            home(c, ui);
+            c.set_failure(
+                "survival-amigos",
+                Failure::Launch { kind: "java_required".into(), message: "hace falta Java 21: instálala con `lcore java install 21`".into() },
+            );
+        },
+    },
+    Scene {
+        name: "home_empty_en",
+        lang: "en",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            home(c, ui);
+            c.set_account(None);
+            c.set_instances(vec![]);
+        },
+    },
+    Scene { name: "home_style_graphite_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Graphite) },
+    Scene { name: "home_style_sebaspi_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Sebaspi) },
+    Scene { name: "home_style_landscape_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Landscape) },
+    Scene { name: "home_style_aurora_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Aurora) },
+    Scene {
+        name: "web_home_graphite_es",
+        lang: "es",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            ui.global::<Backdrop>().set_hidden(true);
+            home(c, ui);
+        },
+    },
+    Scene {
+        name: "crash_banner_es",
+        lang: "es",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            home(c, ui);
+            c.show_crash(CrashNotice { game_id: 2, instance_id: "create-aeronautica".into(), code: Some(1), crash_report: None });
+        },
+    },
+    Scene {
+        name: "update_banner_es",
+        lang: "es",
+        setup: |x| {
+            let (c, ui) = (x.ctl, x.ui);
+            home(c, ui);
+            c.update_checked(Some(fixtures::sample_update()), false);
+        },
+    },
 ];
 
 fn by_label(ui: &MainWindow, label: &str) -> ElementHandle {
@@ -178,13 +261,19 @@ fn rect(e: &ElementHandle) -> [f32; 4] {
 fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
     let mut out = BTreeMap::new();
     for name in [
-        "rail", "titlebar", "pill", "txt-title", "txt-count", "search", "view-toggle", "trash", "new", "empty",
+        "rail", "titlebar", "pill", "txt-title", "txt-count", "search", "view-toggle", "trash", "new", "empty", "txt-greeting",
+        "txt-subtitle", "txt-hero-name", "txt-recent", "hero", "hero-icon", "hero-play-btn", "hero-picker-btn", "hero-failure",
+        "no-instances", "session", "running", "servers", "update-banner", "crash-banner",
         // Fase 2.
         "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "field-2", "code", "outlined", "filled", "cancel",
         "progress", "chip", "empty-action", "viewer", "change", "source", "reset", "apply", "capes",
     ] {
         if let Some(e) = by_id(ui, name).first() {
-            out.insert(name.to_owned(), rect(e));
+            let r = rect(e);
+            // Los avisos ocultos miden 0 de alto (Flutter no los cuenta).
+            if r[3] > 1.0 {
+                out.insert(name.to_owned(), r);
+            }
         }
     }
     for kind in ["account", "action", "stage", "model", "cape"] {
@@ -192,7 +281,7 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
             out.insert(format!("{kind}-{i}"), rect(e));
         }
     }
-    for kind in ["card", "row"] {
+    for kind in ["card", "row", "recent"] {
         let items = by_id(ui, kind);
         let icons = by_id(ui, &format!("{kind}-icon"));
         let plays = by_id(ui, &format!("{kind}-play"));
@@ -209,13 +298,13 @@ fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
     out
 }
 
-/// Segundo del fondo animado en la referencia de Flutter.
-fn atmosphere_s(refs: &Path, scene: &str) -> f64 {
+/// Un reloj de la referencia de Flutter: segundo del fondo animado
+/// (`atmosphere_s`) o del giro de la esfera (`sphere_s`).
+fn ref_clock(refs: &Path, scene: &str, key: &str) -> Option<f64> {
     std::fs::read_to_string(refs.join(format!("{scene}.json")))
         .ok()
         .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-        .and_then(|v| v.get("atmosphere_s").and_then(|t| t.as_f64()))
-        .unwrap_or(0.0)
+        .and_then(|v| v.get(key).and_then(|t| t.as_f64()))
 }
 
 fn write_png(path: &Path, buf: &slint::SharedPixelBuffer<slint::Rgba8Pixel>) {
@@ -230,14 +319,18 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     let ui = MainWindow::new().unwrap();
     ui.window().set_size(slint::LogicalSize::new(1280.0, 800.0));
     ui.set_animate_background(false);
-    ui.set_background_still_at((atmosphere_s(refs, scene.name) * 1000.0).round() as i64);
+    ui.set_background_still_at((ref_clock(refs, scene.name, "atmosphere_s").unwrap_or(0.0) * 1000.0).round() as i64);
     let ctl = Controller::new(&ui, scene.lang, Box::new(|| fixtures::NOW), Box::new(NoActions));
+    ctl.appearance.set_sphere_time(Some(ref_clock(refs, scene.name, "sphere_s").unwrap_or(0.0)));
     let rec = fixtures::Recorder::default();
     let acc = Accounts::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| 0));
     let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
     acc.set_accounts(Ok(fixtures::sample_accounts()));
+    ui.set_route(Route::Instances);
     ui.show().unwrap();
     (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins });
+    // El fondo animado de Flutter va quieto en el modo de la escena.
+    ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.
     i_slint_backend_testing::testing_backend::mock_elapsed_time(1000);
     let snap = ui.window().take_snapshot().expect("captura");

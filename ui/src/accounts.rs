@@ -333,7 +333,14 @@ impl Accounts {
         let st = ui.global::<AccountsState>();
         st.set_loading(!self.loaded.get());
         let chip = self.chip(act);
-        ui.set_account(chip.clone());
+        // Raíl e Inicio: la cara generada pintada a su tamaño (Controller),
+        // o la de la skin cuando ya está.
+        self.shell.set_account(act.map(|a| a.name.as_str()));
+        self.shell.set_account_kind(act.is_some_and(|a| a.microsoft), act.is_some_and(|a| a.shard));
+        if let Some(face) = act.and_then(|a| a.skin_url.as_ref()).and_then(|u| self.faces.borrow().get(u).cloned().flatten()) {
+            ui.set_account(chip.clone());
+            ui.global::<crate::HomeState>().set_session_face(face);
+        }
         for f in self.listeners.borrow().iter() {
             f(act, chip.clone());
         }

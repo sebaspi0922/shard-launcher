@@ -1,8 +1,9 @@
 // Estados y avisos: vacío, error, carga, aviso breve (SnackBar) y diálogo.
 
 import { Palette, Theme, Type } from "../theme.slint";
-import { Txt, Para, Icon, Spinner } from "base.slint";
+import { Txt, Para, Wrapped, Icon, Spinner } from "base.slint";
 import { FilledButton, TextButton } from "buttons.slint";
+import { TipArea } from "common.slint";
 
 // EmptyState (common.dart): icono en caja de acento, título, texto y acción.
 export component EmptyState inherits VerticalLayout {
@@ -27,16 +28,17 @@ export component EmptyState inherits VerticalLayout {
                     width: 64px;
                     height: 64px;
                     border-radius: Theme.radius-panel;
-                    background: Palette.accent-container.with-alpha(Palette.accent-container.alpha / 255 * 0.6);
+                    // withValues(alpha: 0.6) reemplaza el alfa (no lo multiplica).
+                    background: Palette.accent-container.with-alpha(0.6);
                     border-width: 1px;
                     border-color: Palette.accent.with-alpha(0.25);
                     Icon { glyph: root.icon; size: 30px; color: Palette.accent; }
                 }
             }
             Rectangle { height: 20px; }
-            Para { text: root.title; style: Type.title-large; color: Palette.text; horizontal-alignment: center; }
+            Wrapped { text: root.title; style: Type.title-large; color: Palette.text; horizontal-alignment: center; }
             Rectangle { height: 8px; }
-            Para { text: root.body; horizontal-alignment: center; }
+            Wrapped { text: root.body; horizontal-alignment: center; }
             if root.action != "": VerticalLayout {
                 Rectangle { height: 20px; }
                 HorizontalLayout {
@@ -214,7 +216,98 @@ export component ConfirmDialog inherits FormDialog {
     panel-width: 420px;
     Para { text: root.body; color: Palette.text; }
     DialogActions {
-        TextButton { text: root.cancel-label; clicked => { root.dismissed(); } }
+        TextButton { text: root.cancel-label; height: 48px; clicked => { root.dismissed(); } }
         FilledButton { text: root.action; danger: root.danger; clicked => { root.accepted(); } }
     }
 }
+
+// IconButton de cerrar compacto (iconSize 18, VisualDensity.compact).
+export component CloseButton inherits Rectangle {
+    callback clicked;
+    width: 40px;
+    height: 40px;
+    accessible-role: button;
+    accessible-label: @tr("close");
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 32px;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover ? Palette.surface2 : transparent;
+        Icon { glyph: "\u{e5cd}"; size: 18px; }
+    }
+    ta := TipArea { tip: @tr("close"); mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Último fallo de lanzamiento o de partida de una instancia
+// (launch_feedback.dart LaunchFailureNote).
+export struct LaunchFailure {
+    present: bool,
+    title: string,
+    // Texto del error o código de salida e informe (puede tener «\n»).
+    detail: string,
+    // `kind: mensaje` del núcleo, en monoespaciada.
+    tech: string,
+    // El juego se cerró mal: ofrece Diagnosticar y Ver registros.
+    crashed: bool,
+}
+
+export component LaunchFailureNote inherits Rectangle {
+    in property <LaunchFailure> failure;
+    in property <bool> show-logs-link: true;
+    callback dismissed;
+    callback diagnose;
+    callback show-logs;
+    height: lay.preferred-height + 2px;
+    border-radius: Theme.radius-card;
+    background: Theme.blend(Palette.danger.with-alpha(0.14), #0000008C);
+    border-width: 1px;
+    border-color: Palette.danger.with-alpha(0.45);
+    accessible-role: groupbox;
+    accessible-label: failure.title;
+    lay := HorizontalLayout {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        padding-left: 16px;
+        padding-top: 12px;
+        padding-right: 8px;
+        padding-bottom: 12px;
+        spacing: 0;
+        VerticalLayout {
+            alignment: start;
+            padding-top: 1px;
+            Icon { glyph: "\u{f8b6}"; size: 20px; color: Palette.danger; }
+        }
+        Rectangle { width: 12px; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: start;
+            Txt { text: root.failure.title; style: Type.title-small; }
+            if root.failure.detail != "": VerticalLayout {
+                Rectangle { height: 2px; }
+                Wrapped { text: root.failure.detail; style: Type.body-small; }
+            }
+            if root.failure.tech != "": VerticalLayout {
+                Rectangle { height: 4px; }
+                Wrapped {
+                    text: root.failure.tech;
+                    font-family: "JetBrains Mono";
+                    natural: 1.32;
+                    style: { size: 11px, weight: 400, line-height: 1.45, letter-spacing: 0 };
+                    color: Palette.text-muted;
+                    max-lines: 2;
+                }
+            }
+            if root.failure.crashed: HorizontalLayout {
+                alignment: start;
+                padding-top: 8px;
+                spacing: 4px;
+                TextButton { text: @tr("doctorDiagnose"); icon: "\u{f805}"; icon-size: 16px; pad: 8px; tint: Palette.text; clicked => { root.diagnose(); } }
+                if root.show-logs-link: TextButton { text: @tr("launchSeeLogs"); icon: "\u{eb8e}"; icon-size: 16px; pad: 8px; tint: Palette.text; clicked => { root.show-logs(); } }
+            }
+        }
+        CloseButton { clicked => { root.dismissed(); } }
+    }
+}
+
