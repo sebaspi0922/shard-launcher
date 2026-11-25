@@ -1,17 +1,19 @@
 //! Gestión de cuentas: `accounts.json` (datos públicos) + secretos en el keyring.
 //!
 //! Secretos por cuenta de Microsoft (usuario = UUID de la cuenta):
-//! - `<APP_ID>.msa`: refresh token de Microsoft.
-//! - `<APP_ID>.mc`: token de Minecraft en caché con su caducidad (JSON).
+//! - `<APP_ID>.sisu`: sesión SISU completa, incluidos tokens y claves del dispositivo.
+//! - `<APP_ID>.msa` y `<APP_ID>.mc`: formato antiguo; solo se leen para pedir
+//!   re-login y se borran al eliminar la cuenta.
 
 use std::path::Path;
 
+use minecraft_auth::java::{JavaAuthManager, JavaLaunchSession};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::auth::mc::{self, Profile, SkinVariant};
-use crate::auth::msa::{self, DeviceCode, MsaTokens};
-use crate::auth::{Account, AccountKind, AuthError, Session, UserType, offline, xbox, yggdrasil};
+use crate::auth::msa::{self, DeviceCode};
+use crate::auth::{Account, AccountKind, AuthError, Session, UserType, offline, yggdrasil};
 use crate::events::Event;
 use crate::fsutil::{now_secs, read_json, write_json};
 use crate::launcher::Core;
@@ -21,8 +23,6 @@ use crate::settings::DEFAULT_YGGDRASIL_BASE_URL;
 use crate::{Error, Result};
 
 const ACCOUNTS_SCHEMA: u32 = 1;
-/// Margen antes de la caducidad para renovar el token de Minecraft.
-const MC_TOKEN_MARGIN_SECS: i64 = 300;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AccountsFile {
@@ -44,18 +44,16 @@ impl AccountsFile {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-struct CachedMcToken {
-    token: String,
-    expires_at: i64,
-}
-
 fn msa_service() -> String {
     format!("{APP_ID}.msa")
 }
 
 fn mc_service() -> String {
     format!("{APP_ID}.mc")
+}
+
+fn sisu_service() -> String {
+    format!("{APP_ID}.sisu")
 }
 
 fn shard_service() -> String {
@@ -66,6 +64,19 @@ fn shard_service() -> String {
 struct ShardLogin {
     base: String,
     credentials: yggdrasil::Credentials,
+}
+
+fn ensure_expected_account(launch: &JavaLaunchSession, expected_id: Option<&str>) -> Result<()> {
+    if let Some(expected) = expected_id
+        && expected != launch.player_uuid.simple().to_string()
+    {
+        return Err(AuthError::Unexpected {
+            service: "Minecraft",
+            detail: format!("la sesión pertenece a otra cuenta ({})", launch.player_name),
+        }
+        .into());
+    }
+    Ok(())
 }
 
 impl Core {
@@ -116,84 +127,82 @@ impl Core {
         Ok(())
     }
 
-    async fn client_id(&self) -> Result<String> {
-        self.settings()
-            .await
-            .effective_msa_client_id()
-            .ok_or_else(|| AuthError::MissingClientId.into())
-    }
-
-    /// Paso 1 del login: pide un código para que el usuario lo introduzca.
+    /// Paso 1 del login SISU: devuelve el código y deja el sondeo en una tarea
+    /// cancelable al soltar `DeviceCode`.
     pub async fn begin_msa_login(&self) -> Result<DeviceCode> {
-        let client_id = self.client_id().await?;
-        msa::request_device_code(self.http(), &self.inner.endpoints, &client_id).await
+        msa::begin_login(self.http().client().clone()).await
     }
 
     /// Paso 2: espera al usuario, completa la cadena y guarda la cuenta.
     pub async fn complete_msa_login(&self, code: &DeviceCode) -> Result<Account> {
-        let client_id = self.client_id().await?;
-        let tokens =
-            msa::poll_device_code(self.http(), &self.inner.endpoints, &client_id, code).await?;
-        self.finish_msa(tokens, None).await
+        let manager = msa::complete_login(code).await?;
+        self.finish_msa(manager, None).await
     }
 
-    /// De token de Microsoft a cuenta guardada.
-    async fn finish_msa(&self, tokens: MsaTokens, expected_id: Option<&str>) -> Result<Account> {
-        let ep = &self.inner.endpoints;
-        let http = self.http();
-        let xbl = xbox::authenticate_user(http, ep, &tokens.access_token).await?;
-        let xsts = xbox::authorize_xsts(http, ep, &xbl).await?;
-        let mc_token = mc::login_with_xbox(http, ep, &xsts).await?;
-        let profile = match mc::profile(http, ep, &mc_token.access_token).await? {
-            Some(p) => p,
-            None => {
-                let owns = mc::owns_game(http, ep, &mc_token.access_token)
-                    .await
-                    .unwrap_or(false);
-                return Err(if owns {
-                    AuthError::NoProfile
-                } else {
+    /// Completa el perfil y guarda toda la sesión, incluidas las claves SISU.
+    async fn finish_msa(
+        &self,
+        manager: JavaAuthManager,
+        expected_id: Option<&str>,
+    ) -> Result<Account> {
+        let launch = match manager.launch_session().await {
+            Ok(launch) => launch,
+            Err(minecraft_auth::Error::ProfileNotFound) => {
+                let entitlements = manager.entitlements().await.map_err(msa::map_error)?;
+                return Err(if entitlements.items.is_empty() {
                     AuthError::NotEntitled
+                } else {
+                    AuthError::NoProfile
                 }
                 .into());
             }
+            Err(error) => return Err(msa::map_error(error)),
         };
-        if let Some(expected) = expected_id
-            && expected != profile.id
-        {
-            return Err(AuthError::Unexpected {
-                service: "Minecraft",
-                detail: format!("la sesión pertenece a otra cuenta ({})", profile.name),
-            }
-            .into());
-        }
+        let id = launch.player_uuid.simple().to_string();
+        ensure_expected_account(&launch, expected_id)?;
 
-        if let Some(refresh) = &tokens.refresh_token {
-            self.secret_set(
-                msa_service(),
-                profile.id.clone(),
-                refresh.expose().to_owned(),
-            )
-            .await?;
-        } else if expected_id.is_none() {
-            return Err(AuthError::Unexpected {
-                service: "Microsoft",
-                detail: "no se recibió refresh token (¿falta offline_access?)".into(),
-            }
-            .into());
-        }
-        self.store_mc_token(&profile.id, &mc_token.access_token, mc_token.expires_in)
-            .await?;
+        // El perfil del crate no incluye skins; esta llamada conserva ese dato
+        // en `accounts.json` sin rehacer ninguna fase de autenticación.
+        let token = Secret::new(launch.access_token);
+        let profile = mc::profile(self.http(), &self.inner.endpoints, &token)
+            .await?
+            .ok_or(AuthError::NoProfile)?;
+        self.store_sisu_session(&id, &manager).await?;
         self.upsert_msa_account(&profile).await
     }
 
-    async fn store_mc_token(&self, id: &str, token: &Secret, expires_in: u64) -> Result<()> {
-        let cached = CachedMcToken {
-            token: token.expose().to_owned(),
-            expires_at: now_secs() + expires_in as i64,
-        };
-        let json = serde_json::to_string(&cached).map_err(|e| Error::json("token", e))?;
-        self.secret_set(mc_service(), id.to_owned(), json).await
+    async fn store_sisu_session(&self, id: &str, manager: &JavaAuthManager) -> Result<()> {
+        let json = msa::to_saved_json(manager).await?;
+        self.secret_set(sisu_service(), id.to_owned(), json).await
+    }
+
+    async fn load_sisu_manager(&self, account: &Account) -> Result<JavaAuthManager> {
+        if let Some(raw) = self.secret_get(sisu_service(), account.id.clone()).await? {
+            return msa::from_saved_json(self.http().client().clone(), &raw);
+        }
+
+        let legacy_msa = self
+            .secret_get(msa_service(), account.id.clone())
+            .await?
+            .is_some();
+        let legacy_mc = self
+            .secret_get(mc_service(), account.id.clone())
+            .await?
+            .is_some();
+        if legacy_msa || legacy_mc {
+            Err(AuthError::LegacyMsaSession.into())
+        } else {
+            Err(AuthError::RefreshTokenMissing.into())
+        }
+    }
+
+    /// Usa el refresco perezoso del crate y persiste cualquier token renovado.
+    async fn stored_msa_launch(&self, account: &Account) -> Result<JavaLaunchSession> {
+        let manager = self.load_sisu_manager(account).await?;
+        let launch = manager.launch_session().await.map_err(msa::map_error)?;
+        ensure_expected_account(&launch, Some(&account.id))?;
+        self.store_sisu_session(&account.id, &manager).await?;
+        Ok(launch)
     }
 
     async fn upsert_msa_account(&self, profile: &Profile) -> Result<Account> {
@@ -331,7 +340,8 @@ impl Core {
             AccountKind::Msa => {
                 let a = self.secret_delete(msa_service(), account.id.clone()).await;
                 let b = self.secret_delete(mc_service(), account.id.clone()).await;
-                a.and(b)?;
+                let c = self.secret_delete(sisu_service(), account.id.clone()).await;
+                a.and(b).and(c)?;
             }
             AccountKind::Shard => {
                 self.secret_delete(shard_service(), account.id.clone())
@@ -389,12 +399,11 @@ impl Core {
                 }
             }
             AccountKind::Msa => {
-                let token = self.valid_mc_token(&account, false).await?;
-                let account = self.find_account(&account.id).await?;
+                let launch = self.stored_msa_launch(&account).await?;
                 Session {
-                    uuid: account.id,
-                    name: account.name,
-                    access_token: token,
+                    uuid: launch.player_uuid.simple().to_string(),
+                    name: launch.player_name,
+                    access_token: Secret::new(launch.access_token),
                     user_type: UserType::Msa,
                 }
             }
@@ -402,6 +411,9 @@ impl Core {
         self.update_accounts(|file| {
             if let Some(a) = file.accounts.iter_mut().find(|a| a.id == account.id) {
                 a.last_used = Some(now_secs());
+                if a.kind == AccountKind::Msa {
+                    a.name = session.name.clone();
+                }
             }
             Ok(())
         })
@@ -409,14 +421,19 @@ impl Core {
         Ok((session, base))
     }
 
-    /// Fuerza la renovación completa de la sesión de una cuenta de Microsoft.
+    /// Actualiza el perfil y renueva solo las fases de la sesión que hayan
+    /// caducado; la cadencia la controla `minecraft-auth`.
     pub async fn refresh_account(&self, id: &str) -> Result<Account> {
         let account = self.find_account(id).await?;
         if account.kind != AccountKind::Msa {
             return Err(AuthError::OfflineAccount.into());
         }
-        self.valid_mc_token(&account, true).await?;
-        self.find_account(&account.id).await
+        let launch = self.stored_msa_launch(&account).await?;
+        let token = Secret::new(launch.access_token);
+        let profile = mc::profile(self.http(), &self.inner.endpoints, &token)
+            .await?
+            .ok_or(AuthError::NoProfile)?;
+        self.upsert_msa_account(&profile).await
     }
 
     async fn resolve(&self, id: Option<&str>) -> Result<Account> {
@@ -431,38 +448,13 @@ impl Core {
         }
     }
 
-    async fn valid_mc_token(&self, account: &Account, force: bool) -> Result<Secret> {
-        if !force
-            && let Some(raw) = self.secret_get(mc_service(), account.id.clone()).await?
-            && let Ok(cached) = serde_json::from_str::<CachedMcToken>(&raw)
-            && cached.expires_at - now_secs() > MC_TOKEN_MARGIN_SECS
-        {
-            return Ok(Secret::new(cached.token));
-        }
-        let refresh = self
-            .secret_get(msa_service(), account.id.clone())
-            .await?
-            .map(Secret::new)
-            .ok_or(AuthError::RefreshTokenMissing)?;
-        let client_id = self.client_id().await?;
-        let tokens = msa::refresh(self.http(), &self.inner.endpoints, &client_id, &refresh).await?;
-        self.finish_msa(tokens, Some(&account.id)).await?;
-        let raw = self
-            .secret_get(mc_service(), account.id.clone())
-            .await?
-            .ok_or(AuthError::RefreshTokenMissing)?;
-        let cached: CachedMcToken =
-            serde_json::from_str(&raw).map_err(|e| Error::json("token", e))?;
-        Ok(Secret::new(cached.token))
-    }
-
     async fn msa_token_for(&self, id: Option<&str>) -> Result<(Account, Secret)> {
         let account = self.resolve(id).await?;
         if account.kind != AccountKind::Msa {
             return Err(AuthError::OfflineAccount.into());
         }
-        let token = self.valid_mc_token(&account, false).await?;
-        Ok((account, token))
+        let launch = self.stored_msa_launch(&account).await?;
+        Ok((account, Secret::new(launch.access_token)))
     }
 
     /// Perfil actual (skins y capas) de una cuenta de Microsoft.
