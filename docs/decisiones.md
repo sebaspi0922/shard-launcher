@@ -49,7 +49,7 @@ Consecuencias:
 
 **Elegido: el launcher no tiene cuenta propia. Las cuentas son de Microsoft (app de Azure propia) u offline, y los secretos solo se guardan en el keyring del sistema.**
 
-- El original bloqueaba todo el launcher si su servidor no respondía y guardaba el refresh token de Microsoft en su backend (`research/05` §2). Las dos cosas se eliminan.
+- El original bloqueaba todo el launcher si su servidor no respondía y guardaba el refresh token de Microsoft en su backend. Las dos cosas se eliminan.
 - Login por device code (igual que el original y apto para la CLI). El login con navegador y redirect a `localhost` queda como mejora de la UI.
 - Alternativa descartada: reutilizar el client ID de Roxy o de otro launcher. No es nuestro, puede revocarse y va contra las reglas del proyecto.
 
@@ -75,7 +75,7 @@ Consecuencias:
 **Elegido para empezar: ejecutar el instalador oficial con `--installClient` sobre el directorio de datos, como el original.**
 
 - Es lo más rápido y lo que soportan los propios proyectos.
-- Riesgo: depende del comportamiento del instalador en cada versión y SO (`research/06` §3). Si falla en alguna combinación, se pasa a ejecutar los processors del `install_profile.json` en el núcleo, como Prism Launcher o Modrinth App.
+- Riesgo: depende del comportamiento del instalador en cada versión y SO. Si falla en alguna combinación, se pasa a ejecutar los processors del `install_profile.json` en el núcleo, como Prism Launcher o Modrinth App.
 
 ## D7 – Frontera Rust/Flutter (2026-10-11)
 

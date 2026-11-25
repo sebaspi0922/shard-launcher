@@ -63,7 +63,7 @@ Para cada carpeta de `accounts/*/instances/*` con `instance.json` y sin `deleted
 ## 5. Después de migrar (manual, opcional)
 
 1. Comprobar que las dos instancias arrancan y que los mundos están.
-2. Borrar las 3 entradas del keyring de Roxy en Seahorse y revocar la app de Roxy en la cuenta de Microsoft (`research/07`).
+2. Borrar las 3 entradas del keyring de Roxy en Seahorse y revocar la app de Roxy en la cuenta de Microsoft.
 3. Mantener `.roxy` un tiempo como copia de seguridad; borrarlo cuando no haga falta. Los enlaces duros garantizan que no se pierde nada del lado nuevo.
 
 ## 6. Pruebas

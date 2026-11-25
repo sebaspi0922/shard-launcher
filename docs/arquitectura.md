@@ -1,6 +1,6 @@
 # Arquitectura (spec v1, 2026-10-11)
 
-Base: inventario de la fase 1 (`research/02`–`08`) y D1 (Rust + Flutter). Aquí se fija qué se construye y cómo. Las decisiones con alternativas están en `docs/decisiones.md` (D2–D7); el orden de trabajo, en `docs/plan.md`.
+Base: inventario de la fase 1 y D1 (Rust + Flutter). Aquí se fija qué se construye y cómo. Las decisiones con alternativas están en `docs/decisiones.md` (D2–D7); el orden de trabajo, en `docs/plan.md`.
 
 ## 1. Alcance
 
@@ -10,7 +10,7 @@ Base: inventario de la fase 1 (`research/02`–`08`) y D1 (Rust + Flutter). Aqu�
 
 **Más adelante, en `server/`** (opcional): amigos y presencia, LAN por internet (relay), instancias compartidas o sincronizadas, skins offline (Yggdrasil), releases del updater.
 
-**Mejoras frente al original** (bugs y huecos de `research/06` y `08`):
+**Mejoras frente al original**:
 - Sin cuenta propia obligatoria: el launcher arranca y lanza sin servidor.
 - Multiplataforma real: reglas de librerías y natives para linux/windows/osx y x86_64/aarch64; el original solo conocía linux x86_64.
 - Descargas con reintentos y backoff, caché de los JSON (manifiesto, versión, loaders) y modo offline cuando todo está instalado.
@@ -34,7 +34,7 @@ app/                    proyecto Flutter
   rust/                 crate puente `shard_bridge` (flutter_rust_bridge); solo adapta tipos
   lib/                  Dart: UI y estado
 server/                 (hito 5) servicios del home-server
-docs/  research/  tools/
+docs/  tools/
 ```
 
 `lcore` es el nombre interno provisional del crate; el nombre visible de la app está pendiente (D2).
@@ -45,28 +45,28 @@ Regla de dependencias: `core` no conoce Flutter ni frb. `app/rust` depende de `c
 
 ### 3.1 Módulos
 
-| Módulo | Responsabilidad | Referencia en research |
-|---|---|---|
-| `paths` | Directorios de datos por SO (`directories`), layout de §4, rutas seguras (sin `..`, zip-slip) | 06 §1, 07 |
-| `settings` | `settings.json` global (versionado, migraciones de esquema) | 04 §1.3, 07 |
-| `net` | Cliente HTTP único (reqwest + rustls), User-Agent propio, timeouts, reintentos con backoff exponencial y jitter, caché JSON con ETag/Last-Modified y TTL, modo offline | 06 §2.8 |
-| `download` | Cola de descargas con límite de concurrencia (por defecto 12, configurable), verificación SHA-1/SHA-512, escritura `.part` + rename, progreso agregado (archivos y bytes), cancelación | 06 §2.5 |
-| `auth` | `msa` (device code, refresco), `xbox` (XBL, XSTS, XErr), `mc` (login_with_xbox, entitlements, perfil, skins, capas), `offline` (UUID v3 `OfflinePlayer:<nombre>`), `store` (cuentas públicas en JSON y secretos en keyring) | 05 §2 |
-| `meta` | Manifiesto de Mojang, JSON de versión, `inheritsFrom` y fusión, reglas (`os`, `arch`, `features`), índice de assets | 06 §2 |
-| `loader` | `fabric`, `quilt` (perfil JSON de meta), `forge`/`neoforge` (instalador oficial `--installClient`, ver D6), `optifine`, `labymod`, `custom` | 06 §3 |
-| `java` | Detección (override, gestionado, PATH, rutas típicas por SO), instalación desde Adoptium con checksum, selección por major | 06 §4 |
-| `instance` | Modelo, CRUD, papelera de 30 días, cambio de versión, icono, playtime | 06 §1, 07 |
-| `launch` | Plan de lanzamiento (descargas pendientes), natives, classpath, sustitución de argumentos, quickPlay/`--server`, resolución, proceso, logs, crash, salida | 06 §5–6 |
-| `logs` | Parser de líneas `[HH:MM:SS] [Hilo/NIVEL]`, continuaciones, anillo de 5000 líneas por partida, archivo de log propio | 06 §6 |
-| `doctor` | Firmas de diagnóstico (tabla de 06 §7), `FixAction`, informe | 06 §7 |
-| `content` | Modrinth (`api.modrinth.com/v2`), CurseForge (API oficial con clave del usuario), instalar, activar/desactivar, borrar, registro de procedencia, dependencias, actualizaciones | 06 §9 |
-| `modpack` | `.mrpack` y zip de CurseForge: crear instancia, descargar, `overrides` | 06 §9 |
-| `backup` | Zip de la instancia, retención con fijados, restaurar, planificador | 06 §8 |
-| `world` | `level.dat` (fastnbt + flate2), renombrar, editar, borrar, datapacks | 06 §8 |
-| `import` | Roxy (D4), `.minecraft` oficial, Prism/MultiMC, carpeta suelta | 06 §9, 07 |
-| `servers` | Lista local editable de servidores rápidos; Server List Ping (TCP, handshake + status) con caché TTL | 03, 08 |
-| `rpc` | Discord Rich Presence con application id propio; nombre de instancia y versión | 06 §6 |
-| `events` | Bus de eventos (`tokio::sync::broadcast`) | 04 (eventos `mc://*`) |
+| Módulo | Responsabilidad |
+|---|---|
+| `paths` | Directorios de datos por SO (`directories`), layout de §4, rutas seguras (sin `..`, zip-slip) |
+| `settings` | `settings.json` global (versionado, migraciones de esquema) |
+| `net` | Cliente HTTP único (reqwest + rustls), User-Agent propio, timeouts, reintentos con backoff exponencial y jitter, caché JSON con ETag/Last-Modified y TTL, modo offline |
+| `download` | Cola de descargas con límite de concurrencia (por defecto 12, configurable), verificación SHA-1/SHA-512, escritura `.part` + rename, progreso agregado (archivos y bytes), cancelación |
+| `auth` | `msa` (device code, refresco), `xbox` (XBL, XSTS, XErr), `mc` (login_with_xbox, entitlements, perfil, skins, capas), `offline` (UUID v3 `OfflinePlayer:<nombre>`), `store` (cuentas públicas en JSON y secretos en keyring) |
+| `meta` | Manifiesto de Mojang, JSON de versión, `inheritsFrom` y fusión, reglas (`os`, `arch`, `features`), índice de assets |
+| `loader` | `fabric`, `quilt` (perfil JSON de meta), `forge`/`neoforge` (instalador oficial `--installClient`, ver D6), `optifine`, `labymod`, `custom` |
+| `java` | Detección (override, gestionado, PATH, rutas típicas por SO), instalación desde Adoptium con checksum, selección por major |
+| `instance` | Modelo, CRUD, papelera de 30 días, cambio de versión, icono, playtime |
+| `launch` | Plan de lanzamiento (descargas pendientes), natives, classpath, sustitución de argumentos, quickPlay/`--server`, resolución, proceso, logs, crash, salida |
+| `logs` | Parser de líneas `[HH:MM:SS] [Hilo/NIVEL]`, continuaciones, anillo de 5000 líneas por partida, archivo de log propio |
+| `doctor` | Firmas de diagnóstico (tabla de 06 §7), `FixAction`, informe |
+| `content` | Modrinth (`api.modrinth.com/v2`), CurseForge (API oficial con clave del usuario), instalar, activar/desactivar, borrar, registro de procedencia, dependencias, actualizaciones |
+| `modpack` | `.mrpack` y zip de CurseForge: crear instancia, descargar, `overrides` |
+| `backup` | Zip de la instancia, retención con fijados, restaurar, planificador |
+| `world` | `level.dat` (fastnbt + flate2), renombrar, editar, borrar, datapacks |
+| `import` | Roxy (D4), `.minecraft` oficial, Prism/MultiMC, carpeta suelta |
+| `servers` | Lista local editable de servidores rápidos; Server List Ping (TCP, handshake + status) con caché TTL |
+| `rpc` | Discord Rich Presence con application id propio; nombre de instancia y versión |
+| `events` | Bus de eventos (`tokio::sync::broadcast`) |
 
 ### 3.2 Fachada
 
@@ -203,7 +203,7 @@ Diferencias con el original: id estable sin epoch (con sufijo si choca), `jvm_ar
 - Flutter estable (versión fijada con fvm en `app/.fvmrc`), Dart 3.
 - `flutter_rust_bridge` 2.x estable (la última estable vista es 2.12.0; las 2.13/2.14 están en beta). Se fija la versión exacta en el hito 4.
 - Estado: Riverpod. Rutas: go_router. i18n: `gen-l10n` con ARB es y en (textos propios, no copiados del original).
-- Pantallas (equivalentes a `research/03`): arranque, cuentas (añadir MS con device code y offline), Home (jugar, selector de cuenta y versión, servidores rápidos), Instancias (lista, detalle con pestañas mods, mundos, capturas, backups, ajustes, consola), Contenido (buscar en Modrinth y CurseForge), Skins, Ajustes, Doctor (modal), consola en ventana aparte o panel.
+- Pantallas: arranque, cuentas (añadir MS con device code y offline), Home (jugar, selector de cuenta y versión, servidores rápidos), Instancias (lista, detalle con pestañas mods, mundos, capturas, backups, ajustes, consola), Contenido (buscar en Modrinth y CurseForge), Skins, Ajustes, Doctor (modal), consola en ventana aparte o panel.
 - Diseño propio: tema oscuro con acento derivado del fondo (paleta extraída en local), blur y oscurecido configurables, base 1280×800 redimensionable, decoraciones de ventana propias (`window_manager`). Los assets del original no se usan.
 - Bandeja, autostart, instancia única y notificaciones con plugins de Flutter de escritorio (`tray_manager`, `launch_at_startup`, `local_notifier` o equivalentes, a validar en el hito 4).
 

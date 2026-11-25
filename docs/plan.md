@@ -87,7 +87,7 @@ La fase 3 empieza por H0 y H1.
 - `instance`: CRUD, papelera de 30 días, cambio de versión, icono, playtime.
 - Loaders: Vanilla, Fabric y Quilt primero; luego Forge y NeoForge con instalador oficial (D6).
 - `launch`: argumentos (memoria, JVM, resolución, quickPlay/`--server`), proceso desacoplado, logs, crash, salida y playtime. Varias partidas a la vez.
-- `import roxy` (`docs/migracion.md`) y Doctor (firmas y arreglos de `research/06` §7).
+- `import roxy` (`docs/migracion.md`) y Doctor.
 - Rich Presence con application id propio (opcional, si hay id de Discord).
 - **Hecho cuando**: las dos instancias migradas (Fabulously Optimized y técnico, MC 26.2 + Fabric 0.19.3) arrancan desde la CLI, con cuenta de MS si ya hay aprobación y offline si no; una instancia vanilla antigua (1.8.9) y una NeoForge también arrancan.
 

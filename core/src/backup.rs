@@ -1,4 +1,4 @@
-//! Copias de seguridad de instancias (investigación en `research/06-lanzamiento.md` §8).
+//! Copias de seguridad de instancias.
 //!
 //! Disco: `backups/<instancia>/backup-<epoch>.zip` + `backups.json`.
 //! Contenido de un backup nuevo: `instance.json`, `content.json` (si existe) y

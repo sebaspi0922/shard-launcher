@@ -37,7 +37,7 @@ Compose usa la imagen del proyecto `unmojang/drasl:latest`, con SQLite en el vol
 
 Pasaron `git diff --check`, la validación de Compose y la lectura de los archivos ARB y TOML. Los tests añadidos cubren el formato de metadatos y los argumentos JVM, el checksum, el POST con wiremock, respuestas rechazadas o incompletas, la persistencia de tokens y la convivencia de cuentas con el mismo UUID.
 
-No se pudieron ejecutar Cargo, Clippy, rustfmt ni los tests del core porque el entorno de trabajo carece de Cargo. Tampoco estaban Flutter, Dart ni `flutter_rust_bridge_codegen`. El puente generado y las localizaciones se actualizaron manualmente y queda pendiente comprobarlos con la toolchain. La descarga real del JAR, el keyring real, el arranque del juego y la compatibilidad con una instancia Drasl o Ely.by quedan sin comprobar. La sesión no pudo resolver el host del JAR y el dominio final está pendiente. Se validó el modelo de Compose sin arrancar contenedores. No hubo push ni cambios en `research/`.
+No se pudieron ejecutar Cargo, Clippy, rustfmt ni los tests del core porque el entorno de trabajo carece de Cargo. Tampoco estaban Flutter, Dart ni `flutter_rust_bridge_codegen`. El puente generado y las localizaciones se actualizaron manualmente y queda pendiente comprobarlos con la toolchain. La descarga real del JAR, el keyring real, el arranque del juego y la compatibilidad con una instancia Drasl o Ely.by quedan sin comprobar. La sesión no pudo resolver el host del JAR y el dominio final está pendiente. Se validó el modelo de Compose sin arrancar contenedores. No hubo push.
 
 Desde la raíz del repo, con las toolchains instaladas:
 

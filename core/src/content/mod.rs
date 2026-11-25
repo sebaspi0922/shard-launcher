@@ -1,6 +1,6 @@
 //! Contenido de las instancias: mods, resource packs, shaders y datapacks de
 //! Modrinth y CurseForge, registro de procedencia (`content.json`) y modpacks.
-//! Diseño en `docs/arquitectura.md` y `research/06-lanzamiento.md` §9.
+//! Diseño en `docs/arquitectura.md`.
 
 pub mod curseforge;
 mod icons;
