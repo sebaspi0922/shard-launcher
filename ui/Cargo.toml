@@ -4,7 +4,7 @@ description = "Interfaz de Shard en Slint (sustituye a la app Flutter de app/)"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
-license = "GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0"
+license.workspace = true
 
 [[bin]]
 name = "shard-ui"
