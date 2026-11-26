@@ -79,12 +79,10 @@ export component MainWindow inherits Window {
     title: "Shard";
     icon: @image-url("../img/shard-512.png");
     no-frame: true;
-    preferred-width: 1280px;
-    preferred-height: 800px;
-    // Con la escala de UI por debajo de 1 la ventana mide más píxeles
-    // lógicos: el mínimo sigue siendo 960 × 600 a la escala del sistema.
-    min-width: 960px / Theme.ui-scale;
-    min-height: 600px / Theme.ui-scale;
+    preferred-width: 1120px;
+    preferred-height: 640px;
+    min-width: 960px;
+    min-height: 600px;
     default-font-family: "Inter";
     background: Backdrop.hidden ? transparent : Palette.background;
 
