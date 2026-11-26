@@ -157,7 +157,9 @@ fn mundos_lista_y_seleccion() {
 
     // Abrir la carpeta del mundo.
     click(&by_id(&a.ui, "world-folder")[0]);
-    assert_eq!(a.rec.take(), [format!("open-folder /tmp/shard-test/instances/{ID}/minecraft/saves/Creativo-pruebas")]);
+    let game_dir = fixtures::detail::sample_detail(ID).unwrap().game_dir;
+    let world_dir = game_dir.join("saves").join("Creativo-pruebas");
+    assert_eq!(a.rec.take(), [format!("open-folder {}", world_dir.display())]);
 }
 
 fn mundos_modo_dificultad_hardcore_y_trucos() {
@@ -352,7 +354,9 @@ fn capturas_rejilla_y_visor() {
 
     // Abrir la carpeta.
     click(&by_id(&a.ui, "shots-folder")[0]);
-    assert_eq!(a.rec.take(), [format!("open /tmp/shard-test/instances/{ID}/minecraft/screenshots")]);
+    let game_dir = fixtures::detail::sample_detail(ID).unwrap().game_dir;
+    let screenshots_dir = game_dir.join("screenshots");
+    assert_eq!(a.rec.take(), [format!("open {}", screenshots_dir.display())]);
 
     // Visor: clic en la tercera, flechas, límites y Escape.
     click(&by_id(&a.ui, "shot")[2]);
