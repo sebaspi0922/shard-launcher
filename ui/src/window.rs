@@ -66,6 +66,14 @@ impl Shell {
         shell
     }
 
+    /// Ajustes cambió «al cerrar la ventana».
+    pub fn set_close_behavior(&self, close: CloseBehavior) {
+        self.close.set(close);
+        if close == CloseBehavior::Tray {
+            self.ensure_tray();
+        }
+    }
+
     fn request_close(&self) {
         match self.close.get() {
             CloseBehavior::Quit => quit(),

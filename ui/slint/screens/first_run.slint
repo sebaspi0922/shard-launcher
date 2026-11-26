@@ -1,0 +1,782 @@
+// Asistente de primer arranque (first_run/first_run_page.dart): bienvenida e
+// idioma → importar (Roxy y .minecraft, simulando antes) → cuenta → listo.
+// Rust (`first_run.rs`) rellena `FirstRunState`.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Fmt } from "../fmt.slint";
+import { Txt, Wrapped, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, TextButton, Checkbox } from "../components/buttons.slint";
+import { EmptyState, ErrorNote } from "../components/feedback.slint";
+import { Tag, ColorBadge } from "../components/panels.slint";
+import { Divider } from "../components/controls.slint";
+import { BrandMark, PlayerAvatar, AccountChip } from "../components/shell.slint";
+import { AccountsState } from "accounts.slint";
+import { LoadState, InstancesState } from "instances.slint";
+
+// Una instancia del plan de Roxy (PlannedInstanceView).
+export struct RoxyRow {
+    name: string,
+    initials: string,
+    icon-from: color,
+    icon-to: color,
+    mc: string,
+    loader: string,
+    // «1,4 GB».
+    size: string,
+    backups: int,
+    // Motivo para omitirla («» = se importa).
+    skipped: string,
+}
+
+export global FirstRunState {
+    // 0 bienvenida, 1 importar, 2 cuenta, 3 listo.
+    in-out property <int> step;
+    // Idioma: 0 sistema, 1 español, 2 inglés.
+    in property <int> language;
+    callback language-changed(int);
+    callback finish;
+
+    // Importar. Orígenes encontrados («» = no está).
+    in property <LoadState> sources-state: LoadState.loading;
+    in property <string> sources-error;
+    in property <string> sources-error-detail;
+    in property <string> roxy-path;
+    in property <string> minecraft-path;
+    in-out property <bool> roxy-selected: true;
+    in-out property <bool> minecraft-selected;
+    // 0 eligiendo, 1 importando, 2 hecho.
+    in property <int> import-phase;
+    // Estado de cada origen al importar: 0 nada, 1 importando, 2 hecho.
+    in property <int> roxy-status;
+    in property <int> minecraft-status;
+    in property <LoadState> roxy-plan-state: LoadState.loading;
+    in property <string> roxy-plan-error;
+    // Resumen: instancias a importar, su tamaño y lo compartido.
+    in property <int> roxy-count;
+    in property <string> roxy-size;
+    in property <string> roxy-shared;
+    in property <[RoxyRow]> roxy-rows;
+    in property <[string]> roxy-warnings;
+    in property <LoadState> minecraft-plan-state: LoadState.loading;
+    in property <string> minecraft-plan-error;
+    in property <string> minecraft-name;
+    in property <string> minecraft-mc;
+    in property <string> minecraft-loader;
+    in property <string> minecraft-size;
+    in property <[string]> minecraft-tags;
+    in property <[string]> minecraft-warnings;
+    // Progreso en archivos (total 0 = sin saber).
+    in property <int> import-done;
+    in property <int> import-total;
+    // Resultado: instancias importadas o error.
+    in property <int> import-count;
+    in property <string> import-error;
+    in property <string> import-error-detail;
+    callback roxy-toggled(bool);
+    callback minecraft-toggled(bool);
+    callback run-import;
+
+}
+
+// Paso de la columna izquierda (_StepItem).
+component StepItem inherits HorizontalLayout {
+    in property <int> index;
+    in property <string> label;
+    // 0 hecho, 1 actual, 2 pendiente.
+    in property <int> state;
+    spacing: 12px;
+    accessible-role: AccessibleRole.text;
+    accessible-label: label;
+    Rectangle {
+        width: 28px;
+        height: 28px;
+        border-radius: 14px;
+        background: root.state == 0 ? Palette.accent : root.state == 1 ? Palette.accent-container : Palette.surface2;
+        border-width: root.state == 1 ? 2px : 1px;
+        border-color: root.state == 1 ? Palette.accent : Palette.border;
+        animate background { duration: Theme.motion ? Theme.medium : 0ms; }
+        if root.state == 0: Text {
+            text: Icons.check;
+            font-family: "ShardIconsFill";
+            font-size: 16px;
+            color: Palette.on-accent;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        if root.state != 0: Txt {
+            width: parent.width;
+            y: (parent.height - self.height) / 2;
+            text: root.index + 1;
+            style: Type.label-large;
+            horizontal-alignment: center;
+            color: root.state == 1 ? Palette.on-accent-container : Palette.text-muted;
+        }
+    }
+    Txt {
+        y: (parent.height - self.height) / 2;
+        text: root.label;
+        style: { size: 13.5px, weight: root.state == 1 ? 600 : 500, line-height: 1.35, letter-spacing: 0 };
+        color: root.state != 2 ? Palette.text : Palette.text-muted;
+    }
+}
+
+// Cabecera de cada paso (_StepHeader).
+component StepHeader inherits VerticalLayout {
+    in property <string> eyebrow;
+    in property <string> title;
+    in property <string> body;
+    Txt { text: root.eyebrow; style: { size: 11px, weight: 600, line-height: 1.35, letter-spacing: 1.2px }; color: Palette.accent; }
+    Rectangle { height: 8px; }
+    Txt { text: root.title; style: Type.headline-medium; accessible-id: "txt-title"; }
+    Rectangle { height: 8px; }
+    Wrapped { text: root.body; spaced: true; style: Type.body-medium; color: Palette.text-secondary; }
+}
+
+// Tarjeta de elección (_ChoiceCard): idioma o tipo de cuenta.
+component ChoiceCard inherits Rectangle {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> body;
+    in property <bool> selected;
+    callback clicked;
+    min-width: 0;
+    preferred-width: 0;
+    horizontal-stretch: 1;
+    // Todas las de la fila igual de altas (IntrinsicHeight + stretch): la
+    // fila toma la más alta y no crece más.
+    preferred-height: lay.preferred-height;
+    vertical-stretch: 0;
+    border-radius: Theme.radius-card;
+    background: selected ? Palette.accent-container.with-alpha(0.55) : ta.has-hover ? Palette.surface2 : Palette.surface1;
+    border-width: selected ? 2px : 1px;
+    border-color: selected ? Palette.accent : Palette.border;
+    accessible-role: button;
+    accessible-label: title;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-action-default => { clicked(); }
+    lay := VerticalLayout {
+        padding: 16px;
+        HorizontalLayout {
+            Icon { glyph: root.icon; size: 22px; color: root.selected ? Palette.accent : Palette.text-secondary; }
+            Rectangle { horizontal-stretch: 1; }
+            if root.selected: Icon { glyph: Icons.check-circle; filled: true; size: 18px; color: Palette.accent; y: 2px; }
+        }
+        Rectangle { height: 12px; }
+        Txt { text: root.title; style: Type.title-small; }
+        Rectangle { height: 2px; }
+        Wrapped { text: root.body; style: Type.body-small; color: Palette.text-secondary; max-lines: 2; }
+        Rectangle { vertical-stretch: 1; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Novedad de la bienvenida (_Feature).
+component Feature inherits HorizontalLayout {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> body;
+    spacing: 12px;
+    min-width: 0;
+    preferred-width: 0;
+    horizontal-stretch: 1;
+    VerticalLayout {
+        alignment: start;
+        Icon { glyph: root.icon; size: 20px; color: Palette.accent; }
+    }
+    VerticalLayout {
+        alignment: start;
+        horizontal-stretch: 1;
+        Txt { text: root.title; style: Type.label-large; }
+        Rectangle { height: 2px; }
+        Wrapped { text: root.body; spaced: true; style: { size: 12px, weight: 400, line-height: 1.4, letter-spacing: 0 }; color: Palette.text-secondary; }
+    }
+}
+
+// Barra de acciones de cada paso (_StepActions).
+component StepActions inherits HorizontalLayout {
+    in property <bool> back;
+    in property <string> secondary;
+    in property <string> primary;
+    in property <string> primary-icon: Icons.arrow-forward;
+    in property <bool> primary-enabled: true;
+    callback back-clicked;
+    callback secondary-clicked;
+    callback primary-clicked;
+    spacing: 8px;
+    if root.back: TextButton {
+        height: 48px;
+        accessible-id: "text-btn";
+        text: @tr("back");
+        icon: Icons.arrow-back;
+        clicked => { root.back-clicked(); }
+    }
+    Rectangle { horizontal-stretch: 1; }
+    if root.secondary != "": TextButton {
+        height: 48px;
+        accessible-id: "text-btn";
+        text: root.secondary;
+        clicked => { root.secondary-clicked(); }
+    }
+    FilledButton {
+        text: root.primary;
+        icon: root.primary-icon;
+        icon-size: 18px;
+        enabled: root.primary-enabled;
+        accessible-id: "filled";
+        clicked => { root.primary-clicked(); }
+    }
+}
+
+// Origen de importación (_SourceCard): cabecera con casilla y, si está
+// elegido, el plan debajo.
+component SourceCard inherits Rectangle {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> path;
+    // 0 nada, 1 importando, 2 hecho.
+    in property <int> status;
+    in property <bool> enabled;
+    in-out property <bool> selected;
+    callback toggled(bool);
+    border-radius: Theme.radius-card;
+    background: selected ? Palette.surface2 : Palette.surface1;
+    border-width: 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.55) : Palette.border;
+    height: lay.preferred-height;
+    accessible-role: groupbox;
+    accessible-label: title;
+    lay := VerticalLayout {
+        padding: 1px;
+        Rectangle {
+            height: head.preferred-height;
+            head := HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 12px;
+                padding-top: 12px;
+                padding-bottom: 12px;
+                spacing: 12px;
+                Rectangle {
+                    width: 36px;
+                    height: 36px;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: Theme.radius-control;
+                    background: Palette.accent-container.with-alpha(0.6);
+                    Icon { glyph: root.icon; size: 20px; color: Palette.accent; }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    Txt { text: root.title; style: Type.title-small; }
+                    Txt { text: root.path; style: { size: 11.5px, weight: 400, line-height: 1.5, letter-spacing: 0 }; family: "JetBrains Mono"; color: Palette.text-muted; }
+                }
+                if root.status != 0: ColorBadge { text: root.status == 1 ? @tr("firstRunImporting") : @tr("firstRunSourceDone"); tint: Palette.accent; y: (parent.height - self.height) / 2; }
+                Rectangle {
+                    width: 48px;
+                    height: 48px;
+                    accessible-role: checkbox;
+                    accessible-label: root.title;
+                    accessible-checkable: true;
+                    accessible-checked: root.selected;
+                    accessible-enabled: root.enabled;
+                    accessible-action-default => { root.toggle(); }
+                    Rectangle {
+                        width: 18px;
+                        height: 18px;
+                        border-radius: 4px;
+                        border-width: root.selected ? 0 : 1.5px;
+                        border-color: Palette.border-strong;
+                        background: root.selected ? Palette.accent : transparent;
+                        opacity: root.enabled ? 1 : 0.38;
+                        if root.selected: Path {
+                            width: 12px;
+                            height: 12px;
+                            viewbox-width: 24;
+                            viewbox-height: 24;
+                            stroke: Palette.on-accent;
+                            stroke-width: 2.5px;
+                            MoveTo { x: 4; y: 12.5; } LineTo { x: 9.5; y: 18; } LineTo { x: 20; y: 6.5; }
+                        }
+                    }
+                }
+            }
+            TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.toggle(); } }
+        }
+        if root.selected: Divider { }
+        // El plan solo se ve con el origen elegido.
+        Rectangle {
+            height: root.selected ? plan.preferred-height : 0;
+            visible: root.selected;
+            clip: true;
+            plan := VerticalLayout {
+                y: 0;
+                height: self.preferred-height;
+                padding-left: 16px;
+                padding-right: 16px;
+                padding-top: 12px;
+                padding-bottom: 16px;
+                @children
+            }
+        }
+    }
+    function toggle() {
+        if !enabled { return; }
+        selected = !selected;
+        toggled(selected);
+    }
+}
+
+// Icono de instancia pequeño (InstanceIcon de 26).
+component SmallIcon inherits Rectangle {
+    in property <RoxyRow> item;
+    width: 26px;
+    height: 26px;
+    border-radius: 26px * 0.26;
+    background: @linear-gradient(135deg, item.icon-from 0%, item.icon-to 100%);
+    border-width: 1px;
+    border-color: #FFFFFF29;
+    drop-shadow-color: #00000059;
+    drop-shadow-blur: 26px * 0.3;
+    drop-shadow-offset-y: 26px * 0.08;
+    Text {
+        text: root.item.initials;
+        font-family: "Inter";
+        font-size: 26px * 0.36;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        color: #FFFFFFF2;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component WelcomeStep inherits VerticalLayout {
+    StepHeader {
+        eyebrow: @tr("firstRunStepWelcome");
+        title: @tr("firstRunWelcomeTitle", "Shard");
+        body: @tr("firstRunWelcomeBody");
+    }
+    Rectangle { height: 32px; }
+    Txt { text: @tr("settingsLanguage"); style: Type.title-small; }
+    Rectangle { height: 12px; }
+    HorizontalLayout {
+        spacing: 12px;
+        ChoiceCard {
+            icon: Icons.computer;
+            title: @tr("languageSystem");
+            body: @tr("firstRunLanguageSystem");
+            selected: FirstRunState.language == 0;
+            accessible-id: "choice";
+            clicked => { FirstRunState.language-changed(0); }
+        }
+        ChoiceCard {
+            icon: Icons.translate;
+            title: "Español";
+            body: "España · Latinoamérica";
+            selected: FirstRunState.language == 1;
+            accessible-id: "choice";
+            clicked => { FirstRunState.language-changed(1); }
+        }
+        ChoiceCard {
+            icon: Icons.translate;
+            title: "English";
+            body: "United Kingdom · United States";
+            selected: FirstRunState.language == 2;
+            accessible-id: "choice";
+            clicked => { FirstRunState.language-changed(2); }
+        }
+    }
+    Rectangle { height: 32px; }
+    Txt { text: @tr("firstRunHighlights"); style: Type.title-small; }
+    Rectangle { height: 12px; }
+    HorizontalLayout {
+        spacing: 20px;
+        Feature { icon: Icons.deployed-code; title: @tr("firstRunFeatureInstances"); body: @tr("firstRunFeatureInstancesBody"); accessible-role: groupbox; accessible-id: "feature"; }
+        Feature { icon: Icons.extension; title: @tr("firstRunFeatureContent"); body: @tr("firstRunFeatureContentBody"); accessible-role: groupbox; accessible-id: "feature"; }
+        Feature { icon: Icons.stethoscope; title: @tr("firstRunFeatureDoctor"); body: @tr("firstRunFeatureDoctorBody"); accessible-role: groupbox; accessible-id: "feature"; }
+    }
+    Rectangle { vertical-stretch: 1; }
+    StepActions {
+        primary: @tr("firstRunStart");
+        primary-clicked => { FirstRunState.step = 1; }
+    }
+}
+
+component ImportStep inherits VerticalLayout {
+    property <bool> has-roxy: FirstRunState.roxy-path != "";
+    property <bool> has-minecraft: FirstRunState.minecraft-path != "";
+    property <bool> none: FirstRunState.sources-state == LoadState.ready && !has-roxy && !has-minecraft;
+    property <bool> chosen: FirstRunState.sources-state == LoadState.ready
+        && ((FirstRunState.roxy-selected && has-roxy) || (FirstRunState.minecraft-selected && has-minecraft));
+    property <bool> choosing: FirstRunState.import-phase == 0;
+    property <bool> running: FirstRunState.import-phase == 1;
+    StepHeader {
+        eyebrow: @tr("firstRunStepImport");
+        title: @tr("firstRunImportTitle");
+        body: @tr("firstRunImportBody");
+    }
+    Rectangle { height: 24px; }
+    Rectangle {
+        vertical-stretch: 1;
+        if FirstRunState.sources-state == LoadState.loading: Spinner { }
+        if FirstRunState.sources-state == LoadState.failed: VerticalLayout {
+            alignment: start;
+            ErrorNote { message: FirstRunState.sources-error; detail: FirstRunState.sources-error-detail; details-label: @tr("details"); }
+        }
+        if root.none: EmptyState {
+            icon: Icons.travel-explore;
+            title: @tr("firstRunImportNoneTitle");
+            body: @tr("firstRunImportNoneBody");
+        }
+        if FirstRunState.sources-state == LoadState.ready && !root.none: Flickable {
+            content-height: list.preferred-height;
+            list := VerticalLayout {
+                alignment: start;
+                spacing: 12px;
+                if root.has-roxy: SourceCard {
+                    icon: Icons.rocket-launch;
+                    title: @tr("firstRunRoxy");
+                    path: FirstRunState.roxy-path;
+                    selected <=> FirstRunState.roxy-selected;
+                    enabled: root.choosing;
+                    status: FirstRunState.roxy-status;
+                    accessible-id: "source";
+                    toggled(v) => { FirstRunState.roxy-toggled(v); }
+                    if FirstRunState.roxy-plan-state == LoadState.loading: Rectangle { height: 2px; background: Palette.surface3; }
+                    if FirstRunState.roxy-plan-state == LoadState.failed: ErrorNote { message: FirstRunState.roxy-plan-error; }
+                    if FirstRunState.roxy-plan-state == LoadState.ready: VerticalLayout {
+                        Wrapped {
+                            text: (FirstRunState.roxy-count == 0 ? @tr("firstRunRoxySummary.zero", FirstRunState.roxy-size, FirstRunState.roxy-shared)
+                                : @tr("firstRunRoxySummary" | "firstRunRoxySummary" % FirstRunState.roxy-count, FirstRunState.roxy-size, FirstRunState.roxy-shared));
+                            style: Type.body-small;
+                            color: Palette.text-secondary;
+                        }
+                        Rectangle { height: 12px; }
+                        for r in FirstRunState.roxy-rows: VerticalLayout {
+                            padding-bottom: 6px;
+                            HorizontalLayout {
+                                opacity: r.skipped != "" ? 0.5 : 1;
+                                SmallIcon { item: r; }
+                                Rectangle { width: 12px; }
+                                Txt { text: r.name; style: Type.body-medium; color: Palette.text; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+                                Txt { text: Fmt.version-line(r.mc, r.loader); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 0; y: (parent.height - self.height) / 2; }
+                                Rectangle { width: 16px; }
+                                Txt {
+                                    width: 150px;
+                                    y: (parent.height - self.height) / 2;
+                                    text: r.skipped != "" ? @tr("firstRunSkipped", r.skipped)
+                                        : r.backups > 0 ? r.size + " · " + @tr("firstRunBackups" | "firstRunBackups" % r.backups) : r.size;
+                                    style: Type.body-small;
+                                    family: "Inter Tnum";
+                                    color: Palette.text-secondary;
+                                    horizontal-alignment: right;
+                                }
+                            }
+                        }
+                        for w in FirstRunState.roxy-warnings: Wrapped { text: "· " + w; style: Type.body-small; color: Palette.warning; }
+                    }
+                }
+                if root.has-minecraft: SourceCard {
+                    icon: Icons.deployed-code;
+                    title: @tr("firstRunMinecraft");
+                    path: FirstRunState.minecraft-path;
+                    selected <=> FirstRunState.minecraft-selected;
+                    enabled: root.choosing;
+                    status: FirstRunState.minecraft-status;
+                    accessible-id: "source";
+                    toggled(v) => { FirstRunState.minecraft-toggled(v); }
+                    if FirstRunState.minecraft-plan-state == LoadState.loading: Rectangle { height: 2px; background: Palette.surface3; }
+                    if FirstRunState.minecraft-plan-state == LoadState.failed: ErrorNote { message: FirstRunState.minecraft-plan-error; }
+                    if FirstRunState.minecraft-plan-state == LoadState.ready: VerticalLayout {
+                        Wrapped {
+                            text: @tr("firstRunMinecraftSummary", FirstRunState.minecraft-name, Fmt.version-line(FirstRunState.minecraft-mc, FirstRunState.minecraft-loader), FirstRunState.minecraft-size);
+                            style: Type.body-small;
+                            color: Palette.text-secondary;
+                        }
+                        Rectangle { height: 12px; }
+                        // Wrap: filas de etiquetas que caben a lo ancho.
+                        tags := Rectangle {
+                            property <length> row-h: 29px;
+                            height: tag-layout.preferred-height;
+                            tag-layout := VerticalLayout {
+                                spacing: 8px;
+                                HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: start;
+                                    for t[i] in FirstRunState.minecraft-tags: Tag { visible: i < 4; text: t; icon: Icons.check; width: i < 4 ? self.preferred-width : 0; }
+                                }
+                                if FirstRunState.minecraft-tags.length > 4: HorizontalLayout {
+                                    spacing: 8px;
+                                    alignment: start;
+                                    for t[i] in FirstRunState.minecraft-tags: Tag { visible: i >= 4; text: t; icon: Icons.check; width: i >= 4 ? self.preferred-width : 0; }
+                                }
+                            }
+                        }
+                        for w in FirstRunState.minecraft-warnings: VerticalLayout {
+                            padding-top: 8px;
+                            Wrapped { text: "· " + w; style: Type.body-small; color: Palette.warning; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if root.running: HorizontalLayout {
+        padding-top: 16px;
+        spacing: 12px;
+        Rectangle {
+            horizontal-stretch: 1;
+            height: 6px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 4px;
+            clip: true;
+            background: Palette.surface3;
+            Rectangle {
+                x: 0;
+                width: FirstRunState.import-total > 0 ? parent.width * min(1, FirstRunState.import-done / FirstRunState.import-total) : parent.width * 0.3;
+                background: Palette.accent;
+            }
+        }
+        Txt { text: FirstRunState.import-total == 0 ? @tr("firstRunImporting") : @tr("firstRunImportingFiles", FirstRunState.import-done, FirstRunState.import-total); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 0; }
+    }
+    if FirstRunState.import-phase == 2 && FirstRunState.import-error == "": HorizontalLayout {
+        padding-top: 16px;
+        spacing: 8px;
+        Icon { glyph: Icons.check-circle; filled: true; size: 20px; color: Palette.success; }
+        Txt { text: FirstRunState.import-count == 0 ? @tr("firstRunImported.zero") : @tr("firstRunImported" | "firstRunImported" % FirstRunState.import-count); style: Type.title-small; y: (parent.height - self.height) / 2; }
+    }
+    if FirstRunState.import-phase == 2 && FirstRunState.import-error != "": VerticalLayout {
+        padding-top: 16px;
+        ErrorNote { message: FirstRunState.import-error; detail: FirstRunState.import-error-detail; details-label: @tr("details"); }
+    }
+    Rectangle { height: 20px; }
+    StepActions {
+        back: !root.running;
+        secondary: root.choosing && !root.none ? @tr("firstRunNotNow") : "";
+        primary: root.choosing && root.chosen ? @tr("firstRunImportAction") : @tr("next");
+        primary-icon: root.choosing && root.chosen ? Icons.download : Icons.arrow-forward;
+        primary-enabled: !root.running;
+        back-clicked => { FirstRunState.step = 0; }
+        secondary-clicked => { FirstRunState.step = 2; }
+        primary-clicked => {
+            if root.choosing && root.chosen {
+                FirstRunState.run-import();
+            } else {
+                FirstRunState.step = 2;
+            }
+        }
+    }
+}
+
+component AccountStep inherits VerticalLayout {
+    StepHeader {
+        eyebrow: @tr("firstRunStepAccount");
+        title: @tr("firstRunAccountTitle");
+        body: @tr("firstRunAccountBody");
+    }
+    Rectangle { height: 24px; }
+    // Solo Microsoft y offline (decisión de Sebas: sin cuentas Shard).
+    HorizontalLayout {
+        spacing: 12px;
+        ChoiceCard {
+            icon: Icons.verified-user;
+            title: @tr("accountsAddMicrosoft");
+            body: @tr("firstRunMicrosoftDesc");
+            accessible-id: "choice";
+            clicked => { AccountsState.add-microsoft(); }
+        }
+        ChoiceCard {
+            icon: Icons.person;
+            title: @tr("accountsAddOffline");
+            body: @tr("firstRunOfflineDesc");
+            accessible-id: "choice";
+            clicked => { AccountsState.add-offline(); }
+        }
+    }
+    Rectangle { height: 20px; }
+    if AccountsState.items.length > 0: Txt { text: @tr("firstRunAccountsAdded"); style: Type.title-small; }
+    if AccountsState.items.length > 0: Rectangle { height: 8px; }
+    if AccountsState.items.length > 0: Flickable {
+        vertical-stretch: 1;
+        content-height: accs.preferred-height;
+        accs := VerticalLayout {
+            alignment: start;
+            for a in AccountsState.items: VerticalLayout {
+                padding-bottom: 8px;
+                Rectangle {
+                    height: 58px;
+                    border-radius: Theme.radius-card;
+                    background: Palette.card(Palette.surface1);
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    accessible-role: groupbox;
+                    accessible-label: a.name;
+                    accessible-id: "account";
+                    HorizontalLayout {
+                        padding: 13px;
+                        spacing: 12px;
+                        PlayerAvatar { account: a.chip; size: 32px; }
+                        Txt { text: a.name; style: Type.title-small; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+                        ColorBadge {
+                            y: (parent.height - self.height) / 2;
+                            text: a.microsoft ? @tr("accountMicrosoft") : @tr("accountOffline");
+                            tint: a.microsoft ? Palette.accent : Palette.text-secondary;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if AccountsState.items.length == 0: Rectangle { vertical-stretch: 1; }
+    StepActions {
+        back: true;
+        secondary: AccountsState.items.length == 0 ? @tr("firstRunNotNow") : "";
+        primary: @tr("next");
+        back-clicked => { FirstRunState.step = 1; }
+        secondary-clicked => { FirstRunState.step = 3; }
+        primary-clicked => { FirstRunState.step = 3; }
+    }
+}
+
+// Fila del resumen final (_SummaryRow).
+component SummaryRow inherits HorizontalLayout {
+    in property <string> icon;
+    in property <string> label;
+    in property <string> value;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    spacing: 12px;
+    accessible-role: groupbox;
+    accessible-label: label;
+    Icon { glyph: root.icon; size: 20px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+    Txt { text: root.label; style: Type.title-small; horizontal-stretch: 0; y: (parent.height - self.height) / 2; }
+    Rectangle { horizontal-stretch: 1; }
+    Txt { text: root.value; style: Type.body-medium; color: Palette.text-secondary; horizontal-stretch: 0; y: (parent.height - self.height) / 2; }
+}
+
+component DoneStep inherits VerticalLayout {
+    in property <AccountChip> account;
+    StepHeader {
+        eyebrow: @tr("firstRunStepDone");
+        title: @tr("firstRunDoneTitle");
+        body: @tr("firstRunDoneBody");
+    }
+    Rectangle { height: 24px; }
+    Rectangle {
+        border-radius: Theme.radius-card;
+        background: Palette.card(Palette.surface1);
+        border-width: 1px;
+        border-color: Palette.border;
+        height: sum.preferred-height;
+        sum := VerticalLayout {
+            padding: 21px;
+            SummaryRow { icon: Icons.deployed-code; label: @tr("navInstances"); value: InstancesState.total == 0 ? @tr("firstRunNoInstances") : Fmt.instances-count(InstancesState.total); accessible-id: "summary-row"; }
+            Divider { }
+            SummaryRow { icon: Icons.person; label: @tr("firstRunAccount"); value: root.account.present ? root.account.name : @tr("accountNone"); accessible-id: "summary-row"; }
+            Divider { }
+            SummaryRow { icon: Icons.palette; label: @tr("settingsAppearance"); value: @tr("firstRunAppearanceHint"); accessible-id: "summary-row"; }
+        }
+    }
+    Rectangle { vertical-stretch: 1; }
+    StepActions {
+        primary: @tr("firstRunFinish", "Shard");
+        primary-icon: Icons.rocket-launch;
+        primary-clicked => { FirstRunState.finish(); }
+    }
+}
+
+// Página completa del asistente (sin raíl; la barra de título la pone
+// MainWindow).
+export component FirstRunPage inherits Rectangle {
+    // Cuenta activa (la del raíl).
+    in property <AccountChip> account;
+    property <[string]> labels: [@tr("firstRunStepWelcome"), @tr("firstRunStepImport"), @tr("firstRunStepAccount"), @tr("firstRunStepDone")];
+    wizard := Rectangle {
+        // Centrado en lo que queda bajo la barra (32 a los lados, 40 abajo).
+        width: min(980px, root.width - 64px);
+        height: min(620px, root.height - 44px - 40px);
+        x: (root.width - self.width) / 2;
+        y: 44px + (root.height - 44px - 40px - self.height) / 2;
+        border-radius: Theme.radius-panel + 4px;
+        background: Theme.blend(Palette.surface1, Palette.background-deep.with-alpha(0.82));
+        border-width: 1px;
+        border-color: Palette.border-strong;
+        drop-shadow-color: #00000066;
+        drop-shadow-blur: 48px;
+        drop-shadow-offset-y: 18px;
+        accessible-role: groupbox;
+        accessible-id: "wizard";
+        Rectangle {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            border-radius: parent.border-radius - 1px;
+            clip: true;
+            steps := Rectangle {
+                x: 0;
+                width: 240px;
+                background: #0000002E;
+                accessible-role: groupbox;
+                accessible-id: "steps";
+                Rectangle { x: parent.width - 1px; width: 1px; background: Palette.border; }
+                VerticalLayout {
+                    padding-left: 24px;
+                    padding-right: 24px;
+                    padding-top: 32px;
+                    padding-bottom: 24px;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        BrandMark { size: 30px; }
+                        Txt { text: "Shard"; style: Type.title-large; y: (parent.height - self.height) / 2; }
+                    }
+                    Rectangle { height: 32px; }
+                    for label[i] in root.labels: VerticalLayout {
+                        StepItem {
+                            index: i;
+                            label: label;
+                            state: i < FirstRunState.step ? 0 : i == FirstRunState.step ? 1 : 2;
+                            accessible-id: "step";
+                        }
+                        if i < 3: HorizontalLayout {
+                            padding-left: 13px;
+                            alignment: start;
+                            Rectangle {
+                                width: 2px;
+                                height: 22px;
+                                background: i < FirstRunState.step ? Palette.accent.with-alpha(0.6) : Palette.border;
+                            }
+                        }
+                    }
+                    Rectangle { vertical-stretch: 1; }
+                    Wrapped { text: @tr("firstRunRailHint"); spaced: true; style: Type.body-small; color: Palette.text-muted; }
+                }
+            }
+            Rectangle {
+                x: 240px;
+                width: parent.width - 240px;
+                VerticalLayout {
+                    padding-left: 40px;
+                    padding-right: 40px;
+                    padding-top: 32px;
+                    padding-bottom: 24px;
+                    if FirstRunState.step == 0: WelcomeStep { }
+                    if FirstRunState.step == 1: ImportStep { }
+                    if FirstRunState.step == 2: AccountStep { }
+                    if FirstRunState.step == 3: DoneStep { account: root.account; }
+                }
+            }
+        }
+    }
+    // Saltar, siempre a mano arriba a la izquierda.
+    TextButton {
+        x: 16px;
+        y: 6px;
+        height: 48px;
+        text: @tr("firstRunSkip");
+        icon: Icons.skip-next;
+        accessible-id: "text-btn";
+        clicked => { FirstRunState.finish(); }
+    }
+}

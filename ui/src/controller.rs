@@ -20,7 +20,7 @@ use crate::notices::{CrashNotice, Crashes, Update, UpdateStatus, UpdateView};
 use crate::prefs::UiPrefs;
 use crate::{
     AccountChip, Activity, Fmt, HomeState, InstanceItem, InstanceTab, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
-    Notices, Route, ServerItem, UpdatePhase, art, errors, face, i18n,
+    Notices, Route, ServerItem, SettingsState, UpdatePhase, art, errors, face, i18n,
 };
 
 /// Lo que la UI pide hacer fuera de ella (núcleo, diálogos de otras fases).
@@ -120,7 +120,7 @@ fn color(c: art::Rgba) -> slint::Color {
 
 /// Copia `new` en `model` tocando solo las filas que cambian (así Slint no
 /// recrea las tarjetas y no se pierde el hover).
-fn sync<T: Clone + PartialEq + 'static>(model: &VecModel<T>, new: Vec<T>) {
+pub fn sync<T: Clone + PartialEq + 'static>(model: &VecModel<T>, new: Vec<T>) {
     if model.row_count() != new.len() {
         model.set_vec(new);
         return;
@@ -277,6 +277,7 @@ impl Controller {
             if r == Route::Home {
                 c.actions.refresh_servers();
             }
+            crate::settings::with(|s| s.route_changed(r));
         });
         on!(ctl, ui, on_resized, |c, w, h| c.appearance.resized(w, h));
         ctl.appearance.set_prefs(UiPrefs::default());
@@ -581,6 +582,12 @@ impl Controller {
         accepted
     }
 
+    /// Consulta manual en marcha («Buscando…»).
+    pub fn update_checking(&self) {
+        self.update.borrow_mut().status = UpdateStatus::Checking;
+        self.refresh_notices();
+    }
+
     pub fn update_check_failed(&self, error: (String, String), manual: bool) {
         self.update.borrow_mut().check_failed(error, manual);
         self.refresh_notices();
@@ -749,6 +756,20 @@ impl Controller {
             nt.set_update_status(status.into());
         }
         nt.set_update_progress(self.update_progress.get());
+        // Fila de Ajustes › Acerca de (_UpdateRow).
+        let version = if crate::backend::PACKAGE_VERSION.is_empty() { env!("CARGO_PKG_VERSION") } else { crate::backend::PACKAGE_VERSION };
+        let ss = ui.global::<SettingsState>();
+        ss.set_update_details(u.info.is_some() && u.status != UpdateStatus::Checking);
+        ss.set_update_checking(u.status == UpdateStatus::Checking);
+        ss.set_update_description(
+            match (&u.status, &u.error) {
+                (UpdateStatus::Checking, _) => t("settingsUpdatesChecking"),
+                (UpdateStatus::UpToDate, _) => fill(t("settingsUpdatesUpToDate"), &[("version", version)]),
+                (UpdateStatus::Failed, Some((msg, _))) => format!("{}: {msg}", t("updateFailed")),
+                _ => fill(t("settingsUpdatesCurrent"), &[("version", version)]),
+            }
+            .into(),
+        );
         let c = self.crashes.borrow();
         nt.set_crash_shown(c.notice.is_some());
         if let Some(n) = &c.notice {

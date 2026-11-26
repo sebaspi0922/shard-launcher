@@ -1,7 +1,7 @@
 # Shard → Slint: plan de migración de la UI
 
-Fecha: 2026-11-24 · Rama: `slint/f1` · Estado: fases 0 y 1 entregadas, pendiente de
-revisión.
+Fecha: 2026-11-25 · Estado: fases 0, 1, 2 y 5 entregadas (3 y 4 en curso en
+paralelo).
 
 Decisión ya tomada por Sebas: toda la UI pasa de Flutter (`app/`) a Slint
 (`ui/`), con UX prácticamente idéntica. Flutter sigue intacto en `app/` hasta
@@ -20,6 +20,7 @@ Contenido:
 7. [Resultados de la fase 0](#7-resultados-de-la-fase-0)
 8. [Resultados de la fase 1](#8-resultados-de-la-fase-1)
 9. [Resultados de la fase 2](#9-resultados-de-la-fase-2)
+10. [Resultados de la fase 5](#10-resultados-de-la-fase-5)
 
 ---
 
@@ -42,8 +43,8 @@ funciones y un stream de eventos. 46 goldens de 1280 × 800 en
 | `/content` | `content/content_page.dart`, `project_sheet.dart`, `install.dart`, `modpack_dialog.dart` | ⚠️ buscador + ficha lateral | `content_search_es`, `content_curseforge_en`, `content_target_es`, `project_sheet_es`, `modpack_installing_es` | 4 |
 | `/servers` | `servers/*` | ⚠️ lista con ping, reordenar | `servers_es`, `server_dialog_en` | 4 |
 | `/skins` | `skins/skins_page.dart`, `skin_viewer.dart`, `skin_mesh.dart` | ✅ `screens/skins.slint` + visor en Rust (`skin_mesh.rs`) | `skins_es`, `skins_offline_en` | 2 |
-| `/settings` | `settings/settings_page.dart`, `appearance_group.dart`, `java_group.dart`, `curseforge_key_dialog.dart` | ⚠️ grupos General, Apariencia, Juego, Java, Descargas, Integraciones, Acerca de | `settings_*` ×5 | 5 |
-| `/welcome` | `first_run/first_run_page.dart` (1154) | ⚠️ 4 pasos (bienvenida, importar, cuenta, listo) | `first_run_*` ×4 | 5 |
+| `/settings` | `settings/settings_page.dart`, `appearance_group.dart`, `java_group.dart`, `curseforge_key_dialog.dart` | ✅ `screens/settings.slint` + `settings.rs` (todos los grupos, Java, autoarranque, fondo propio, `AboutSlint`) | `settings_*` ×5 | 5 |
+| `/welcome` | `first_run/first_run_page.dart` (1154) | ✅ `screens/first_run.slint` + `first_run.rs` (4 pasos, importar de Roxy y `.minecraft`; cuentas solo Microsoft y offline) | `first_run_*` ×4 | 5 |
 
 Transiciones: `_fade` entre rutas (260 ms) → `opacity` animada en el
 contenedor de la ruta. `Hero` (3 usos) → fundido + escala coordinados; se
@@ -59,7 +60,7 @@ acepta que la transición no sea idéntica (no hay golden de transiciones).
 | Restaurar backup, borrar backup, captura a pantalla completa (flechas ←/→) | `instances/backups_tab.dart`, `screenshots_tab.dart` | 3 |
 | Modpack, ficha de proyecto (sheet) | `content/*` | 4 |
 | Servidor (añadir/editar), confirmar borrado | `servers/*` | 4 |
-| Doctor, clave de CurseForge, confirmar, texto | `doctor/*`, `settings/*`, `widgets/common.dart` | 5 |
+| Doctor, clave de CurseForge, confirmar, texto | `doctor/*`, `settings/*`, `widgets/common.dart` | ✅ 5 (Doctor y confirmar; la clave de CurseForge la comparte Contenido, F4) |
 | Selector desplegable (`select_button.dart`) | `widgets/` | 3 |
 
 Base: ✅ `AppDialog` (velo, panel con borde fuerte y sombra, `@children`).
@@ -288,7 +289,7 @@ nada. Estimación en hilos de agente (como F0, que fue uno).
 | **2** ✅ | Cuentas (panel, Microsoft con código, offline, Shard/Yggdrasil), skins con visor 3D, capas, caras de skin en el raíl | Visor 3D es el mayor riesgo técnico | `accounts_panel_es`, `ms_login_es`, `offline_account_en`, `skins_es`, `skins_offline_en`; geometría del visor con tests contra `skin_mesh.dart`; login real probado a mano | 2 |
 | **3** | Detalle de instancia (6 pestañas), consola en vivo, crear instancia, cambiar versión, papelera, backups, mundos, capturas | Mucho volumen; la consola es el riesgo de rendimiento | `instance_*` ×7, `create_instance_es`, `change_version_es`, `trash_en`, `backup_restore_es`, `instance_menu_es`; consola con 5000 líneas sin bajar de 60 fps | 3 |
 | **4** | Contenido (Modrinth/CurseForge, ficha, instalación, modpacks) y Servidores | Red y listas con imágenes | `content_*` ×3, `project_sheet_es`, `modpack_installing_es`, `servers_es`, `server_dialog_en` | 2 |
-| **5** | Ajustes (todos los grupos, Java, Acerca de con `AboutSlint`), primer arranque (4 pasos, importar), Doctor | Formularios, poco riesgo | `settings_*` ×5, `first_run_*` ×4, `doctor_es` | 2 |
+| **5** ✅ | Ajustes (todos los grupos, Java, Acerca de con `AboutSlint`), primer arranque (4 pasos, importar), Doctor | Formularios, poco riesgo | `settings_*` ×5, `first_run_*` ×4, `doctor_es` | 2 |
 | **6** | Plataforma: Windows y macOS probados a mano, autoarranque, redimensionar sin marco, accesibilidad (Orca/Narrador), IME, HiDPI 1,25/1,5/2, empaquetado (AppImage/Flatpak/pacman, MSI, dmg) | Lo que el arnés no ve | checklist por plataforma (niri, GNOME, KDE, X11, Windows 11, macOS) y `medir.sh` en el PC de Sebas | 2 |
 | **7** | Corte: una versión con las dos UIs, luego borrar `app/` y `app/rust` | — | una semana de uso de Sebas sin regresiones | 1 |
 
@@ -299,34 +300,20 @@ las pantallas de poco uso).
 
 ## 5. Licencia de Slint
 
-Slint se distribuye con tres licencias a elegir (cabecera SPDX de cada
-crate: `GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR
-LicenseRef-Slint-Software-3.0`; textos en
-<https://github.com/slint-ui/slint/tree/master/LICENSES>).
+**Decisión (Sebas, fase 5): Shard es software libre bajo GPLv3**
+(`LICENSE`, `license = "GPL-3.0-only"` en el workspace de Cargo, `lcore`,
+`shard-ui` y el bridge). Slint se usa con su licencia GPLv3 (una de las tres
+de su cabecera SPDX: `GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR
+LicenseRef-Slint-Software-3.0`), así que no hay obligación de atribución:
+el widget `AboutSlint` al pie de Ajustes queda como cortesía.
 
-| | Royalty-free 2.0 | GPLv3 | Comercial (Software 3.0) |
-|---|---|---|---|
-| Coste | gratis | gratis | de pago (<https://slint.dev/pricing>) |
-| Para | «Desktop, Mobile, and Web Applications»: un launcher de escritorio entra | cualquier uso | cualquier uso, incluido embebido |
-| Obligación | atribución: (a) widget `AboutSlint` en una pantalla «Acerca de» accesible desde el menú principal (o en la pantalla de inicio si no hay «Acerca de»), **o** (b) la insignia «Made with Slint» en una web pública, mejor donde se descargan los binarios | todo Shard pasa a GPLv3: código fuente publicado y misma licencia para quien lo redistribuya | según contrato; sin atribución obligatoria |
-| Límites | no sistemas embebidos; no redistribuir Slint suelto ni exponer su API | copyleft fuerte | — |
-| Encaje con Shard | bueno: Shard ya tiene «Acerca de» en Ajustes; no cambia la licencia del launcher | solo si Shard va a ser software libre GPL | innecesario hoy |
+Las otras dos opciones, para el registro: Royalty-free 2.0 (gratis, obliga a
+mostrar `AboutSlint` en «Acerca de» o la insignia en la web de descargas) y la
+comercial (de pago). Con GPLv3 ninguna hace falta.
 
-Cita (Royalty-free 2.0, §2): «You may distribute the Software as part of an
-Application, modified or unmodified, provided that You do either of the
-following: (a) Display the AboutSlint widget in an "About" screen or dialog
-that is accessible from the top level menu of the Application. […] (b)
-Display the Slint attribution badge on a public webpage, preferably where
-the binaries of your Application can be downloaded from […]».
-
-**Recomendación: Royalty-free 2.0**, cumpliendo con las dos atribuciones
-(`AboutSlint` en Ajustes → Acerca de en la fase 5 y la insignia en la página
-de descargas). Deja libre la licencia de Shard (hoy el repo es privado y sin
-licencia) y no cuesta nada. GPLv3 solo si Sebas decide publicar Shard como
-software libre GPL; comercial solo si algún día hay embebido o no se quiere
-atribución. **Lo decide Sebas**; `ui/Cargo.toml` declara de momento
-`GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0` para no adelantar la
-decisión.
+Compatibilidad de las dependencias con GPLv3 (revisada en F5 con
+`cargo metadata`, todas las dependencias de `lcore` y `shard-ui`): ver
+`docs/slint/licencias-f5.md`.
 
 ---
 
@@ -636,3 +623,85 @@ F3 sobre F4):
 
 **Pendiente:** probar a mano una instalación real de mod y de modpack con
 red; el arrastre de servidores a mano (sensación).
+---
+
+## 10. Resultados de la fase 5
+
+Ajustes, Doctor y primer arranque, contra el núcleo real.
+
+- **Ajustes** (`screens/settings.slint`, `settings.rs`, `settings_backend.rs`):
+  General (idioma al momento, al cerrar, varias partidas, autoarranque con
+  `auto-launch`: `.desktop` en Linux, registro en Windows, LaunchAgent en
+  macOS; en AppImage usa `$APPIMAGE` y en Flatpak `flatpak run`), Apariencia
+  (4 estilos con miniatura quieta, fondo propio copiado a
+  `<datos>/backgrounds/`, acento del estilo/automático/preset, desenfoque,
+  oscurecido, modo rendimiento → `ui.json`, mismas claves que Flutter),
+  Juego (memoria hasta la RAM del equipo con `sysinfo`, argumentos de JVM),
+  Java (detectadas, instalar 8/17/21/25 con progreso), Descargas,
+  Integraciones (clave de CurseForge con el diálogo compartido de F4,
+  `CurseforgeKey`; quitar pide confirmación) y Acerca de (versión, buscar
+  actualizaciones, carpeta de datos al portapapeles con `arboard`,
+  `AboutSlint` de cortesía). Los deslizadores y el texto se guardan tras
+  400/500 ms como Flutter; al salir de la página se guarda lo pendiente.
+- **Doctor** (`screens/doctor.slint`, `doctor.rs`): se abre desde «Diagnosticar»
+  (`Actions::diagnose`, el mismo punto que usa el menú del detalle de F3),
+  analiza con `Core::diagnose`, aplica arreglos (uno a la vez; vuelve a
+  analizar y recarga las instancias) y abre el crash report con `open`.
+- **Primer arranque** (`screens/first_run.slint`, `first_run.rs`): se decide
+  antes de pintar (`needs_first_run`, como `main.dart`); idioma, importar de
+  Roxy y `.minecraft` simulando antes (plan y luego importación real con
+  progreso), cuenta (**solo Microsoft y offline**: decisión de Sebas, sin
+  cuentas Shard) y resumen; «Saltar» o «Ir a Shard» escriben
+  `first_run_done` en `ui.json`. Con el asistente pendiente la app no
+  arranca oculta.
+- **Licencia:** Shard pasa a GPLv3 (§5, `LICENSE`,
+  `docs/slint/licencias-f5.md`, `tools/licencias.py`: 768 crates, ningún
+  conflicto).
+
+**Paridad** (`tools/paridad.sh all`, informe en `docs/slint/paridad-f5/`):
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| settings_es | 0,9790 | 16/16 |
+| settings_appearance_es | 0,9805 | 23/23 |
+| settings_java_es | 0,9700 | 19/19 |
+| settings_integrations_es | 0,9737 | 10/10 |
+| settings_update_en | 0,9761 | 10/10 |
+| first_run_welcome_es | 0,9728 | 15/15 |
+| first_run_import_es | 0,9757 | 13/13 |
+| first_run_account_en | 0,9872 | 14/14 |
+| first_run_done_es | 0,9896 | 12/12 |
+| doctor_es | 0,9703 | 8/8 |
+
+Notas de las referencias:
+- Las cajas de Ajustes solo cuentan lo que se ve en la ventana (Slint no
+  expone lo recortado por el `Flickable`); la escena copia el desplazamiento
+  de Flutter (`scroll_y` en el JSON).
+- `first_run_account_en` no se regenera: Flutter aún muestra la tarjeta de
+  cuenta Shard. La referencia es el golden con dos tarjetas y las cajas
+  `choice-*` se midieron en él (nota en el JSON; el test de Flutter queda
+  `skip`).
+- `doctor_es` se abre sobre Instancias, no sobre el detalle (fase 3).
+
+**Piezas compartidas nuevas:** `components/controls.slint` (`Switch`,
+`Slider`, `SegmentedButton`, `ValueBox`, `MemorySlider`, `SettingRow`,
+`Divider`), `Fmt.memory`/`Fmt.one-decimal` con separador decimal por
+idioma, `Tag { dot }`, `TextField { font-family; font-size }`,
+`Wrapped { spaced }` (interlineado de Flutter en todas las líneas, alto por
+línea redondeado como el párrafo de Flutter; unificado con F4, que añadió
+`TextStyle.nudge` y el reparto del interlineado en d7c9dc1), `prefs::save`/`UiPrefs::to_json`.
+
+**Pruebas:** `tests/fase5.rs` (clics y teclado: idioma, cierre, interruptores,
+estilo y acento → `ui.json`, memoria con el teclado y JVM con espera, instalar
+Java con progreso y error, quitar clave con confirmación, copiar, buscar
+versión; Doctor: informes viejos descartados, crash report, un arreglo a la
+vez, sano, error; asistente completo de bienvenida a «Ir a Shard» y «Saltar»)
+y `tests/nucleo_fase5.rs` (contra `lcore` real: `settings.json` y `ui.json`
+cambian, Doctor sobre una instancia real e importación real de un
+`.minecraft` de prueba con `$HOME` temporal).
+
+**Pendiente / a mano:** autoarranque real en Windows y macOS; selector de
+imagen (portal) y portapapeles en Wayland a mano; importar un Roxy real.
+Fallo previo, no de esta fase: `core/tests/fixtures/update/payload.AppImage`
+lo ignora `.gitignore` (`*.AppImage`), así que dos tests de `lcore::update`
+fallan en cualquier checkout limpio.

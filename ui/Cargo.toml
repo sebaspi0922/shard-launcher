@@ -44,8 +44,14 @@ chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 # Elegir el PNG de la skin.
 rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+# Abrir al iniciar sesión (launch_at_startup en Flutter).
+auto-launch = { version = "0.6.0", default-features = false }
+# Copiar al portapapeles (carpeta de datos).
+arboard = { version = "3.7.0", default-features = false, features = ["wayland-data-control"] }
 # RAM del equipo (tope del deslizador de memoria), como el bridge.
 sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
+# Abrir el crash report con la aplicación del sistema (url_launcher con file:).
+open = "5.3"
 
 # Saber si hay host de bandeja (StatusNotifierWatcher) antes de ocultar la
 # ventana: Slint no avisa si no pudo crear el icono. Misma versión que ksni.

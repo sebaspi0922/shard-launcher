@@ -11,6 +11,9 @@ export component TextField inherits Rectangle {
     in property <string> prefix-icon;
     in property <bool> clearable;
     in property <string> clear-label;
+    // Fuente del texto (p. ej. «JetBrains Mono» a 12,5 para argumentos).
+    in property <string> font-family: "Inter";
+    in property <length> font-size: Type.body-medium.size;
     out property <bool> has-focus: input.has-focus;
     callback edited(string);
     callback accepted(string);
@@ -39,8 +42,8 @@ export component TextField inherits Rectangle {
         x: root.lead + 4px;
         width: parent.width - self.x - root.trail;
         text: root.placeholder;
-        font-family: "Inter";
-        font-size: Type.body-medium.size;
+        font-family: root.font-family;
+        font-size: root.font-size;
         color: Palette.text-muted;
         vertical-alignment: center;
         overflow: elide;
@@ -50,8 +53,8 @@ export component TextField inherits Rectangle {
         x: root.lead + 4px;
         width: parent.width - self.x - root.trail;
         height: parent.height;
-        font-family: "Inter";
-        font-size: Type.body-large.size;
+        font-family: root.font-family;
+        font-size: root.font-size;
         color: Palette.text;
         selection-background-color: Palette.accent.with-alpha(0.35);
         selection-foreground-color: Palette.text;

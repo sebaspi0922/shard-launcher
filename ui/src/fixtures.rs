@@ -452,3 +452,229 @@ impl crate::controller::Actions for Recorder {
         self.push(format!("join {instance_id} {address} {account:?}"));
     }
 }
+// --- Ajustes (fase 5) ------------------------------------------------------
+
+use crate::settings::{Java, SettingsActions, Values};
+
+/// RAM del equipo de ejemplo (`systemMemoryMb`).
+pub const TOTAL_MB: u64 = 16384;
+pub const DATA_DIR: &str = "/home/user/.local/share/shard";
+pub const CORE_VERSION: &str = "0.1.0";
+
+/// `getSettings` de fake_bridge.dart.
+pub fn sample_values(language: Option<&str>) -> Values {
+    Values {
+        language: language.map(str::to_owned),
+        close: lcore::settings::CloseBehavior::Ask,
+        multiple: false,
+        memory_mb: 4096,
+        jvm_args: vec!["-XX:+UseG1GC".into()],
+        concurrency: 8,
+        discord: false,
+        check_updates: true,
+        msa_set: true,
+    }
+}
+
+/// `sampleJavas`.
+pub fn sample_javas() -> Vec<Java> {
+    use lcore::java::JavaSource;
+    let j = |path: &str, major, version: &str, vendor: &str, source| Java {
+        major,
+        version: version.into(),
+        vendor: Some(vendor.into()),
+        path: path.into(),
+        source,
+    };
+    vec![
+        j("/home/user/.local/share/shard/java/21/bin/java", 21, "21.0.5", "Eclipse Adoptium", JavaSource::Managed),
+        j("/usr/lib/jvm/java-17-openjdk/bin/java", 17, "17.0.13", "Arch Linux", JavaSource::System),
+        j("/usr/lib/jvm/java-8-openjdk/jre/bin/java", 8, "1.8.0_432", "Oracle Corporation", JavaSource::System),
+    ]
+}
+
+/// `flatpakUpdate` (se actualiza a mano).
+pub fn flatpak_update() -> crate::notices::UpdateView {
+    crate::notices::UpdateView {
+        version: "0.2.0.r40".into(),
+        current: "0.1.0.r27".into(),
+        notes: None,
+        notes_url: None,
+        can_install: false,
+        download_url: "https://dl.shardlauncher.com/linux/0.2.0.r40/Shard-0.2.0.r40-x86_64.flatpak".into(),
+    }
+}
+
+impl SettingsActions for Recorder {
+    fn load(&self, _: u64) {
+        self.push("settings".into());
+    }
+    fn save(&self, v: &Values, _: u64) {
+        self.push(format!("save {v:?}"));
+    }
+    fn list_java(&self) {
+        self.push("java".into());
+    }
+    fn install_java(&self, major: u32) {
+        self.push(format!("install-java {major}"));
+    }
+    fn load_autostart(&self) {
+        self.push("autostart?".into());
+    }
+    fn set_autostart(&self, on: bool) {
+        self.push(format!("autostart {on}"));
+    }
+    fn save_prefs(&self, p: &crate::prefs::UiPrefs) {
+        self.push(format!("prefs {}", p.to_json()));
+    }
+    fn pick_background(&self) {
+        self.push("pick-background".into());
+    }
+    fn image_accent(&self, path: &std::path::Path) {
+        self.push(format!("image-accent {}", path.display()));
+    }
+    fn copy_text(&self, text: &str) -> bool {
+        self.push(format!("copy {text}"));
+        true
+    }
+    fn check_update(&self) {
+        self.push("check-update".into());
+    }
+}
+
+// --- Doctor (fase 5) ---------------------------------------------------------
+
+use crate::doctor::{Diagnosis, DoctorActions, Report};
+
+/// `sampleReport`.
+pub fn sample_report() -> Report {
+    Report {
+        crash_excerpt: Some("Description: Mod resolution failed\nMod sodium-extra requires sodium 0.6.0 or later, found 0.5.11".into()),
+        crash_report_path: Some(
+            "/home/user/.local/share/shard/instances/survival-amigos/minecraft/crash-reports/crash-2026-10-11_18.02.31-client.txt".into(),
+        ),
+        diagnoses: vec![
+            Diagnosis {
+                id: "mod_dependency".into(),
+                category: "missing_dependency".into(),
+                severity: "critical".into(),
+                title: "Falta una dependencia de un mod".into(),
+                explanation: "sodium-extra necesita una versión más nueva de Sodium. Actualiza Sodium o desactiva sodium-extra.".into(),
+                confidence: 92,
+                culprit: Some("sodium-extra-0.5.4+mc1.21.4.jar".into()),
+                fix: Some("Desactivar el mod sodium-extra-0.5.4+mc1.21.4.jar".into()),
+            },
+            Diagnosis {
+                id: "low_memory".into(),
+                category: "memory".into(),
+                severity: "warning".into(),
+                title: "Poca memoria para tantos mods".into(),
+                explanation: "La instancia tiene 87 mods y 2 GB asignados. Con menos de 4 GB es habitual que se quede sin memoria.".into(),
+                confidence: 64,
+                culprit: None,
+                fix: Some("Asignar 4096 MB de memoria".into()),
+            },
+            Diagnosis {
+                id: "world_lock".into(),
+                category: "world_corruption".into(),
+                severity: "info".into(),
+                title: "Quedó un bloqueo de mundo".into(),
+                explanation: "Un session.lock de la última partida sigue ahí. No suele dar problemas, pero puede impedir abrir el mundo.".into(),
+                confidence: 40,
+                culprit: Some("saves/Mundo de verano/session.lock".into()),
+                fix: None,
+            },
+        ],
+    }
+}
+
+impl DoctorActions for Recorder {
+    fn diagnose(&self, instance_id: &str, seq: u64) {
+        self.push(format!("diagnose {instance_id} {seq}"));
+    }
+    fn apply_fix(&self, instance_id: &str, diagnosis_id: &str) {
+        self.push(format!("fix {instance_id} {diagnosis_id}"));
+    }
+    fn open_path(&self, path: &str) {
+        self.push(format!("open-path {path}"));
+    }
+}
+
+// --- Primer arranque (fase 5) --------------------------------------------------
+
+use crate::first_run::{FirstRunActions, MinecraftPlan, Planned, RoxyPlan, Section, Sources};
+
+/// `sources` de fake_bridge.dart.
+pub fn sample_sources() -> Sources {
+    Sources { roxy: Some("/home/user/.local/share/.roxy".into()), minecraft: Some("/home/user/.minecraft".into()) }
+}
+
+/// `sampleRoxyPlan`.
+pub fn sample_roxy_plan() -> RoxyPlan {
+    const GB: f64 = 1024.0 * 1024.0 * 1024.0;
+    const MB: u64 = 1024 * 1024;
+    let p = |id: &str, name: &str, mc: &str, loader: &str, bytes: u64, backups: u32, skipped: Option<&str>| Planned {
+        original_id: id.into(),
+        name: name.into(),
+        mc: mc.into(),
+        loader: loader.into(),
+        bytes,
+        backups,
+        skipped: skipped.map(str::to_owned),
+    };
+    RoxyPlan {
+        instances: vec![
+            p("survival-amigos", "Survival con amigos", "1.21.4", "fabric", (1.4 * GB).round() as u64, 3, None),
+            p("create-aeronautica", "Create: Aeronáutica", "1.20.1", "forge", (2.1 * GB).round() as u64, 1, None),
+            p("vanilla-puro", "Vanilla puro", "1.21.4", "vanilla", 412 * MB, 0, None),
+            p("viejo", "Pruebas 2023", "1.19.2", "fabric", 0, 0, Some("ya importada")),
+        ],
+        shared_bytes: (1.2 * GB).round() as u64,
+        warnings: vec![],
+    }
+}
+
+/// `sampleMinecraftPlan`.
+pub fn sample_minecraft_plan() -> MinecraftPlan {
+    const MB: u64 = 1024 * 1024;
+    let s = |name: &str, files: u64, bytes: u64| Section { section: name.into(), present: files > 0, bytes };
+    MinecraftPlan {
+        name: "Minecraft 1.21.4".into(),
+        mc: "1.21.4".into(),
+        loader: "vanilla".into(),
+        bytes: 852 * MB,
+        sections: vec![
+            s("saves", 812, 640 * MB),
+            s("resourcepacks", 3, 92 * MB),
+            s("screenshots", 57, 120 * MB),
+            s("options", 1, 6 * 1024),
+            s("servers", 1, 2 * 1024),
+            s("mods", 0, 0),
+        ],
+        warnings: vec![],
+    }
+}
+
+impl FirstRunActions for Recorder {
+    fn detect(&self) {
+        self.push("detect".into());
+    }
+    fn plan_roxy(&self) {
+        self.push("plan-roxy".into());
+    }
+    fn plan_minecraft(&self) {
+        self.push("plan-minecraft".into());
+    }
+    fn import(&self, roxy: bool, minecraft: bool) {
+        self.push(format!("import roxy={roxy} minecraft={minecraft}"));
+    }
+    fn save_language(&self, language: Option<String>) {
+        self.push(format!("language {language:?}"));
+    }
+    fn save_prefs(&self, p: &crate::prefs::UiPrefs) {
+        self.push(format!("prefs {}", p.to_json()));
+    }
+    fn reload(&self) {
+        self.push("reload".into());
+    }
+}
