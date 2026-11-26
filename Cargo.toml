@@ -6,6 +6,8 @@ members = ["core", "app/rust", "ui"]
 version = "0.1.0"
 edition = "2024"
 publish = false
+# Shard es software libre: GPLv3 (LICENSE).
+license = "GPL-3.0-only"
 
 # Binario de la UI Slint para distribuir y medir (no cambia el `release` que
 # usa el bridge de Flutter).

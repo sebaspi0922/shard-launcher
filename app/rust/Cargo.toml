@@ -1,4 +1,5 @@
 [package]
+license.workspace = true
 name = "shard_bridge"
 description = "Puente entre lcore y la app Flutter (flutter_rust_bridge)"
 version.workspace = true

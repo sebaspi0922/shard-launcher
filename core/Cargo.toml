@@ -4,6 +4,7 @@ description = "Núcleo de Shard: cuentas, instancias, descargas y lanzamiento"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
+license.workspace = true
 
 [features]
 default = ["cli"]
