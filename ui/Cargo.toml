@@ -39,9 +39,13 @@ serde_json = "1.0.154"
 # Texturas de skin y capa.
 png = "0.18"
 tracing = "0.1.44"
+# Hora local de las fechas absolutas (copias de seguridad). Ya la usa Slint.
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 # Elegir el PNG de la skin.
 rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+# RAM del equipo (tope del deslizador de memoria), como el bridge.
+sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
 
 # Saber si hay host de bandeja (StatusNotifierWatcher) antes de ocultar la
 # ventana: Slint no avisa si no pudo crear el icono. Misma versión que ksni.

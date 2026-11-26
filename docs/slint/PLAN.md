@@ -503,6 +503,72 @@ sin cuenta y offline, y cuentas antiguas deshabilitadas) y
 **Pendiente:** login de Microsoft real completo, a mano (necesita a Sebas);
 sensación del arrastre del visor a mano.
 
+## 10. Resultados de la fase 3
+
+Detalle de instancia (cabecera con paisaje, carpeta, menú «Más opciones»,
+Jugar; nota de fallo; 6 pestañas) y los diálogos de instancias, con el
+núcleo real. Cada pestaña o diálogo tiene su controlador en Rust
+(`instance.rs` y, suscritos a `DetailEvent`, `inst_content.rs`, `worlds.rs`,
+`screenshots.rs`, `backups.rs`, `console.rs`, `inst_settings.rs`,
+`create_instance.rs`, `change_version.rs`, `trash.rs`) con su trait de
+acciones (`CoreX` contra `lcore`, `fixtures::Recorder` en tests).
+
+**Paridad** (`tools/paridad.sh all`, informe en `docs/slint/paridad-f3/`):
+
+| escena | SSIM | cajas ±2 px |
+|---|---|---|
+| instance_menu_es | 0,9718 | 16/16 |
+| instance_content_es | 0,9773 | 54/54 |
+| instance_worlds_es | 0,9758 | 40/40 |
+| instance_screenshots_es | 0,9780 | 26/26 |
+| instance_backups_es | 0,9723 | 44/44 |
+| instance_logs_es | 0,9745 | 29/29 |
+| instance_settings_es | 0,9727 | 28/28 |
+| change_version_es | 0,9792 | 40/40 |
+| trash_en | 0,9740 | 18/18 |
+| **backup_restore_es** | **0,9642** | 24/24 |
+| **create_instance_es** | **0,9675** | 22/22 |
+
+Las dos que no llegan a 0,97 tienen la geometría al píxel (todas las cajas,
+colores de fondo y la línea base de cada texto medida por perfil, ±0,5 px);
+pierden en la forma del glifo de los textos de 13,5 px, que llenan esos
+diálogos: es el riesgo de §6 (Slint rasteriza a 13 px). Probado sin éxito,
+todo sobre las 38 escenas: rasterizar a 14 compensando el avance con
+`letter-spacing` (35 → 31 escenas), pesos 500 para bodyMedium/bodySmall
+(→ 25), un `stroke` de 0,25 px del color del texto (→ 33), el velo de
+`showDialog` a `Colors.black54` (sin efecto). El arreglo de verdad es en
+Slint (tamaño de glifo fraccionario en `i-slint-renderer-software`: el tamaño
+es un `i16` desde `match_font`); queda como decisión de Sebas.
+
+**Consola:** lista virtualizada (`ListView`), búfer acotado y lotes de 50 ms
+o 200 líneas como el bridge (`backend::pump_events`). Con 5000 líneas, a
+1280 × 800 con el renderer por software y `opt-level=3`: fotograma de
+14–15 ms (quieta, desplazando y llegando 200 líneas; ventana vacía 12,4 ms),
+bajo los 16,7 ms. Comando en `tests/instancia_registros.rs`.
+
+**Pruebas:** `tests/instancia_{contenido,mundos,copias,registros,ajustes,dialogos}.rs`
+(clics y teclado sobre la UI, lo pedido al núcleo y el estado) y
+`tests/nucleo_{contenido,mundos,copias,dialogos}.rs` (contra `lcore` real en
+una carpeta temporal, sin red: lo que queda en disco). Lógica pura con tests
+en cada módulo (filtros, fechas, tamaños, validación, días de papelera…).
+
+**Piezas compartidas nuevas:** `components/menu.slint` (`MenuPanel`,
+`MenuEntry`, `MenuDivider`, en una capa y no en `PopupWindow`, que el arnés
+no mide); `PlayButton { medium }`; `LabeledField.select-all()` y
+`text-size` (bodyLarge por defecto); `SegmentedButton` con `icons` y
+`enabled`; en `Controller`: `open_instance(id, tab)`, `show_logs`,
+`set_opener`, `set_dialog_hooks`, `actions()`, `instance_item`,
+`launch_failure`, `now()`. Núcleo: `Core::add_datapack`.
+
+**Diferencias con Flutter:** Mundos añade datapacks con selector de archivos
+(Flutter mandaba a Contenido); la consola descarta líneas tardías de una
+partida anterior y empieza vacía si la partida ya estaba abierta al arrancar.
+
+**Pendiente:** «Añadir»/«Explorar» de Contenido de la instancia solo navega a
+Contenido (falta pasarle instancia y tipo); Escape no cierra los diálogos;
+sin probar con red (versiones de Minecraft/loaders, actualizar e identificar
+contenido) ni el portapapeles real; a mano: rueda con 5000 líneas.
+
 ## 11. Resultados de la fase 4
 
 (Numerada 11 para dejar la 10 a la fase 3, que se integra después.)

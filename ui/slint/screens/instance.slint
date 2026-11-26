@@ -1,0 +1,380 @@
+// Detalle de una instancia (instance_detail_page.dart): cabecera con
+// acciones y menú, nota de fallo, pestañas y el contenido de la pestaña.
+//
+// Cada pestaña vive en `screens/instance/<pestaña>.slint` con su propio
+// global de estado; este archivo solo las coloca.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Fmt } from "../fmt.slint";
+import { Txt, Icon, Spinner } from "../components/base.slint";
+import { PlayButton, OutlinedButton, LaunchPhase } from "../components/buttons.slint";
+import { EmptyState, LaunchFailureNote, LaunchFailure, ConfirmDialog } from "../components/feedback.slint";
+import { Tag, TipArea } from "../components/common.slint";
+import { MenuPanel, MenuEntry, MenuDivider } from "../components/menu.slint";
+import { InstanceIcon, InstanceItem } from "instances.slint";
+import { ContentTab } from "instance/content.slint";
+import { WorldsTab } from "instance/worlds.slint";
+import { ScreenshotsTab } from "instance/screenshots.slint";
+import { BackupsTab } from "instance/backups.slint";
+import { LogsTab } from "instance/logs.slint";
+import { SettingsTab } from "instance/settings.slint";
+
+export enum InstanceTab { content, worlds, screenshots, backups, logs, settings }
+
+// Estado del detalle (Rust lo rellena: `instance::InstanceDetail`).
+export global InstanceState {
+    // Instancia abierta; "" = se ve la lista de Instancias.
+    in property <string> id;
+    in property <InstanceTab> tab: InstanceTab.settings;
+    // `false` = la instancia no está en la lista (borrada o aún cargando).
+    in property <bool> found;
+    in property <bool> loading;
+    in property <InstanceItem> item;
+    // Versión del loader (`0.16.10`); "" = sin ella.
+    in property <string> loader-version;
+    in property <LaunchFailure> failure;
+    // Paisaje de la cabecera, pintado por Rust al tamaño de `art-size`.
+    in property <image> art;
+    // Confirmación de «Eliminar instancia».
+    in-out property <bool> confirm-delete;
+    // Menú «Más opciones» abierto y dónde (esquina de abajo a la izquierda
+    // del botón, en coordenadas de la ventana).
+    in-out property <bool> menu-open;
+    in-out property <length> menu-x;
+    in-out property <length> menu-y;
+    callback art-size(length, length);
+    callback select-tab(InstanceTab);
+    // Volver a la lista (botón o raíl).
+    callback close;
+    callback play;
+    callback open-folder;
+    callback change-version;
+    callback diagnose;
+    callback delete;
+    callback dismiss-failure;
+}
+
+// Botón redondeado de 44 de la cabecera (_HeaderIconButton): fondo negro al
+// 30 %, borde blanco al 16 %.
+// Área de toque de 48 (Material), como en Flutter.
+component HeaderIconButton inherits Rectangle {
+    in property <string> icon;
+    in property <string> tooltip;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 44px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover ? Theme.blend(Palette.text.with-alpha(0.08), #0000004D) : #0000004D;
+        border-width: 1px;
+        border-color: #FFFFFF29;
+        Icon { glyph: root.icon; size: 20px; color: Palette.text; }
+    }
+    ta := TipArea { tip: root.tooltip; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Cabecera (_Header): paisaje, velo, «← Instancias», icono, nombre,
+// etiquetas, carpeta, menú y Jugar.
+component Header inherits Rectangle {
+    property <InstanceItem> item: InstanceState.item;
+    height: 168px;
+    border-radius: Theme.radius-panel;
+    accessible-id: "header";
+    accessible-role: groupbox;
+    accessible-label: item.name;
+    changed width => { InstanceState.art-size(self.width - 2px, self.height - 2px); }
+    init => { InstanceState.art-size(self.width - 2px, self.height - 2px); }
+    // Container con borde: el contenido va 1 px dentro.
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: Theme.radius-panel - 1px;
+        clip: true;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: InstanceState.art;
+            image-fit: fill;
+            accessible-role: none;
+        }
+        Rectangle { background: @linear-gradient(90deg, #000000B8 0%, #00000026 100%); }
+        // Área de toque de 48; se ve la píldora de 32.
+        back := Rectangle {
+            x: 12px;
+            y: 12px;
+            height: 48px;
+            width: brow.preferred-width;
+            Rectangle {
+                y: 8px;
+                height: 32px;
+                border-radius: Theme.radius-control;
+                background: bta.has-hover ? Theme.blend(Palette.text.with-alpha(0.08), #00000040) : #00000040;
+            }
+            accessible-role: button;
+            accessible-label: @tr("navInstances");
+            accessible-id: "back";
+            accessible-action-default => { InstanceState.close(); }
+            brow := HorizontalLayout {
+                padding-left: 10px;
+                padding-right: 10px;
+                spacing: 8px;
+                Icon { glyph: Icons.arrow-back; size: 18px; color: Palette.text; y: (parent.height - self.height) / 2; }
+                Txt { text: @tr("navInstances"); style: Type.label-large; y: (parent.height - self.height) / 2; }
+            }
+            bta := TouchArea { mouse-cursor: pointer; clicked => { InstanceState.close(); } }
+        }
+        HorizontalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 24px;
+            padding-bottom: 20px;
+            alignment: stretch;
+            VerticalLayout {
+                alignment: end;
+                InstanceIcon { item: root.item; size: 64px; accessible-id: "header-icon"; }
+            }
+            Rectangle { width: 20px; }
+            VerticalLayout {
+                alignment: end;
+                horizontal-stretch: 1;
+                Txt { text: root.item.name; style: Type.headline-medium; accessible-id: "txt-name"; }
+                Rectangle { height: 8px; }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    Tag {
+                        text: InstanceState.loader-version == "" ? Fmt.version-line(root.item.mc, root.item.loader)
+                            : Fmt.version-line(root.item.mc, root.item.loader) + " " + InstanceState.loader-version;
+                        dot: Fmt.loader-color(root.item.loader);
+                        strong: true;
+                        accessible-id: "tag";
+                    }
+                    Tag { text: Fmt.playtime(root.item.playtime); icon: Icons.schedule; strong: true; accessible-id: "tag"; }
+                    Tag {
+                        text: root.item.last-ago < 0 ? @tr("homeNeverPlayed") : Fmt.relative(root.item.last-ago);
+                        icon: Icons.history;
+                        strong: true;
+                        accessible-id: "tag";
+                    }
+                }
+            }
+            Rectangle { width: 16px; }
+            VerticalLayout {
+                alignment: end;
+                HeaderIconButton {
+                    icon: Icons.folder-open;
+                    tooltip: @tr("instanceOpenFolder");
+                    accessible-id: "folder";
+                    clicked => { InstanceState.open-folder(); }
+                }
+            }
+            Rectangle { width: 8px; }
+            VerticalLayout {
+                alignment: end;
+                more := HeaderIconButton {
+                    icon: Icons.more-horiz;
+                    tooltip: @tr("instanceMore");
+                    accessible-id: "more";
+                    clicked => {
+                        InstanceState.menu-x = self.absolute-position.x;
+                        InstanceState.menu-y = self.absolute-position.y + self.height;
+                        InstanceState.menu-open = true;
+                    }
+                }
+            }
+            Rectangle { width: 12px; }
+            VerticalLayout {
+                alignment: end;
+                padding-bottom: 2px;
+                PlayButton {
+                    medium: true;
+                    state: root.item.launch;
+                    label: Fmt.launch-label(root.item.launch);
+                    accessible-id: "header-play";
+                    clicked => { InstanceState.play(); }
+                }
+            }
+        }
+    }
+    // Borde por encima del paisaje recortado.
+    Rectangle {
+        border-radius: root.border-radius;
+        border-width: 1px;
+        border-color: Palette.border-strong;
+    }
+}
+
+// Una pestaña (_TabItem): icono 18 + texto, raya de 2 px del acento debajo
+// si está elegida.
+component TabItem inherits Rectangle {
+    in property <string> icon;
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked;
+    // El ancho del texto de Slint sale redondeado hacia arriba; medio píxel
+    // menos por pestaña deja las seis donde Flutter (que no redondea).
+    width: row.preferred-width - 0.5px;
+    height: 44px;
+    border-radius: Theme.radius-control;
+    accessible-role: tab;
+    accessible-label: text;
+    accessible-item-selected: selected;
+    accessible-id: "tab";
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        border-radius: Theme.radius-control;
+        background: ta.has-hover ? Palette.text.with-alpha(0.08) : transparent;
+    }
+    row := HorizontalLayout {
+        height: parent.height - 2px;
+        y: 0;
+        padding-left: 12px;
+        padding-right: 16px;
+        spacing: 8px;
+        Icon {
+            glyph: root.icon;
+            size: 18px;
+            color: root.selected ? Palette.accent : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+        Txt {
+            text: root.text;
+            style: { size: Type.label-large.size, weight: root.selected ? 600 : 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+            color: root.selected ? Palette.text : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    if root.selected: Rectangle { y: parent.height - 2px; height: 2px; background: Palette.accent; }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+component TabBar inherits Rectangle {
+    height: 45px;
+    accessible-role: tab-list;
+    accessible-id: "tabs";
+    HorizontalLayout {
+        alignment: start;
+        height: 44px;
+        y: 0;
+        for t in [
+            { tab: InstanceTab.content, icon: Icons.extension, text: @tr("tabContent") },
+            { tab: InstanceTab.worlds, icon: Icons.public, text: @tr("tabWorlds") },
+            { tab: InstanceTab.screenshots, icon: Icons.photo-library, text: @tr("tabScreenshots") },
+            { tab: InstanceTab.backups, icon: Icons.cloud-sync, text: @tr("tabBackups") },
+            { tab: InstanceTab.logs, icon: Icons.terminal, text: @tr("tabLogs") },
+            { tab: InstanceTab.settings, icon: Icons.tune, text: @tr("tabSettings") },
+        ]: TabItem {
+            icon: t.icon;
+            text: t.text;
+            selected: InstanceState.tab == t.tab;
+            clicked => { InstanceState.select-tab(t.tab); }
+        }
+    }
+    Rectangle { y: parent.height - 1px; height: 1px; background: Palette.border; }
+}
+
+export component InstancePage inherits Rectangle {
+    if !InstanceState.found && InstanceState.loading: Spinner { }
+    if !InstanceState.found && !InstanceState.loading: EmptyState {
+        icon: Icons.help;
+        title: @tr("instanceNotFound");
+        body: "";
+        action: @tr("back");
+        accessible-id: "not-found";
+        act => { InstanceState.close(); }
+    }
+    if InstanceState.found: VerticalLayout {
+        padding-left: 32px;
+        padding-right: 32px;
+        padding-bottom: 24px;
+        Header { }
+        Rectangle { height: 8px; }
+        if InstanceState.item.launch.phase == LaunchPhase.error && InstanceState.failure.present: LaunchFailureNote {
+            failure: InstanceState.failure;
+            accessible-id: "failure";
+            dismissed => { InstanceState.dismiss-failure(); }
+            diagnose => { InstanceState.diagnose(); }
+            show-logs => { InstanceState.select-tab(InstanceTab.logs); }
+        }
+        Rectangle { height: 8px; }
+        TabBar { }
+        Rectangle { height: 16px; }
+        Rectangle {
+            vertical-stretch: 1;
+            if InstanceState.tab == InstanceTab.content: ContentTab { instance-id: InstanceState.id; }
+            if InstanceState.tab == InstanceTab.worlds: WorldsTab { instance-id: InstanceState.id; }
+            if InstanceState.tab == InstanceTab.screenshots: ScreenshotsTab { instance-id: InstanceState.id; }
+            if InstanceState.tab == InstanceTab.backups: BackupsTab { instance-id: InstanceState.id; }
+            if InstanceState.tab == InstanceTab.logs: LogsTab { instance-id: InstanceState.id; }
+            if InstanceState.tab == InstanceTab.settings: SettingsTab { instance-id: InstanceState.id; }
+        }
+    }
+}
+
+// Menú «Más opciones» (_MoreMenu, MenuAnchor con alignmentOffset (0, 6)) y
+// diálogos del detalle, por encima de toda la ventana (MainWindow). El menú
+// va en esta capa y no en un PopupWindow para que se cierre con clic fuera
+// o Escape y los tests lo encuentren como cualquier otro elemento.
+export component InstanceLayer inherits Rectangle {
+    if InstanceState.menu-open: Rectangle {
+        TouchArea { clicked => { InstanceState.menu-open = false; } }
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if e.text == Key.Escape {
+                    InstanceState.menu-open = false;
+                    return accept;
+                }
+                reject
+            }
+        }
+        MenuPanel {
+            x: InstanceState.menu-x;
+            y: InstanceState.menu-y + 6px;
+            accessible-id: "menu";
+            MenuEntry {
+                icon: Icons.swap-vert;
+                text: @tr("instanceChangeVersion");
+                activated => { InstanceState.menu-open = false; InstanceState.change-version(); }
+            }
+            MenuEntry {
+                icon: Icons.stethoscope;
+                text: @tr("doctorDiagnose");
+                activated => { InstanceState.menu-open = false; InstanceState.diagnose(); }
+            }
+            MenuEntry {
+                icon: Icons.folder-open;
+                text: @tr("instanceOpenFolder");
+                activated => { InstanceState.menu-open = false; InstanceState.open-folder(); }
+            }
+            MenuDivider { }
+            MenuEntry {
+                icon: Icons.delete;
+                text: @tr("instanceDelete");
+                danger: true;
+                activated => { InstanceState.menu-open = false; InstanceState.confirm-delete = true; }
+            }
+        }
+    }
+    if InstanceState.confirm-delete: ConfirmDialog {
+        title: @tr("instanceDeleteTitle", InstanceState.item.name);
+        body: @tr("instanceDeleteBody", "Shard");
+        action: @tr("delete");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-delete";
+        dismissed => { InstanceState.confirm-delete = false; }
+        accepted => {
+            InstanceState.confirm-delete = false;
+            InstanceState.delete();
+        }
+    }
+}

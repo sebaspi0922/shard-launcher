@@ -31,3 +31,15 @@ pub mod servers;
 pub mod skins;
 pub mod theme;
 pub mod window;
+
+// Fase 3: detalle de instancia, sus pestañas y los diálogos de instancias.
+pub mod instance;
+pub mod inst_content;
+pub mod worlds;
+pub mod screenshots;
+pub mod backups;
+pub mod console;
+pub mod inst_settings;
+pub mod create_instance;
+pub mod change_version;
+pub mod trash;

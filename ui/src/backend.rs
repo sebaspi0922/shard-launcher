@@ -15,6 +15,7 @@ use lcore::update::{Package, UpdateInfo};
 use tokio::runtime::Handle;
 use tokio::sync::broadcast::error::RecvError;
 
+use crate::console;
 use crate::controller::{Actions, Controller};
 use crate::errors;
 use crate::home::{Server, Status};
@@ -110,9 +111,10 @@ impl Backend {
         });
     }
 
-    /// Reenvía a la UI los eventos que cambian lo que se ve. De las líneas de
-    /// registro solo pasan las que dicen que el juego ya abrió (la consola,
-    /// fase 3, las agrupará como hace el bridge).
+    /// Reenvía a la UI los eventos que cambian lo que se ve. Las líneas de
+    /// registro van a la consola agrupadas como en el bridge (50 ms o 200
+    /// líneas, y lo pendiente antes de cualquier otro evento); al
+    /// controlador solo pasa la que dice que el juego ya abrió.
     ///
     /// Antes, las partidas que siguen abiertas al arrancar (`_restore`), en
     /// la misma tarea y ya suscrita: un cierre posterior llega a la UI
@@ -122,12 +124,40 @@ impl Backend {
         let me = self.clone();
         self.rt.spawn(async move {
             for g in me.core.running_games().await {
+                let (game, id) = (g.game_id, g.instance_id.clone());
+                console::post(move |k| k.started(game, &id));
                 post(move |c| c.restore_game(&g.instance_id, g.game_id));
             }
+            let mut logs = console::Batcher::default();
             loop {
-                match rx.recv().await {
-                    Ok(Event::GameLog { ref line, .. }) if !is_ready_line(line) => {}
+                // Sin líneas pendientes no hay temporizador (CPU en reposo).
+                let ev = match logs.deadline() {
+                    Some(at) => match tokio::time::timeout_at(at.into(), rx.recv()).await {
+                        Ok(ev) => ev,
+                        Err(_) => {
+                            send_logs(logs.take());
+                            continue;
+                        }
+                    },
+                    None => rx.recv().await,
+                };
+                match ev {
+                    Ok(Event::GameLog { game_id, stream, line }) => {
+                        if is_ready_line(&line) {
+                            let e = Event::GameLog { game_id, stream, line: line.clone() };
+                            post(move |c| c.on_event(&e));
+                        }
+                        if let Some(batch) = logs.push(game_id, stream, line, std::time::Instant::now()) {
+                            send_logs(vec![batch]);
+                        }
+                    }
                     Ok(e) => {
+                        // Antes de un fin de partida, sus líneas pendientes.
+                        send_logs(logs.take());
+                        if let Event::GameStarted { game_id, ref instance_id, .. } = e {
+                            let id = instance_id.clone();
+                            console::post(move |k| k.started(game_id, &id));
+                        }
                         let reload = matches!(e, Event::GameExited { .. } | Event::GameCrashed { .. } | Event::AccountsChanged);
                         if matches!(e, Event::AccountsChanged) {
                             crate::accounts::post(|a| a.reload());
@@ -195,6 +225,13 @@ impl Backend {
             let accent = crate::accent::from_path(&path);
             post(move |c| c.appearance.set_image_accent(accent));
         });
+    }
+}
+
+/// Entrega a la consola los lotes de líneas.
+fn send_logs(batches: Vec<console::Batch>) {
+    for (game, lines) in batches {
+        console::post(move |k| k.lines(game, lines));
     }
 }
 

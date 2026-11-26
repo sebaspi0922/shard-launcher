@@ -1,0 +1,644 @@
+// Pestaña Mundos del detalle de instancia (worlds_tab.dart): lista de
+// mundos y, a la derecha, el elegido con su modo, dificultad, hardcore,
+// trucos, datapacks y borrado. Rust (`worlds::Worlds`) rellena
+// `WorldsState` y atiende sus callbacks.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Para, Icon, Spinner } from "../../components/base.slint";
+import { TextButton, FilledButton } from "../../components/buttons.slint";
+import { EmptyState, ErrorNote, FormDialog, DialogActions, ConfirmDialog } from "../../components/feedback.slint";
+import { Tag, TipArea } from "../../components/common.slint";
+import { Switch, SegmentedButton } from "../../components/controls.slint";
+import { LabeledField } from "../../components/inputs.slint";
+
+export struct WorldItem {
+    // Carpeta dentro de `saves/` (identifica el mundo).
+    folder: string,
+    name: string,
+    // Índice en survival, creative, adventure, spectator; -1 = desconocido.
+    mode: int,
+    // Índice en peaceful, easy, normal, hard; -1 = desconocida.
+    difficulty: int,
+    hardcore: bool,
+    cheats: bool,
+    // Segundos desde la última partida; < 0 = nunca.
+    last-ago: int,
+    size: string,
+    version: string,
+    // `level.dat` ilegible ("" = bien).
+    error: string,
+    // icon.png del mundo o el paisaje de la carpeta (52 y 72).
+    icon: image,
+    icon-large: image,
+}
+
+export struct DatapackItem {
+    name: string,
+    is-dir: bool,
+    enabled: bool,
+    size: string,
+}
+
+export global WorldsState {
+    in property <bool> loading;
+    in property <string> error;
+    in property <string> error-detail;
+    in property <[WorldItem]> items;
+    // Índice del mundo elegido en `items`.
+    in property <int> selected;
+    // El juego está abierto: no se edita.
+    in property <bool> running;
+    in property <[DatapackItem]> datapacks;
+    in property <bool> datapacks-loading;
+    // Sube cada vez que Rust cambia el mundo elegido: los controles vuelven
+    // a su valor (también si el núcleo rechazó el cambio).
+    in property <int> revision;
+    // Diálogos.
+    in-out property <bool> rename-open;
+    in-out property <bool> delete-open;
+    // Datapack pendiente de confirmar para quitarlo ("" = ninguno).
+    in-out property <string> remove-pack;
+    callback select(string);
+    // Nombre no vacío (sin contar espacios).
+    pure callback name-valid(string) -> bool;
+    // Nombre nuevo (Rust quita los espacios de los bordes).
+    callback rename(string);
+    callback set-mode(int);
+    callback set-difficulty(int);
+    callback set-hardcore(bool);
+    callback set-cheats(bool);
+    callback set-datapack(string, bool);
+    callback remove-datapack(string);
+    callback add-datapacks;
+    callback delete;
+    callback open-folder;
+
+    public pure function mode-label(m: int) -> string {
+        if m == 0 { return @tr("modeSurvival"); }
+        if m == 1 { return @tr("modeCreative"); }
+        if m == 2 { return @tr("modeAdventure"); }
+        if m == 3 { return @tr("modeSpectator"); }
+        return @tr("unknownValue");
+    }
+
+    public pure function difficulty-label(d: int) -> string {
+        if d == 0 { return @tr("diffPeaceful"); }
+        if d == 1 { return @tr("diffEasy"); }
+        if d == 2 { return @tr("diffNormal"); }
+        if d == 3 { return @tr("diffHard"); }
+        return @tr("unknownValue");
+    }
+}
+
+// Icono del mundo (WorldIcon): radio del 20 %, borde blanco al 14 % y la
+// imagen dentro del borde.
+component WorldIcon inherits Rectangle {
+    in property <image> source;
+    in property <length> size: 52px;
+    width: size;
+    height: size;
+    border-radius: size * 0.2;
+    accessible-role: image;
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: root.border-radius - 1px;
+        clip: true;
+        Image { width: parent.width; height: parent.height; source: root.source; image-fit: cover; }
+    }
+    Rectangle {
+        border-radius: root.border-radius;
+        border-width: 1px;
+        border-color: #FFFFFF24;
+    }
+}
+
+// IconButton estándar: 40 × 40 (el área de toque de 48 la pone quien lo
+// coloca), hover del texto al 8 %.
+component IconBtn inherits Rectangle {
+    in property <string> icon;
+    in property <length> icon-size: 20px;
+    in property <string> tooltip;
+    in property <bool> enabled: true;
+    callback clicked;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: ta.has-hover && enabled ? Palette.text.with-alpha(0.08) : transparent;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
+    Icon { glyph: root.icon; size: root.icon-size; color: root.enabled ? Palette.text-secondary : Palette.text.with-alpha(0.38); }
+    ta := TipArea {
+        tip: root.tooltip;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { if root.enabled { root.clicked(); } }
+    }
+}
+
+// Tarjeta de un mundo (_WorldCard): icono, nombre (y corazón si es
+// hardcore), modo · dificultad, hace cuánto · tamaño.
+component WorldCard inherits Rectangle {
+    in property <WorldItem> world;
+    in property <bool> selected;
+    callback clicked;
+    height: 78px;
+    border-radius: Theme.radius-card;
+    background: selected ? Palette.accent-container.with-alpha(0.45) : Palette.surface1;
+    border-width: 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.5) : Palette.border;
+    accessible-role: button;
+    accessible-label: world.name;
+    accessible-item-selected: selected;
+    accessible-id: "world";
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        border-radius: root.border-radius;
+        background: ta.has-hover ? Palette.text.with-alpha(0.08) : transparent;
+    }
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+        WorldIcon { source: root.world.icon; y: (parent.height - self.height) / 2; accessible-id: "world-icon"; }
+        VerticalLayout {
+            alignment: center;
+            HorizontalLayout {
+                alignment: start;
+                Txt { text: root.world.name; style: Type.title-small; accessible-id: "txt-world"; }
+                if root.world.hardcore: HorizontalLayout {
+                    Rectangle { width: 8px; }
+                    Icon { glyph: Icons.favorite; filled: true; size: 14px; color: Palette.danger; y: (parent.height - self.height) / 2; }
+                }
+            }
+            Rectangle { height: 2px; }
+            Txt {
+                text: root.world.error != "" ? @tr("worldUnreadable")
+                    : WorldsState.mode-label(root.world.mode) + " · " + WorldsState.difficulty-label(root.world.difficulty);
+                style: Type.body-small;
+                color: root.world.error != "" ? Palette.warning : Palette.text-secondary;
+            }
+            Txt {
+                text: Fmt.relative(root.world.last-ago) + " · " + root.world.size;
+                style: Type.body-small;
+                color: Palette.text-muted;
+            }
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// SettingRow: título (y descripción) a la izquierda, control a la derecha,
+// 12 arriba y abajo.
+component SettingRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    spacing: 24px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Txt { text: root.title; style: Type.title-small; }
+        if root.description != "": VerticalLayout {
+            Rectangle { height: 2px; }
+            Txt { text: root.description; style: Type.body-small; color: Palette.text-secondary; }
+        }
+    }
+    @children
+}
+
+component Divider inherits Rectangle {
+    height: 1px;
+    background: Palette.border;
+}
+
+// Aviso informativo (_Note): «el juego está abierto».
+component Note inherits Rectangle {
+    in property <string> icon;
+    in property <string> text;
+    border-radius: Theme.radius-control;
+    background: Palette.info.with-alpha(0.08);
+    border-width: 1px;
+    border-color: Palette.info.with-alpha(0.3);
+    height: lay.preferred-height;
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    accessible-id: "running-note";
+    lay := HorizontalLayout {
+        padding: 13px;
+        spacing: 8px;
+        Icon { glyph: root.icon; size: 18px; color: Palette.info; y: (parent.height - self.height) / 2; }
+        Para { text: root.text; color: Palette.text; horizontal-stretch: 1; }
+    }
+}
+
+// OutlinedButton.icon en rojo (borrar el mundo).
+component DangerButton inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 48px;
+    width: lay.preferred-width;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
+    property <color> fg: enabled ? Palette.danger : Palette.text.with-alpha(0.38);
+    Rectangle {
+        y: 2px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: root.enabled ? Palette.danger.with-alpha(0.5) : Palette.text.with-alpha(0.12);
+        background: ta.has-hover && root.enabled ? Palette.danger.with-alpha(0.08) : transparent;
+    }
+    lay := HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        Icon { glyph: root.icon; size: 18px; color: root.fg; y: (parent.height - self.height) / 2; }
+        Txt { text: root.text; style: Type.label-large; color: root.fg; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Una fila de datapack: icono, nombre, tamaño, interruptor y quitar.
+component DatapackRow inherits Rectangle {
+    in property <DatapackItem> pack;
+    in property <bool> editable;
+    in property <int> revision;
+    // Divider(indent: 16, endIndent: 16) encima (todas menos la primera).
+    in property <bool> divider;
+    height: row.preferred-height + (divider ? 1px : 0);
+    accessible-role: list-item;
+    accessible-label: pack.name;
+    accessible-id: "datapack";
+    changed revision => { sw.checked = root.pack.enabled; }
+    if root.divider: Rectangle { x: 16px; y: 0; width: parent.width - 32px; height: 1px; background: Palette.border; }
+    row := HorizontalLayout {
+        y: root.divider ? 1px : 0;
+        height: self.preferred-height;
+        padding-left: 16px;
+        padding-right: 8px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        Icon {
+            glyph: root.pack.is-dir ? Icons.folder : Icons.data-object;
+            size: 18px;
+            color: root.pack.enabled ? #86EFAC : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+        Rectangle { width: 12px; }
+        Txt {
+            text: root.pack.name;
+            style: Type.body-medium;
+            color: root.pack.enabled ? Palette.text : Palette.text-muted;
+            horizontal-stretch: 1;
+            y: (parent.height - self.height) / 2;
+        }
+        if !root.pack.is-dir: Txt {
+            text: root.pack.size;
+            style: Type.body-small;
+            color: Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+        Rectangle { width: 12px; }
+        sw := Switch {
+            checked: root.pack.enabled;
+            enabled: root.editable;
+            label: root.pack.name;
+            toggled(v) => { WorldsState.set-datapack(root.pack.name, v); }
+        }
+        HorizontalLayout {
+            padding: 4px;
+            IconBtn {
+                icon: Icons.delete;
+                icon-size: 18px;
+                tooltip: @tr("remove");
+                enabled: root.editable;
+                clicked => { WorldsState.remove-pack = root.pack.name; }
+            }
+        }
+    }
+}
+
+// Lista de datapacks (_Datapacks).
+component Datapacks inherits VerticalLayout {
+    in property <bool> editable;
+    property <[DatapackItem]> packs: WorldsState.datapacks;
+    HorizontalLayout {
+        height: 48px;
+        Txt { text: @tr("kindDatapacks"); style: Type.title-medium; horizontal-stretch: 0; y: (parent.height - self.height) / 2; accessible-id: "txt-datapacks"; }
+        if root.packs.length > 0: HorizontalLayout {
+            horizontal-stretch: 0;
+            Rectangle { width: 8px; }
+            Tag { text: root.packs.length; y: (parent.height - self.height) / 2; accessible-id: "world-tag"; }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        TextButton {
+            height: 48px;
+            icon: Icons.add;
+            text: @tr("datapacksAdd");
+            enabled: root.editable;
+            accessible-id: "add-datapacks";
+            clicked => { WorldsState.add-datapacks(); }
+        }
+    }
+    Rectangle { height: 8px; }
+    if WorldsState.datapacks-loading && root.packs.length == 0: Rectangle {
+        height: 36px + 32px;
+        Spinner { }
+    }
+    if !WorldsState.datapacks-loading && root.packs.length == 0: Rectangle {
+        border-radius: Theme.radius-card;
+        border-width: 1px;
+        border-color: Palette.border;
+        height: empty.preferred-height;
+        empty := VerticalLayout {
+            padding: 17px;
+            Para { text: @tr("datapacksEmpty"); accessible-id: "datapacks-empty"; }
+        }
+    }
+    if root.packs.length > 0: Rectangle {
+        border-radius: Theme.radius-card;
+        background: Palette.card(Palette.surface1);
+        border-width: 1px;
+        border-color: Palette.border;
+        height: rows.preferred-height;
+        rows := VerticalLayout {
+            padding: 1px;
+            for p[i] in root.packs: DatapackRow { pack: p; divider: i > 0; editable: root.editable; revision: WorldsState.revision; }
+        }
+    }
+}
+
+// Panel del mundo elegido (_WorldDetail).
+component WorldDetail inherits Rectangle {
+    in property <WorldItem> world;
+    property <bool> editable: !WorldsState.running && world.error == "";
+    border-radius: Theme.radius-card;
+    background: Palette.card(Palette.surface1);
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: groupbox;
+    accessible-label: world.name;
+    accessible-id: "world-detail";
+    // Los controles se quedan con lo que pulsó el usuario hasta que Rust
+    // responde; entonces vuelven al valor del mundo.
+    property <int> revision: WorldsState.revision;
+    changed revision => {
+        mode.selected = root.world.mode;
+        difficulty.selected = root.world.difficulty;
+        hardcore.checked = root.world.hardcore;
+        cheats.checked = root.world.cheats;
+    }
+    Flickable {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        content-height: body.preferred-height;
+        body := VerticalLayout {
+            padding: 20px;
+            alignment: start;
+            HorizontalLayout {
+                WorldIcon { source: root.world.icon-large; size: 72px; y: (parent.height - self.height) / 2; accessible-id: "world-big-icon"; }
+                Rectangle { width: 16px; }
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    HorizontalLayout {
+                        alignment: start;
+                        height: 48px;
+                        Txt {
+                            text: root.world.name;
+                            style: Type.headline-small;
+                            y: (parent.height - self.height) / 2;
+                            accessible-id: "txt-world-name";
+                        }
+                        Rectangle { width: 4px; }
+                        HorizontalLayout {
+                            padding: 4px;
+                            IconBtn {
+                                icon: Icons.edit;
+                                icon-size: 18px;
+                                tooltip: @tr("worldRename");
+                                enabled: root.editable;
+                                accessible-id: "rename";
+                                clicked => { WorldsState.rename-open = true; }
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 8px;
+                        Tag { text: root.world.folder; icon: Icons.folder; accessible-id: "world-tag"; }
+                        if root.world.version != "": Tag { text: root.world.version; icon: Icons.deployed-code; accessible-id: "world-tag"; }
+                        Tag { text: root.world.size; icon: Icons.hard-drive; accessible-id: "world-tag"; }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    padding: 4px;
+                    IconBtn {
+                        icon: Icons.folder-open;
+                        tooltip: @tr("openFolder");
+                        accessible-id: "world-folder";
+                        clicked => { WorldsState.open-folder(); }
+                    }
+                }
+            }
+            if WorldsState.running: VerticalLayout {
+                Rectangle { height: 16px; }
+                Note { icon: Icons.lock; text: @tr("worldLockedRunning"); }
+            }
+            if root.world.error != "": VerticalLayout {
+                Rectangle { height: 16px; }
+                ErrorNote { message: @tr("errIo"); detail: root.world.error; details-label: @tr("details"); }
+            }
+            Rectangle { height: 20px; }
+            Txt { text: @tr("worldGame"); style: Type.title-medium; accessible-id: "txt-world-game"; }
+            Rectangle { height: 4px; }
+            SettingRow {
+                title: @tr("worldMode");
+                mode := SegmentedButton {
+                    options: [@tr("modeSurvival"), @tr("modeCreative"), @tr("modeAdventure"), @tr("modeSpectator")];
+                    icons: [Icons.swords, Icons.brush, Icons.explore, Icons.visibility];
+                    selected: root.world.mode;
+                    enabled: root.editable;
+                    label: @tr("worldMode");
+                    accessible-id: "mode";
+                    changed(i) => { WorldsState.set-mode(i); }
+                }
+            }
+            Divider { }
+            SettingRow {
+                title: @tr("worldDifficulty");
+                difficulty := SegmentedButton {
+                    options: [@tr("diffPeaceful"), @tr("diffEasy"), @tr("diffNormal"), @tr("diffHard")];
+                    selected: root.world.difficulty;
+                    enabled: root.editable;
+                    label: @tr("worldDifficulty");
+                    accessible-id: "difficulty";
+                    changed(i) => { WorldsState.set-difficulty(i); }
+                }
+            }
+            Divider { }
+            SettingRow {
+                title: @tr("worldHardcore");
+                description: @tr("worldHardcoreDesc");
+                hardcore := Switch {
+                    checked: root.world.hardcore;
+                    enabled: root.editable;
+                    label: @tr("worldHardcore");
+                    accessible-id: "switch";
+                    toggled(v) => { WorldsState.set-hardcore(v); }
+                }
+            }
+            Divider { }
+            SettingRow {
+                title: @tr("worldCheats");
+                description: @tr("worldCheatsDesc");
+                cheats := Switch {
+                    checked: root.world.cheats;
+                    enabled: root.editable;
+                    label: @tr("worldCheats");
+                    accessible-id: "switch";
+                    toggled(v) => { WorldsState.set-cheats(v); }
+                }
+            }
+            Rectangle { height: 24px; }
+            Datapacks { editable: !WorldsState.running; }
+            Rectangle { height: 24px; }
+            Rectangle {
+                border-radius: Theme.radius-card;
+                background: Palette.danger.with-alpha(0.06);
+                border-width: 1px;
+                border-color: Palette.danger.with-alpha(0.25);
+                height: danger.preferred-height;
+                danger := HorizontalLayout {
+                    padding: 17px;
+                    spacing: 16px;
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Txt { text: @tr("worldDelete"); style: Type.title-small; }
+                        Rectangle { height: 2px; }
+                        Txt { text: @tr("worldDeleteDesc"); style: Type.body-small; color: Palette.text-secondary; }
+                    }
+                    DangerButton {
+                        icon: Icons.delete-forever;
+                        text: @tr("delete");
+                        enabled: !WorldsState.running;
+                        accessible-id: "delete-world";
+                        y: (parent.height - self.height) / 2;
+                        clicked => { WorldsState.delete-open = true; }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component WorldsTab inherits Rectangle {
+    in property <string> instance-id;
+    property <[WorldItem]> items: WorldsState.items;
+    if root.items.length == 0 && WorldsState.loading: Spinner { }
+    if root.items.length == 0 && !WorldsState.loading && WorldsState.error != "": ErrorNote {
+        width: min(480px, root.width);
+        height: self.preferred-height;
+        message: WorldsState.error;
+        detail: WorldsState.error-detail;
+        details-label: @tr("details");
+        accessible-id: "worlds-error";
+    }
+    if root.items.length == 0 && !WorldsState.loading && WorldsState.error == "": EmptyState {
+        icon: Icons.public;
+        title: @tr("worldsEmptyTitle");
+        body: @tr("worldsEmptyBody");
+        accessible-id: "empty";
+    }
+    if root.items.length > 0: HorizontalLayout {
+        spacing: 20px;
+        Flickable {
+            width: 380px;
+            content-height: root.items.length * (78px + 8px) - 8px;
+            for w[i] in root.items: WorldCard {
+                y: i * (78px + 8px);
+                width: 380px;
+                world: w;
+                selected: i == WorldsState.selected;
+                clicked => { WorldsState.select(w.folder); }
+            }
+        }
+        WorldDetail {
+            world: root.items[WorldsState.selected];
+        }
+    }
+}
+
+// showTextPrompt(worldRename): campo con el nombre (todo seleccionado),
+// «Cancelar» y «Guardar» (deshabilitado si queda vacío).
+component RenameDialog inherits FormDialog {
+    in property <string> name;
+    property <bool> valid: WorldsState.name-valid(field.text);
+    title: @tr("worldRename");
+    dismissed => { WorldsState.rename-open = false; }
+    init => {
+        field.text = root.name;
+        field.focus-input();
+        field.select-all();
+    }
+    field := LabeledField {
+        label: @tr("worldName");
+        accessible-id: "field";
+        accepted => { root.submit(); }
+    }
+    DialogActions {
+        TextButton { height: 48px; text: @tr("cancel"); clicked => { root.dismissed(); } }
+        FilledButton { text: @tr("save"); enabled: root.valid; clicked => { root.submit(); } }
+    }
+    function submit() {
+        if root.valid {
+            WorldsState.rename-open = false;
+            WorldsState.rename(field.text);
+        }
+    }
+}
+
+// Diálogos de la pestaña, por encima de toda la ventana.
+export component WorldsLayer inherits Rectangle {
+    property <WorldItem> world: WorldsState.items[WorldsState.selected];
+    if WorldsState.rename-open: RenameDialog { name: root.world.name; }
+    if WorldsState.delete-open: ConfirmDialog {
+        title: @tr("worldDeleteTitle", root.world.name);
+        body: @tr("worldDeleteBody");
+        action: @tr("worldDeleteAction");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-delete-world";
+        dismissed => { WorldsState.delete-open = false; }
+        accepted => {
+            WorldsState.delete-open = false;
+            WorldsState.delete();
+        }
+    }
+    if WorldsState.remove-pack != "": ConfirmDialog {
+        title: @tr("contentRemoveTitle", WorldsState.remove-pack);
+        body: @tr("datapackRemoveBody");
+        action: @tr("remove");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-remove-datapack";
+        dismissed => { WorldsState.remove-pack = ""; }
+        accepted => {
+            WorldsState.remove-datapack(WorldsState.remove-pack);
+            WorldsState.remove-pack = "";
+        }
+    }
+}

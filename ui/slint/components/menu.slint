@@ -1,0 +1,69 @@
+// Menú desplegable de Material (MenuAnchor + MenuItemButton con el
+// menuTheme de app_theme.dart): panel surface3 sobre el fondo, borde fuerte,
+// radio de tarjeta, 6 px de relleno; entradas de 180 × 38 como mínimo con
+// icono 18 y texto bodyMedium.
+//
+// Uso: un `MenuPanel` con `MenuEntry`/`MenuDivider` como hijos, en una capa
+// por encima de la ventana (ver `InstanceLayer` en screens/instance.slint:
+// clic fuera o Escape cierran).
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Txt, Icon } from "base.slint";
+
+export component MenuPanel inherits Rectangle {
+    width: max(192px, col.preferred-width + 12px);
+    height: col.preferred-height + 12px;
+    border-radius: Theme.radius-card;
+    background: Theme.blend(Palette.surface3, Palette.background);
+    border-width: 1px;
+    border-color: Palette.border-strong;
+    drop-shadow-color: #00000040;
+    drop-shadow-blur: 8px;
+    drop-shadow-offset-y: 3px;
+    accessible-role: list;
+    col := VerticalLayout {
+        x: 6px;
+        y: 6px;
+        width: parent.width - 12px;
+        @children
+    }
+}
+
+export component MenuEntry inherits Rectangle {
+    in property <string> icon;
+    in property <string> text;
+    in property <bool> danger;
+    callback activated;
+    height: 48px;
+    min-width: 180px;
+    preferred-width: row.preferred-width;
+    border-radius: Theme.radius-control;
+    background: ta.has-hover ? Palette.text.with-alpha(0.08) : transparent;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { activated(); }
+    row := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 12px;
+        if root.icon != "": Icon {
+            glyph: root.icon;
+            size: 18px;
+            color: root.danger ? Palette.danger : Palette.text-secondary;
+            y: (parent.height - self.height) / 2;
+        }
+        Txt {
+            text: root.text;
+            style: Type.body-medium;
+            color: root.danger ? Palette.danger : Palette.text;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.activated(); } }
+}
+
+// Divider(height: 9).
+export component MenuDivider inherits Rectangle {
+    height: 9px;
+    Rectangle { y: 4px; height: 1px; background: Palette.border; }
+}

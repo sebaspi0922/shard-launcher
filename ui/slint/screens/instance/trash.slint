@@ -1,0 +1,234 @@
+// Papelera (trash_dialog.dart): instancias borradas, recuperar, borrar para
+// siempre (con confirmación) y vaciar. Rust (trash.rs) lleva la lista, lo
+// que está en curso y la confirmación.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Icon, Spinner, Wrapped } from "../../components/base.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+import { FormDialog, DialogActions, ErrorNote, EmptyState, ConfirmDialog } from "../../components/feedback.slint";
+import { Panel, Tag, TipArea } from "../../components/common.slint";
+import { InstanceIcon } from "../instances.slint";
+
+export struct TrashItem {
+    trash-id: string,
+    name: string,
+    mc: string,
+    loader: string,
+    playtime: int,
+    // Segundos desde que se borró.
+    ago: int,
+    days-left: int,
+    initials: string,
+    icon-from: color,
+    icon-to: color,
+    // Recuperando o borrando esta (ruedita en «Recuperar»).
+    busy: bool,
+}
+
+export global TrashState {
+    in property <bool> open;
+    // 0 = cargando, 1 = vacía, 2 = lista, 3 = error.
+    in property <int> state;
+    in property <[TrashItem]> items;
+    // Algo en curso: botones desactivados.
+    in property <bool> busy;
+    in property <string> error;
+    in property <string> error-detail;
+    in property <bool> confirm-open;
+    // Una fila: su nombre; vaciar: "" y cuántas.
+    in property <string> confirm-name;
+    in property <int> confirm-count;
+    callback close();
+    callback restore(string);
+    callback ask-purge(string);
+    callback ask-empty();
+    callback confirm();
+    callback cancel-confirm();
+}
+
+// OutlinedButton.icon de «Recuperar», con ruedita mientras se recupera y
+// desactivado si hay algo en curso.
+component RestoreButton inherits Rectangle {
+    in property <bool> busy;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 48px;
+    width: lay.preferred-width;
+    accessible-role: button;
+    accessible-label: @tr("trashRestore");
+    accessible-enabled: enabled;
+    accessible-action-default => { if root.enabled { root.clicked(); } }
+    property <color> fg: root.enabled ? Palette.text : Palette.text-muted;
+    Rectangle {
+        y: 2px;
+        height: 44px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: root.enabled ? Palette.border-strong : Palette.border;
+        background: !root.enabled ? transparent : ta.has-hover ? Palette.surface2 : Palette.surface1;
+    }
+    lay := HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        alignment: center;
+        if !root.busy: Icon { glyph: Icons.restore-from-trash; size: 18px; color: root.fg; y: (parent.height - self.height) / 2; }
+        if root.busy: Rectangle {
+            width: 18px;
+            Spinner { size: 14px; stroke: 2px; tint: root.fg; }
+        }
+        Txt { text: @tr("trashRestore"); style: Type.label-large; color: root.fg; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// _TrashRow: icono atenuado, nombre y detalle, días que quedan, borrar y
+// recuperar.
+component TrashRow inherits Panel {
+    in property <TrashItem> item;
+    in property <bool> enabled;
+    callback restore;
+    callback purge;
+    height: 74px;
+    accessible-role: list-item;
+    accessible-label: item.name;
+    accessible-id: "trash-row";
+    // La primera fila también es la caja `code` de la referencia.
+    Rectangle { accessible-role: groupbox; accessible-id: "code"; }
+    HorizontalLayout {
+        padding: 13px;
+        Rectangle {
+            width: 44px;
+            height: 44px;
+            y: (parent.height - self.height) / 2;
+            accessible-role: groupbox;
+            accessible-id: "trash-icon";
+            InstanceIcon {
+                size: 44px;
+                opacity: 0.75;
+                item: { name: root.item.name, initials: root.item.initials, icon-from: root.item.icon-from, icon-to: root.item.icon-to };
+            }
+        }
+        Rectangle { width: 12px; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Txt { text: root.item.name; style: Type.title-small; }
+            Rectangle { height: 2px; }
+            Txt {
+                text: Fmt.version-line(root.item.mc, root.item.loader) + " · " + @tr("trashDeletedAgo", Fmt.relative(root.item.ago)) + " · " + Fmt.playtime(root.item.playtime);
+                style: Type.body-small;
+                color: Palette.text-secondary;
+            }
+        }
+        Rectangle { width: 8px; }
+        Tag {
+            text: root.item.days-left == 0 ? @tr("trashDaysLeft.zero") : @tr("trashDaysLeft" | "trashDaysLeft" % root.item.days-left);
+            icon: Icons.hourglass-bottom;
+            y: (parent.height - self.height) / 2;
+            accessible-id: "trash-left";
+        }
+        Rectangle { width: 8px; }
+        Rectangle {
+            width: 48px;
+            height: 48px;
+            y: (parent.height - self.height) / 2;
+            accessible-role: button;
+            accessible-label: @tr("trashPurge");
+            accessible-enabled: root.enabled;
+            accessible-id: "trash-purge";
+            accessible-action-default => { if root.enabled { root.purge(); } }
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+                background: purge-ta.has-hover && root.enabled ? Palette.surface2 : transparent;
+                Icon { glyph: Icons.delete-forever; size: 20px; color: root.enabled ? Palette.danger : Palette.text-muted; }
+            }
+            purge-ta := TipArea { tip: @tr("trashPurge"); enabled: root.enabled; mouse-cursor: pointer; clicked => { root.purge(); } }
+        }
+        Rectangle { width: 4px; }
+        Rectangle {
+            width: restore.width;
+            height: 48px;
+            y: (parent.height - self.height) / 2;
+            accessible-role: groupbox;
+            accessible-id: "trash-restore";
+            restore := RestoreButton {
+                busy: root.item.busy;
+                enabled: root.enabled;
+                accessible-id: "outlined";
+                clicked => { root.restore(); }
+            }
+        }
+    }
+}
+
+component TrashDialog inherits FormDialog {
+    title: @tr("trashTitle");
+    icon: Icons.delete;
+    panel-width: 620px;
+    dismissed => { TrashState.close(); }
+    if TrashState.state == 0: Rectangle {
+        height: 200px;
+        Spinner { }
+    }
+    if TrashState.state == 1: Rectangle {
+        height: 240px;
+        EmptyState {
+            icon: Icons.delete-sweep;
+            title: @tr("trashEmptyStateTitle");
+            body: @tr("trashEmptyStateBody", 30);
+        }
+    }
+    if TrashState.state == 2: VerticalLayout {
+        Wrapped { text: @tr("trashHint", 30); style: Type.body-small; accessible-id: "txt-trash-hint"; }
+        Rectangle { height: 16px; }
+        Flickable {
+            property <length> full: TrashState.items.length * (74px + 8px) - 8px;
+            height: min(420px, self.full);
+            content-height: self.full;
+            for it[i] in TrashState.items: TrashRow {
+                y: i * (74px + 8px);
+                width: parent.width;
+                item: it;
+                enabled: !TrashState.busy;
+                restore => { TrashState.restore(it.trash-id); }
+                purge => { TrashState.ask-purge(it.trash-id); }
+            }
+        }
+    }
+    if TrashState.state == 3: ErrorNote { message: TrashState.error; detail: TrashState.error-detail; details-label: @tr("details"); }
+    DialogActions {
+        if TrashState.state == 2: TextButton {
+            height: 48px;
+            text: @tr("trashEmptyAll");
+            icon: Icons.delete-forever;
+            tint: Palette.danger;
+            enabled: !TrashState.busy;
+            accessible-id: "cancel";
+            clicked => { TrashState.ask-empty(); }
+        }
+        FilledButton {
+            text: @tr("close");
+            accessible-id: "filled";
+            clicked => { TrashState.close(); }
+        }
+    }
+}
+
+export component TrashLayer inherits Rectangle {
+    if TrashState.open: TrashDialog { }
+    if TrashState.open && TrashState.confirm-open: ConfirmDialog {
+        title: TrashState.confirm-name != "" ? @tr("trashPurgeTitle", TrashState.confirm-name) : @tr("trashEmptyTitle" | "trashEmptyTitle" % TrashState.confirm-count);
+        body: @tr("trashPurgeBody");
+        action: @tr("trashPurge");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-purge";
+        dismissed => { TrashState.cancel-confirm(); }
+        accepted => { TrashState.confirm(); }
+    }
+}

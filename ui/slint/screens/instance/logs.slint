@@ -1,0 +1,374 @@
+// Pestaña Registros del detalle de instancia (console_view.dart): barra con
+// filtro, chips por nivel con su cuenta, «N líneas», seguir al final,
+// copiar y limpiar; debajo, la consola con números de línea y colores por
+// nivel. Rust (`console::Console`) lleva las líneas y el filtro; aquí solo
+// queda el estado de vista (seguir al final, desplazamiento).
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Txt, Icon } from "../../components/base.slint";
+import { TextField } from "../../components/inputs.slint";
+import { EmptyState } from "../../components/feedback.slint";
+import { TipArea } from "../../components/common.slint";
+
+// Grupo de nivel de una línea (`_LevelGroup`), en el orden de los chips.
+export enum LogGroup { error, warn, info, debug }
+
+export struct LogRow {
+    // Posición en lo que se ve, desde 1.
+    number: int,
+    text: string,
+    level: LogGroup,
+}
+
+export global ConsoleState {
+    // Filas visibles (modelo de Rust que crea cada fila al pedirla).
+    in property <[LogRow]> rows;
+    // Líneas de la instancia (sin filtrar) y cuántas pasan el filtro.
+    in property <int> total;
+    in property <int> shown;
+    // Líneas por grupo y grupos ocultos (Errores, Avisos, Info, Depuración).
+    in property <[int]> counts: [0, 0, 0, 0];
+    in property <[bool]> hidden: [false, false, false, false];
+    // Texto del filtro (Rust lo vacía al abrir la pestaña).
+    in-out property <string> query;
+    // Seguir al final (se apaga al subir y vuelve al llegar abajo).
+    in-out property <bool> follow: true;
+    callback filter(string);
+    callback toggle(int);
+    callback clear();
+    // Texto de las líneas visibles, para el portapapeles.
+    callback copy-text() -> string;
+    // Aviso tras copiar (ya traducido).
+    callback copied(string);
+}
+
+// Lista virtualizada: el compilador de Slint trata cualquier componente
+// llamado `ListView` con estas propiedades como una lista que solo crea las
+// filas visibles. Esta, sin las barras de la ScrollView de Fluent: una barra
+// fina como el `Scrollbar` de Flutter.
+component ListView inherits Rectangle {
+    in-out property <length> content-y <=> fl.content-y;
+    in-out property <length> content-height <=> fl.content-height;
+    in-out property <length> content-width <=> fl.content-width;
+    out property <length> visible-height <=> fl.height;
+    out property <length> visible-width <=> fl.width;
+    // El usuario desplazó (rueda, arrastre o la barra).
+    callback scrolled <=> fl.flicked;
+    fl := Flickable {
+        @children
+    }
+    // Barra: 8 px a la derecha, visible si hay más de lo que cabe.
+    property <bool> overflow: fl.content-height > fl.height + 1px;
+    property <length> thumb-h: max(32px, fl.height * fl.height / max(1px, fl.content-height));
+    property <length> travel: fl.height - thumb-h;
+    property <length> range: max(1px, fl.content-height - fl.height);
+    if root.overflow: Rectangle {
+        x: parent.width - 10px;
+        width: 10px;
+        accessible-role: none;
+        thumb := Rectangle {
+            x: 2px;
+            width: 6px;
+            y: root.travel * clamp(-fl.content-y / root.range, 0, 1);
+            height: root.thumb-h;
+            border-radius: 3px;
+            background: drag.pressed || drag.has-hover ? Palette.text.with-alpha(0.45) : Palette.text.with-alpha(0.22);
+        }
+        drag := TouchArea {
+            property <length> start-y;
+            property <length> start-content;
+            pointer-event(e) => {
+                if e.kind == PointerEventKind.down {
+                    self.start-y = self.mouse-y;
+                    self.start-content = fl.content-y;
+                    // Clic fuera del pulgar: saltar ahí.
+                    if self.mouse-y < thumb.y || self.mouse-y > thumb.y + thumb.height {
+                        fl.content-y = -clamp((self.mouse-y - root.thumb-h / 2) / max(1px, root.travel), 0, 1) * root.range;
+                        self.start-content = fl.content-y;
+                        root.scrolled();
+                    }
+                }
+            }
+            moved => {
+                if self.pressed {
+                    fl.content-y = clamp(self.start-content - (self.mouse-y - self.start-y) * root.range / max(1px, root.travel), -root.range, 0px);
+                    root.scrolled();
+                }
+            }
+        }
+    }
+}
+
+// Chip de nivel (_LevelChip): punto, nombre y cuenta; apagado = oculto.
+component LevelChip inherits Rectangle {
+    in property <string> label;
+    in property <int> count;
+    in property <color> tint;
+    in property <bool> selected;
+    callback clicked;
+    width: row.preferred-width;
+    height: 30px;
+    border-radius: self.height / 2;
+    background: selected ? Palette.surface2 : transparent;
+    border-width: 1px;
+    border-color: selected ? Palette.border-strong : Palette.border;
+    animate background, border-color { duration: Theme.motion ? Theme.fast : 0ms; }
+    accessible-role: checkbox;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-label: label;
+    accessible-id: "chip";
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        border-radius: parent.border-radius;
+        background: ta.has-hover ? Palette.text.with-alpha(0.08) : transparent;
+    }
+    row := HorizontalLayout {
+        padding-left: 11px;
+        padding-right: 11px;
+        spacing: 6px;
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 7px;
+            height: 7px;
+            border-radius: 3.5px;
+            background: root.selected ? root.tint : transparent;
+            border-width: 1.2px;
+            border-color: root.tint;
+        }
+        Txt {
+            y: (parent.height - self.height) / 2;
+            text: root.label;
+            style: Type.label-medium;
+            color: root.selected ? Palette.text : Palette.text-muted;
+        }
+        Txt {
+            y: (parent.height - self.height) / 2;
+            text: root.count;
+            style: Type.label-medium;
+            family: "Inter Tnum";
+            color: Palette.text-muted;
+        }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// Botón de la barra (_ToolButton = IconButton): 40 visibles en 48, icono
+// de 19; activo, con el contenedor del acento.
+component ToolButton inherits Rectangle {
+    in property <string> icon;
+    in property <string> tooltip;
+    in property <bool> active;
+    in property <bool> enabled: true;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: enabled;
+    accessible-checked: active;
+    accessible-id: "tool";
+    accessible-action-default => { if enabled { clicked(); } }
+    property <color> fg: !enabled ? Palette.text.with-alpha(0.38) : active ? Palette.on-accent-container : Palette.text-secondary;
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        background: root.active ? (ta.has-hover ? Theme.blend(root.fg.with-alpha(0.08), Palette.accent-container) : Palette.accent-container)
+            : ta.has-hover && root.enabled ? root.fg.with-alpha(0.08) : transparent;
+        Icon { glyph: root.icon; size: 19px; color: root.fg; }
+    }
+    ta := TipArea {
+        tip: root.tooltip;
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Una línea (_LogLine): marca de 2 px y fondo tenue en errores y avisos,
+// número a la derecha en 52 px, 16 de separación y el texto, que parte en
+// varias líneas si no cabe. La primera y la última llevan los 12 px de
+// relleno de la lista (la lista virtualizada solo tiene filas).
+component LogLine inherits Rectangle {
+    in property <LogRow> item;
+    in property <bool> last;
+    property <length> pad-top: item.number == 1 ? 12px : 0;
+    property <length> pad-bottom: last ? 12px : 0;
+    property <color> marker: item.level == LogGroup.error ? Palette.danger : item.level == LogGroup.warn ? Palette.warning : transparent;
+    property <color> tint: item.level == LogGroup.error ? Palette.danger
+        : item.level == LogGroup.warn ? Palette.warning
+        : item.level == LogGroup.debug ? Palette.text-muted : Palette.text-secondary;
+    // 12 px × 1,55 = 18,6, que Flutter pinta en 19; las líneas partidas
+    // siguen con el alto natural de la fuente (Slint no tiene interlineado).
+    height: pad-top + line.height + pad-bottom;
+    line := Rectangle {
+        y: root.pad-top;
+        height: 19px + (max(1, round(body.preferred-height / (12px * 1.32))) - 1) * 12px * 1.32;
+        background: root.marker.alpha == 0 ? transparent : root.marker.with-alpha(0.06);
+        accessible-role: text;
+        accessible-label: root.item.text;
+        accessible-id: "line";
+        Rectangle { x: 0; width: 2px; background: root.marker; }
+        Text {
+            x: 2px;
+            y: 2px;
+            width: 52px;
+            height: 12px * 1.32;
+            text: root.item.number;
+            font-family: "JetBrains Mono";
+            font-size: 12px;
+            color: Palette.text-muted.with-alpha(0.6);
+            horizontal-alignment: right;
+            accessible-role: none;
+        }
+        body := Text {
+            x: 2px + 52px + 16px;
+            y: 2px;
+            width: parent.width - self.x - 16px;
+            text: root.item.text;
+            font-family: "JetBrains Mono";
+            font-size: 12px;
+            color: root.tint;
+            wrap: word-wrap;
+            accessible-role: none;
+        }
+    }
+}
+
+export component LogsTab inherits Rectangle {
+    in property <string> instance-id;
+    property <[string]> labels: [@tr("logLevelError"), @tr("logLevelWarn"), @tr("logLevelInfo"), @tr("logLevelDebug")];
+    property <[color]> tints: [Palette.danger, Palette.warning, Palette.text-secondary, Palette.text-muted];
+    function to-end() {
+        lv.content-y = min(0px, lv.visible-height - lv.content-height);
+    }
+    VerticalLayout {
+        spacing: 12px;
+        HorizontalLayout {
+            height: 48px;
+            TextField {
+                width: 260px;
+                text <=> ConsoleState.query;
+                placeholder: @tr("consoleFilter");
+                prefix-icon: Icons.filter-list;
+                accessible-label: @tr("consoleFilter");
+                accessible-id: "filter";
+                edited(t) => { ConsoleState.filter(t); }
+            }
+            Rectangle { width: 12px; }
+            for i in 4: HorizontalLayout {
+                padding-right: 8px;
+                LevelChip {
+                    y: (parent.height - self.height) / 2;
+                    label: root.labels[i];
+                    count: ConsoleState.counts[i];
+                    tint: root.tints[i];
+                    selected: !ConsoleState.hidden[i];
+                    clicked => { ConsoleState.toggle(i); }
+                }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Txt {
+                y: (parent.height - self.height) / 2;
+                width: self.preferred-width;
+                text: @tr("consoleLines" | "consoleLines" % ConsoleState.total);
+                style: Type.body-small;
+                color: Palette.text-secondary;
+                accessible-id: "txt-lines";
+            }
+            Rectangle { width: 12px; }
+            ToolButton {
+                icon: Icons.vertical-align-bottom;
+                tooltip: @tr("consoleFollow");
+                active: ConsoleState.follow;
+                clicked => {
+                    ConsoleState.follow = !ConsoleState.follow;
+                    if ConsoleState.follow { root.to-end(); }
+                }
+            }
+            ToolButton {
+                icon: Icons.content-copy;
+                tooltip: @tr("consoleCopy");
+                enabled: ConsoleState.shown > 0;
+                clicked => {
+                    clip.text = ConsoleState.copy-text();
+                    clip.select-all();
+                    clip.copy();
+                    clip.text = "";
+                    ConsoleState.copied(@tr("consoleCopied" | "consoleCopied" % ConsoleState.shown));
+                }
+            }
+            ToolButton {
+                icon: Icons.delete-sweep;
+                tooltip: @tr("consoleClear");
+                enabled: ConsoleState.total > 0;
+                clicked => { ConsoleState.clear(); }
+            }
+        }
+        // Container con borde y recorte: el contenido va 1 px dentro.
+        Rectangle {
+            vertical-stretch: 1;
+            border-radius: Theme.radius-card;
+            background: Palette.background-deep.with-alpha(0.75);
+            accessible-role: groupbox;
+            accessible-id: "console";
+            Rectangle {
+                x: 1px;
+                y: 1px;
+                width: parent.width - 2px;
+                height: parent.height - 2px;
+                border-radius: Theme.radius-card - 1px;
+                clip: true;
+                if ConsoleState.total == 0: EmptyState {
+                    icon: Icons.terminal;
+                    title: @tr("consoleEmptyTitle");
+                    body: @tr("consoleEmptyBody");
+                }
+                if ConsoleState.total > 0 && ConsoleState.shown == 0: Txt {
+                    y: (parent.height - self.height) / 2;
+                    width: parent.width;
+                    horizontal-alignment: center;
+                    text: @tr("consoleNoMatches");
+                    color: Palette.text-secondary;
+                    accessible-id: "no-matches";
+                }
+            }
+            // Fuera del `if`: la lista conserva el desplazamiento al filtrar.
+            lv := ListView {
+                x: 1px;
+                y: 1px;
+                width: parent.width - 2px;
+                height: parent.height - 2px;
+                visible: ConsoleState.shown > 0;
+                accessible-role: list;
+                accessible-id: "lines";
+                changed content-height => { if ConsoleState.follow { root.to-end(); } }
+                changed visible-height => { if ConsoleState.follow { root.to-end(); } }
+                // Si el usuario sube, se deja de seguir; al volver abajo,
+                // se reanuda (margen de 24 px, como Flutter). Solo con lo
+                // que hace el usuario: al saltar al final o al cambiar la
+                // estimación del alto de la lista no cuenta.
+                scrolled => {
+                    ConsoleState.follow = -self.content-y >= self.content-height - self.visible-height - 24px;
+                }
+                for row in ConsoleState.rows: LogLine {
+                    item: row;
+                    last: row.number == ConsoleState.shown;
+                }
+            }
+            Rectangle {
+                border-radius: Theme.radius-card;
+                border-width: 1px;
+                border-color: Palette.border;
+            }
+        }
+    }
+    clip := TextInput {
+        visible: false;
+        width: 0;
+        height: 0;
+        accessible-role: none;
+    }
+}

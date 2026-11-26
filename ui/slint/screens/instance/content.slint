@@ -1,0 +1,513 @@
+// Pestaña Contenido del detalle de instancia (content_tab.dart): mods,
+// paquetes de recursos y shaders con filtro por tipo y texto, avisos de
+// actualizaciones y de archivos desconocidos, y por fila activar/desactivar,
+// actualizar y quitar. Rust (`inst_content.rs`) rellena `InstContentState`.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Txt, Icon, Spinner } from "../../components/base.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+import { EmptyState, ErrorNote, ConfirmDialog } from "../../components/feedback.slint";
+import { ColorBadge } from "../../components/panels.slint";
+import { TipArea } from "../../components/common.slint";
+import { TextField } from "../../components/inputs.slint";
+import { Switch } from "../../components/controls.slint";
+import { LoadState } from "../instances.slint";
+
+// Una fila de la lista (`_ContentRow`).
+export struct ContentRow {
+    // `tipo/archivo` (contentKey).
+    key: string,
+    kind: string,
+    // Nombre del proyecto o, sin él, el archivo.
+    name: string,
+    // «archivo  ·  versión  ·  tamaño».
+    details: string,
+    // `modrinth`, `curseforge` o `unknown`.
+    source: string,
+    enabled: bool,
+    // Icono del proyecto ya descargado (si no, el de su tipo).
+    has-icon: bool,
+    icon: image,
+    // Versión nueva ("" = al día).
+    update: string,
+    // Actualizándose (esta fila o «Actualizar todo»).
+    updating: bool,
+}
+
+export global InstContentState {
+    in property <LoadState> load: LoadState.loading;
+    in property <string> error;
+    in property <string> error-detail;
+    // Filtro por tipo: 0 Todo, 1 Mods, 2 Paquetes de recursos, 3 Shaders.
+    in property <int> filter;
+    // Cuántos hay de cada filtro (mismo orden).
+    in property <[int]> counts: [0, 0, 0, 0];
+    // Hay contenido (sin datapacks), aunque el filtro no deje ver nada.
+    in property <bool> any;
+    in property <[ContentRow]> rows;
+    in property <bool> updates-loading;
+    in property <int> updates-count;
+    in property <int> unknown-count;
+    in property <bool> updating-all;
+    in property <bool> identifying;
+    // Confirmación de «Quitar» (key "" = cerrada).
+    in-out property <string> remove-key;
+    in-out property <string> remove-name;
+    callback select-filter(int);
+    callback query(string);
+    callback refresh;
+    callback add;
+    callback update-all;
+    callback identify;
+    callback set-enabled(string, bool);
+    callback update(string);
+    callback remove(string);
+
+    // contentKindIcon / contentKindColor de content_tab.dart.
+    public pure function kind-icon(kind: string) -> string {
+        return kind == "mod" ? Icons.extension
+            : kind == "resourcepack" ? Icons.palette
+            : kind == "shader" ? Icons.wb-sunny
+            : kind == "datapack" ? Icons.data-object
+            : kind == "modpack" ? Icons.inventory-2
+            : Icons.draft;
+    }
+    public pure function kind-color(kind: string) -> color {
+        return kind == "mod" ? #7DD3FC
+            : kind == "resourcepack" ? #F0ABFC
+            : kind == "shader" ? #FCD34D
+            : kind == "datapack" ? #86EFAC
+            : kind == "modpack" ? #FDA4AF
+            : #A0A0A0;
+    }
+}
+
+// Píldora de PillTabs (media.dart) con contador.
+component Pill inherits Rectangle {
+    in property <string> text;
+    in property <int> count;
+    in property <bool> selected;
+    callback clicked;
+    // El ancho del texto de Slint sale redondeado hacia arriba; medio píxel
+    // menos por texto (como TabItem) deja las píldoras donde Flutter.
+    width: row.preferred-width - 1px;
+    height: row.preferred-height;
+    border-radius: self.height / 2;
+    background: selected ? Palette.accent-container : Palette.surface1;
+    border-width: 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.45) : Palette.border;
+    animate background, border-color { duration: Theme.motion ? Theme.fast : 0ms; }
+    accessible-role: tab;
+    accessible-label: text;
+    accessible-item-selected: selected;
+    accessible-action-default => { clicked(); }
+    // Relleno 14 × 8 más el borde (Container lo suma).
+    row := HorizontalLayout {
+        padding-left: 15px;
+        padding-right: 15px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+        spacing: 6px;
+        Txt {
+            text: root.text;
+            style: { size: Type.label-large.size, weight: root.selected ? 600 : 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+            color: root.selected ? Palette.on-accent-container : Palette.text-secondary;
+        }
+        Txt {
+            text: root.count;
+            style: Type.label-medium;
+            family: "Inter Tnum";
+            color: root.selected ? Palette.accent : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// IconButton estándar (iconButtonTheme): 40 visibles en 48 de toque, icono
+// en texto secundario. `busy` = ruedita y deshabilitado.
+component IconBtn inherits Rectangle {
+    in property <string> icon;
+    in property <length> icon-size: 20px;
+    in property <string> tooltip;
+    in property <bool> busy;
+    // accessible-id del área visible (lo que mide Flutter con byTooltip).
+    in property <string> visible-id;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: !busy;
+    accessible-action-default => { if !busy { clicked(); } }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover && !root.busy ? Palette.text-secondary.with-alpha(0.08) : transparent;
+        // Solo para medirlo (las cajas del arnés); el botón es el de fuera.
+        accessible-role: image;
+        accessible-id: root.visible-id;
+        if root.busy: Spinner { size: 16px; stroke: 2px; }
+        if !root.busy: Icon { glyph: root.icon; size: root.icon-size; color: Palette.text-secondary; }
+    }
+    ta := TipArea {
+        tip: root.tooltip;
+        mouse-cursor: root.busy ? MouseCursor.default : MouseCursor.pointer;
+        clicked => { if !root.busy { root.clicked(); } }
+    }
+}
+
+// Aviso de color con una acción a la derecha (_Banner).
+component Banner inherits Rectangle {
+    in property <string> icon;
+    in property <color> tint;
+    in property <string> text;
+    in property <string> action;
+    in property <bool> busy;
+    // accessible-id de la acción.
+    in property <string> action-id;
+    callback act;
+    height: lay.preferred-height;
+    border-radius: Theme.radius-card;
+    background: tint.with-alpha(0.08);
+    border-width: 1px;
+    border-color: tint.with-alpha(0.28);
+    accessible-role: groupbox;
+    accessible-label: text;
+    lay := HorizontalLayout {
+        // Relleno 16/8/8/8 más el borde.
+        padding-left: 17px;
+        padding-right: 9px;
+        padding-top: 9px;
+        padding-bottom: 9px;
+        Icon { glyph: root.icon; size: 18px; color: root.tint; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 12px; }
+        Txt { text: root.text; horizontal-stretch: 1; accessible-id: "txt-banner"; y: (parent.height - self.height) / 2; }
+        if root.busy: Rectangle {
+            width: 40px;
+            height: 48px;
+            accessible-role: button;
+            accessible-label: root.action;
+            accessible-enabled: false;
+            accessible-id: root.action-id;
+            Spinner { size: 16px; stroke: 2px; tint: root.tint; }
+        }
+        if !root.busy: TextButton {
+            text: root.action;
+            tint: root.tint;
+            height: 48px;
+            accessible-id: root.action-id;
+            clicked => { root.act(); }
+        }
+    }
+}
+
+// Botón «↑ versión» de una fila (OutlinedButton.icon de acento, 32 visibles
+// en 48 de toque, relleno 12).
+component UpdateButton inherits Rectangle {
+    in property <string> version;
+    in property <bool> busy;
+    callback clicked;
+    width: lay.preferred-width;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: @tr("contentUpdateTo", version);
+    accessible-enabled: !busy;
+    accessible-action-default => { if !busy { clicked(); } }
+    Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: 32px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: root.busy ? Palette.text.with-alpha(0.12) : Palette.accent.with-alpha(0.4);
+        background: ta.has-hover && !root.busy ? Theme.blend(Palette.accent.with-alpha(0.08), Palette.accent.with-alpha(0.08)) : Palette.accent.with-alpha(0.08);
+    }
+    lay := HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+        alignment: center;
+        if root.busy: Spinner { size: 14px; stroke: 2px; y: (parent.height - self.height) / 2; }
+        if !root.busy: Icon { glyph: Icons.arrow-upward; size: 16px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+        Txt {
+            text: root.version;
+            style: Type.label-large;
+            color: root.busy ? Palette.text.with-alpha(0.38) : Palette.accent;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    ta := TipArea {
+        tip: @tr("contentUpdateTo", root.version);
+        mouse-cursor: root.busy ? MouseCursor.default : MouseCursor.pointer;
+        clicked => { if !root.busy { root.clicked(); } }
+    }
+}
+
+// Icono de la fila: el del proyecto o, sin él, el de su tipo (ProjectIcon
+// con `fallback`).
+component RowIcon inherits Rectangle {
+    in property <ContentRow> item;
+    property <color> kc: InstContentState.kind-color(item.kind);
+    width: 40px;
+    height: 40px;
+    accessible-role: image;
+    accessible-label: item.name;
+    if root.item.has-icon: Rectangle {
+        border-radius: 40px * 0.26;
+        background: Palette.surface2;
+        clip: true;
+        Image { width: parent.width; height: parent.height; source: root.item.icon; image-fit: cover; accessible-role: none; }
+    }
+    if !root.item.has-icon: Rectangle {
+        border-radius: 10px;
+        background: root.kc.with-alpha(0.12);
+        border-width: 1px;
+        border-color: root.kc.with-alpha(0.25);
+        Icon { glyph: InstContentState.kind-icon(root.item.kind); size: 20px; color: root.kc; }
+    }
+}
+
+// Fila de la lista (_ContentRow): 68 de alto (10 + 48 + 10).
+component RowView inherits Rectangle {
+    in property <ContentRow> item;
+    in-out property <bool> enabled;
+    height: 68px;
+    accessible-role: list-item;
+    accessible-label: item.name;
+    accessible-id: "content-row";
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        RowIcon {
+            item: root.item;
+            accessible-id: "content-icon";
+            y: (parent.height - self.height) / 2;
+            opacity: root.item.enabled ? 1 : 0.45;
+            animate opacity { duration: Theme.motion ? Theme.fast : 0ms; }
+        }
+        Rectangle { width: 16px; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            opacity: root.item.enabled ? 1 : 0.55;
+            animate opacity { duration: Theme.motion ? Theme.fast : 0ms; }
+            HorizontalLayout {
+                Txt { text: root.item.name; style: Type.title-small; horizontal-stretch: 0; accessible-id: "txt-content-name"; y: (parent.height - self.height) / 2; }
+                Rectangle { width: 8px; }
+                ColorBadge {
+                    text: root.item.source == "modrinth" ? "Modrinth" : root.item.source == "curseforge" ? "CurseForge" : @tr("sourceUnknown");
+                    tint: root.item.source == "modrinth" ? #4ADE80 : root.item.source == "curseforge" ? #F59E0B : Palette.text-muted;
+                }
+                if !root.item.enabled: HorizontalLayout {
+                    padding-left: 4px;
+                    ColorBadge { text: @tr("contentDisabled"); tint: Palette.text-muted; }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+            // SizedBox(height: 2) de Flutter (la línea base de bodySmall la
+            // corrige `TextStyle.nudge`).
+            Rectangle { height: 2px; }
+            Txt { text: root.item.details; style: Type.body-small; color: Palette.text-muted; }
+        }
+        if root.item.update != "": HorizontalLayout {
+            padding-left: 12px;
+            UpdateButton {
+                version: root.item.update;
+                busy: root.item.updating;
+                accessible-id: "content-update-play";
+                y: (parent.height - self.height) / 2;
+                clicked => { InstContentState.update(root.item.key); }
+            }
+        }
+        Rectangle { width: 16px; }
+        Switch {
+            checked <=> root.enabled;
+            label: root.item.enabled ? @tr("contentDisable") : @tr("contentEnable");
+            accessible-id: "content-switch";
+            y: (parent.height - self.height) / 2;
+            toggled(v) => { InstContentState.set-enabled(root.item.key, v); }
+        }
+        Rectangle { width: 8px; }
+        IconBtn {
+            icon: Icons.delete;
+            icon-size: 19px;
+            tooltip: @tr("remove");
+            accessible-id: "content-remove";
+            y: (parent.height - self.height) / 2;
+            clicked => {
+                InstContentState.remove-name = root.item.name;
+                InstContentState.remove-key = root.item.key;
+            }
+        }
+    }
+}
+
+export component ContentTab inherits Rectangle {
+    in property <string> instance-id;
+    VerticalLayout {
+        HorizontalLayout {
+            height: 48px;
+            HorizontalLayout {
+                spacing: 8px;
+                for f[i] in [@tr("filterAll"), @tr("kindMods"), @tr("kindResourcepacks"), @tr("kindShaders")]: Pill {
+                    text: f;
+                    count: InstContentState.counts[i];
+                    selected: InstContentState.filter == i;
+                    accessible-id: "filter";
+                    y: (parent.height - self.height) / 2;
+                    clicked => { InstContentState.select-filter(i); }
+                }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            TextField {
+                width: 230px;
+                placeholder: @tr("contentFilterHint");
+                prefix-icon: Icons.search;
+                accessible-id: "content-search";
+                edited(t) => { InstContentState.query(t); }
+            }
+            Rectangle { width: 8px; }
+            IconBtn {
+                icon: Icons.refresh;
+                tooltip: @tr("contentCheckUpdates");
+                busy: InstContentState.updates-loading;
+                visible-id: "content-refresh";
+                clicked => { InstContentState.refresh(); }
+            }
+            Rectangle { width: 8px; }
+            FilledButton {
+                text: @tr("contentAdd");
+                icon: Icons.add;
+                accessible-id: "content-add-play";
+                clicked => { InstContentState.add(); }
+            }
+        }
+        if InstContentState.updates-count > 0 || InstContentState.unknown-count > 0: VerticalLayout {
+            padding-top: 12px;
+            banners := HorizontalLayout {
+                // Expanded: mitad y mitad (o todo el ancho si hay uno).
+                property <length> each: InstContentState.updates-count > 0 && InstContentState.unknown-count > 0 ? (self.width - 12px) / 2 : self.width;
+                spacing: 12px;
+                if InstContentState.updates-count > 0: Banner {
+                    width: banners.each;
+                    icon: Icons.upgrade;
+                    tint: Palette.accent;
+                    text: @tr("contentUpdatesAvailable" | "contentUpdatesAvailable" % InstContentState.updates-count);
+                    action: @tr("contentUpdateAll");
+                    busy: InstContentState.updating-all;
+                    action-id: "update-all-play";
+                    accessible-id: "banner";
+                    act => { InstContentState.update-all(); }
+                }
+                if InstContentState.unknown-count > 0: Banner {
+                    width: banners.each;
+                    icon: Icons.help;
+                    tint: Palette.warning;
+                    text: @tr("contentUnknownFiles" | "contentUnknownFiles" % InstContentState.unknown-count);
+                    action: @tr("contentIdentify");
+                    busy: InstContentState.identifying;
+                    action-id: "identify-play";
+                    accessible-id: "banner";
+                    act => { InstContentState.identify(); }
+                }
+            }
+        }
+        Rectangle { height: 12px; }
+        body := Rectangle {
+            vertical-stretch: 1;
+            if !InstContentState.any && InstContentState.load == LoadState.failed: VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    ErrorNote {
+                        width: min(480px, body.width);
+                        message: InstContentState.error;
+                        detail: InstContentState.error-detail;
+                        details-label: @tr("details");
+                        accessible-id: "content-error";
+                    }
+                }
+            }
+            if !InstContentState.any && InstContentState.load == LoadState.loading: Spinner { accessible-id: "content-loading"; }
+            if !InstContentState.any && InstContentState.load == LoadState.ready: EmptyState {
+                icon: Icons.extension;
+                title: @tr("contentEmptyTitle");
+                body: @tr("contentEmptyBody");
+                action: @tr("contentBrowse");
+                action-icon: Icons.travel-explore;
+                accessible-id: "content-empty";
+                act => { InstContentState.add(); }
+            }
+            if InstContentState.any && InstContentState.rows.length == 0: Txt {
+                text: @tr("contentNoMatches");
+                color: Palette.text-secondary;
+                accessible-id: "content-no-matches";
+            }
+            if InstContentState.any && InstContentState.rows.length > 0: Rectangle {
+                // Lista ajustada a su contenido (shrinkWrap) y arriba, como
+                // mucho el alto disponible: 1 de borde, 4 de relleno, filas de
+                // 68 con separadores de 1.
+                property <length> list-height: 2px + 8px + InstContentState.rows.length * 69px - 1px;
+                y: 0;
+                height: min(body.height, self.list-height);
+                border-radius: Theme.radius-card;
+                background: Palette.card(Palette.surface1);
+                border-width: 1px;
+                border-color: Palette.border;
+                accessible-role: list;
+                accessible-id: "content-list";
+                Flickable {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    height: parent.height - 2px;
+                    content-height: parent.list-height - 2px;
+                    VerticalLayout {
+                        padding-top: 4px;
+                        padding-bottom: 4px;
+                        alignment: start;
+                        for r[i] in InstContentState.rows: VerticalLayout {
+                            if i > 0: Rectangle {
+                                height: 1px;
+                                Rectangle { x: 16px; width: parent.width - 32px; background: Palette.border; }
+                            }
+                            RowView { item: r; enabled <=> r.enabled; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Confirmación de «Quitar» (confirm() de common.dart), por encima de toda la
+// ventana; Escape la cierra.
+export component ContentTabLayer inherits Rectangle {
+    if InstContentState.remove-key != "": Rectangle {
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if e.text == Key.Escape {
+                    InstContentState.remove-key = "";
+                    return accept;
+                }
+                reject
+            }
+        }
+        ConfirmDialog {
+            title: @tr("contentRemoveTitle", InstContentState.remove-name);
+            body: @tr("contentRemoveBody");
+            action: @tr("remove");
+            cancel-label: @tr("cancel");
+            danger: true;
+            accessible-id: "confirm-remove";
+            dismissed => { InstContentState.remove-key = ""; }
+            accepted => {
+                InstContentState.remove(InstContentState.remove-key);
+                InstContentState.remove-key = "";
+            }
+        }
+    }
+}
