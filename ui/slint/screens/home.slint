@@ -1,6 +1,7 @@
 // Inicio (home_page.dart): saludo, tarjeta grande para seguir jugando,
 // recientes, sesión, partidas en marcha y servidores rápidos.
 
+import { AccountsState } from "accounts.slint";
 import { Palette, Theme, Type } from "../theme.slint";
 import { Icons } from "../icons.slint";
 import { Fmt } from "../fmt.slint";
@@ -221,12 +222,12 @@ component SessionCard inherits Panel {
             // La columna de Flutter estira los botones a todo el ancho.
             Rectangle {
                 height: 48px;
-                FilledButton { width: parent.width; text: @tr("accountsAddMicrosoft"); icon: Icons.add-circle; icon-size: 18px; clicked => { HomeState.add-microsoft(); } }
+                FilledButton { width: parent.width; text: @tr("accountsAddMicrosoft"); icon: Icons.add-circle; icon-size: 18px; clicked => { AccountsState.add-microsoft(); } }
             }
             Rectangle { height: 8px; }
             Rectangle {
                 height: 48px;
-                OutlinedButton { text: @tr("accountsAddOffline"); clicked => { HomeState.add-offline(); } }
+                OutlinedButton { text: @tr("accountsAddOffline"); clicked => { AccountsState.add-offline(); } }
             }
         }
         if root.account.present: HorizontalLayout {
@@ -262,7 +263,7 @@ component SessionCard inherits Panel {
             }
             VerticalLayout {
                 alignment: center;
-                TextButton { text: @tr("homeChangeAccount"); clicked => { HomeState.change-account(); } }
+                TextButton { text: @tr("homeChangeAccount"); clicked => { AccountsState.panel-open = true; } }
             }
         }
     }
@@ -547,87 +548,95 @@ component HeroCard inherits Rectangle {
 
 export component HomePage inherits Rectangle {
     in property <AccountChip> account;
-    VerticalLayout {
-        padding-left: 32px;
-        padding-right: 32px;
-        padding-top: 4px;
-        padding-bottom: 32px;
-        Txt {
-            text: root.account.present ? @tr("homeGreeting", root.account.name) : @tr("homeGreetingAnon");
-            style: Type.headline-medium;
-            accessible-id: "txt-greeting";
-        }
-        Rectangle { height: 4px; }
-        Txt {
-            text: @tr("homeSubtitle");
-            style: Type.body-large;
-            color: Palette.text-secondary;
-            accessible-id: "txt-subtitle";
-        }
-        Rectangle { height: 24px; }
-        HorizontalLayout {
-            vertical-stretch: 1;
-            spacing: 24px;
-            Rectangle {
-                horizontal-stretch: 1;
-                if HomeState.state == LoadState.loading: Spinner { }
-                if HomeState.state == LoadState.failed: ErrorNote {
-                    width: min(parent.width, 520px);
-                    height: self.preferred-height;
-                    message: HomeState.error-message;
-                    detail: HomeState.error-detail;
-                    details-label: @tr("details");
-                }
-                if HomeState.state == LoadState.ready && !HomeState.has-hero: Panel {
-                    radius: Theme.radius-panel + 4px;
-                    accessible-role: groupbox;
-                    accessible-id: "no-instances";
-                    EmptyState {
-                        icon: Icons.deployed-code;
-                        title: @tr("homeNoInstancesTitle");
-                        body: @tr("homeNoInstancesBody");
-                        action: @tr("instancesNew");
-                        action-icon: Icons.add;
-                        act => { HomeState.new-instance(); }
-                    }
-                }
-                if HomeState.state == LoadState.ready && HomeState.has-hero: VerticalLayout {
-                    HeroCard { vertical-stretch: 1; }
-                    if HomeState.recent.length > 0: VerticalLayout {
-                        Rectangle { height: 24px; }
-                        HorizontalLayout {
-                            height: 48px;
-                            padding-bottom: 0;
-                            Txt { text: @tr("homeRecent"); style: Type.title-medium; horizontal-stretch: 1; y: (parent.height - self.height) / 2; accessible-id: "txt-recent"; }
-                            VerticalLayout {
-                                alignment: center;
-                                TextButton { text: @tr("homeSeeAll"); clicked => { HomeState.see-all-instances(); } }
-                            }
-                        }
-                        Rectangle { height: 12px; }
-                        recent-row := HorizontalLayout {
-                            spacing: 16px;
-                            for r in HomeState.recent: RecentCard {
-                                // Siempre un tercio (Expanded), mida lo que mida el texto.
-                                width: (recent-row.width - 32px) / 3;
-                                item: r;
-                                accessible-id: "recent";
-                                open => { HomeState.open(r.id); }
-                                play => { HomeState.play(r.id); }
-                            }
-                            // Huecos de las que faltan.
-                            for i in max(0, 3 - HomeState.recent.length): Rectangle { width: (recent-row.width - 32px) / 3; }
-                        }
-                    }
-                }
+    Flickable {
+        width: parent.width;
+        height: parent.height;
+        content-width: self.width;
+        content-height: max(self.height, 540px, sidebar.preferred-height + 108px);
+        VerticalLayout {
+            width: parent.content-width;
+            height: parent.content-height;
+            padding-left: 32px;
+            padding-right: 32px;
+            padding-top: 4px;
+            padding-bottom: 32px;
+            Txt {
+                text: root.account.present ? @tr("homeGreeting", root.account.name) : @tr("homeGreetingAnon");
+                style: Type.headline-medium;
+                accessible-id: "txt-greeting";
             }
-            VerticalLayout {
-                width: 296px;
-                alignment: start;
-                spacing: 16px;
-                SessionCard { account: root.account; }
-                RunningCard { }
-                QuickServersCard { }
+            Rectangle { height: 4px; }
+            Txt {
+                text: @tr("homeSubtitle");
+                style: Type.body-large;
+                color: Palette.text-secondary;
+                accessible-id: "txt-subtitle";
+            }
+            Rectangle { height: 24px; }
+            HorizontalLayout {
+                vertical-stretch: 1;
+                spacing: 24px;
+                Rectangle {
+                    horizontal-stretch: 1;
+                    if HomeState.state == LoadState.loading: Spinner { }
+                    if HomeState.state == LoadState.failed: ErrorNote {
+                        width: min(parent.width, 520px);
+                        height: self.preferred-height;
+                        message: HomeState.error-message;
+                        detail: HomeState.error-detail;
+                        details-label: @tr("details");
+                    }
+                    if HomeState.state == LoadState.ready && !HomeState.has-hero: Panel {
+                        radius: Theme.radius-panel + 4px;
+                        accessible-role: groupbox;
+                        accessible-id: "no-instances";
+                        EmptyState {
+                            icon: Icons.deployed-code;
+                            title: @tr("homeNoInstancesTitle");
+                            body: @tr("homeNoInstancesBody");
+                            action: @tr("instancesNew");
+                            action-icon: Icons.add;
+                            act => { HomeState.new-instance(); }
+                        }
+                    }
+                    if HomeState.state == LoadState.ready && HomeState.has-hero: VerticalLayout {
+                        HeroCard { vertical-stretch: 1; }
+                        if HomeState.recent.length > 0: VerticalLayout {
+                            Rectangle { height: 24px; }
+                            HorizontalLayout {
+                                height: 48px;
+                                padding-bottom: 0;
+                                Txt { text: @tr("homeRecent"); style: Type.title-medium; horizontal-stretch: 1; y: (parent.height - self.height) / 2; accessible-id: "txt-recent"; }
+                                VerticalLayout {
+                                    alignment: center;
+                                    TextButton { text: @tr("homeSeeAll"); clicked => { HomeState.see-all-instances(); } }
+                                }
+                            }
+                            Rectangle { height: 12px; }
+                            recent-row := HorizontalLayout {
+                                spacing: 16px;
+                                for r in HomeState.recent: RecentCard {
+                                    // Siempre un tercio (Expanded), mida lo que mida el texto.
+                                    width: (recent-row.width - 32px) / 3;
+                                    item: r;
+                                    accessible-id: "recent";
+                                    open => { HomeState.open(r.id); }
+                                    play => { HomeState.play(r.id); }
+                                }
+                                // Huecos de las que faltan.
+                                for i in max(0, 3 - HomeState.recent.length): Rectangle { width: (recent-row.width - 32px) / 3; }
+                            }
+                        }
+                    }
+                }
+                sidebar := VerticalLayout {
+                    width: 296px;
+                    alignment: start;
+                    spacing: 16px;
+                    SessionCard { account: root.account; }
+                    RunningCard { }
+                    QuickServersCard { }
+                }
             }
         }
     }

@@ -18,7 +18,7 @@ use shard_ui::prefs::UiPrefs;
 use shard_ui::theme::Style;
 use shard_ui::window::Shell;
 use shard_ui::{
-    Backdrop, BackdropKind, HomeState, InstancesState, LaunchPhase, LoadState, MainWindow, Notices, Palette, Route, Theme, Tips, UpdatePhase,
+    AccountsState, Backdrop, BackdropKind, HomeState, InstancesState, LaunchPhase, LoadState, MainWindow, Notices, Palette, Route, Theme, Tips, UpdatePhase,
     fixtures,
 };
 use slint::platform::{PointerEventButton, WindowEvent};
@@ -438,6 +438,25 @@ fn entrar_a_un_servidor() {
     assert!(!a.ui.global::<HomeState>().get_servers().row_data(0).unwrap().can_join);
 }
 
+fn jugar_visible_en_ventanas_bajas() {
+    let a = home_app("es");
+    // Área útil aproximada con una barra de 40 px, y tamaño mínimo.
+    for (width, height) in [(1280., 680.), (1366., 728.), (960., 600.)] {
+        resize_physical(&a.ui, width, height);
+        let play = &by_id(&a.ui, "hero-play-btn")[0];
+        let bottom = (play.absolute_position().y + play.size().height) * a.ui.window().scale_factor();
+        assert!(bottom <= height, "Jugar queda fuera a {width} × {height}: {bottom}");
+    }
+}
+
+fn cambiar_cuenta_desde_inicio() {
+    let a = home_app("es");
+    assert!(!a.ui.global::<AccountsState>().get_panel_open());
+    click(&by_label(&a.ui, "Cambiar"));
+    assert!(a.ui.global::<AccountsState>().get_panel_open());
+    assert_eq!(a.ui.get_route(), Route::Home);
+}
+
 fn sin_cuenta_ni_instancias() {
     let a = home_app("en");
     a.ctl.set_account(None);
@@ -528,6 +547,8 @@ fn interacciones() {
     aviso_de_cierre_inesperado();
     aviso_de_version_nueva();
     entrar_a_un_servidor();
+    jugar_visible_en_ventanas_bajas();
+    cambiar_cuenta_desde_inicio();
     sin_cuenta_ni_instancias();
     tooltip_del_rail_tras_la_espera();
     estilos_y_escala_de_ui();
