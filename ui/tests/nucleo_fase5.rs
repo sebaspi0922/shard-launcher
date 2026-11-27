@@ -32,20 +32,26 @@ impl Actions for NoActions {
 
 /// Corre el bucle de eventos hasta que `cond` se cumpla (20 s como mucho).
 fn wait(what: &str, cond: impl Fn() -> bool + 'static) {
-    let start = Instant::now();
+    let deadline = Instant::now() + Duration::from_secs(20);
     let timer = slint::Timer::default();
-    let ok = std::rc::Rc::new(std::cell::Cell::new(false));
-    let ok2 = ok.clone();
+    let result = std::rc::Rc::new(std::cell::Cell::new(None));
+    let result_from_tick = result.clone();
     timer.start(slint::TimerMode::Repeated, Duration::from_millis(10), move || {
-        if cond() {
-            ok2.set(true);
-            let _ = slint::quit_event_loop();
-        } else if start.elapsed() > Duration::from_secs(20) {
+        if result_from_tick.get().is_some() {
+            return;
+        }
+        let ready = cond();
+        if ready || Instant::now() >= deadline {
+            result_from_tick.set(Some(ready));
             let _ = slint::quit_event_loop();
         }
     });
-    slint::run_event_loop().unwrap();
-    assert!(ok.get(), "no llegó: {what}");
+    // El backend de pruebas puede consumir una salida de una espera anterior.
+    // Solo termina esta espera cuando su propio temporizador da un resultado.
+    while result.get().is_none() && Instant::now() < deadline {
+        slint::run_event_loop().unwrap();
+    }
+    assert_eq!(result.get(), Some(true), "no llegó: {what}");
 }
 
 /// Deja correr el bucle `ms` (temporizadores de guardado).
@@ -156,6 +162,8 @@ fn fase5_con_el_nucleo_real() {
     wait("es", move || h.block_on(c.settings()).language.as_deref() == Some("es"));
 
     // --- Doctor sobre una instancia que nunca se jugó. ----------------------
+    // Una salida encolada no debe cancelar la espera del informe.
+    slint::quit_event_loop().unwrap();
     doctor.open("survival-amigos");
     let w = ui.as_weak();
     wait("informe", move || w.unwrap().global::<DoctorState>().get_state() != LoadState::Loading);
