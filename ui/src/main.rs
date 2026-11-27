@@ -14,6 +14,8 @@ use lcore::{Core, Options};
 use shard_ui::accounts::Accounts;
 use shard_ui::accounts_backend::{CoreAccounts, CoreSkins};
 use shard_ui::backend::{self, Backend, CoreActions};
+use shard_ui::settings::Settings;
+use shard_ui::settings_backend::CoreSettings;
 use shard_ui::skins::Skins;
 use shard_ui::content::Content;
 use shard_ui::content_backend::CoreContent;
@@ -215,6 +217,25 @@ fn main() {
         });
     }
     let shell = Shell::new(&ui, settings.close_behavior, backend.clone());
+    // Ajustes (sin núcleo, la página muestra el error de carga).
+    let total_mb = {
+        let mut sys = sysinfo::System::new();
+        sys.refresh_memory();
+        sys.total_memory() / (1024 * 1024)
+    };
+    let data_dir = backend.as_ref().map(|b| b.core.paths().root().display().to_string()).unwrap_or_default();
+    let settings_actions: Box<dyn shard_ui::settings::SettingsActions> = match &backend {
+        Some(b) => Box::new(CoreSettings::new(b.clone(), lang)),
+        None => Box::new(NoCore),
+    };
+    let _doctor = backend.as_ref().map(|b| {
+        shard_ui::doctor::Doctor::new(&ui, ctl.clone(), Box::new(shard_ui::doctor::CoreDoctor { backend: b.clone(), lang: lang.to_owned() }))
+    });
+    let settings_ctl = Settings::new(&ui, ctl.clone(), settings_actions, total_mb, &data_dir, env!("CARGO_PKG_VERSION"));
+    {
+        let shell = shell.clone();
+        settings_ctl.on_close_changed(move |c| shell.set_close_behavior(c));
+    }
     {
         let shell = shell.clone();
         ctl.on_refresh(move |m| shell.set_tray_last(m.all.first().map(|r| r.name.as_str()).unwrap_or("")));
@@ -233,10 +254,35 @@ fn main() {
         None => ctl.set_failed(i18n::text(lang, "errGeneric"), "lcore: no se pudo abrir la carpeta de datos".into()),
     }
 
+    // Primer arranque: se decide antes de pintar para no mostrar Inicio un
+    // instante (main.dart).
+    let first_run = match &backend {
+        Some(b) if ui_prefs.first_run_done != Some(true) => {
+            let has_instances = rt.block_on(b.core.list_instances()).is_ok_and(|l| !l.is_empty());
+            let has_accounts = rt.block_on(b.core.accounts()).is_ok_and(|a| !a.accounts.is_empty());
+            shard_ui::first_run::needs_first_run(&ui_prefs, has_instances, has_accounts)
+        }
+        _ => false,
+    };
+    let _first_run = backend.as_ref().map(|b| {
+        let fr = shard_ui::first_run::FirstRun::new(
+            &ui,
+            ctl.clone(),
+            Box::new(shard_ui::first_run::CoreFirstRun { backend: b.clone(), lang: lang.to_owned() }),
+            settings.language.clone(),
+        );
+        if first_run {
+            fr.show(0);
+        }
+        fr
+    });
+
     if std::env::var_os("SHARD_TIMING").is_some() {
         stamp_first_frame(&ui, started);
     }
-    if args.background {
+    // Con el asistente pendiente no se arranca oculta.
+    // Oculta solo con bandeja (como Flutter): si no, no habría forma de volver.
+    if args.background && !first_run && shard_ui::window::tray_host_available() {
         shell.to_background();
     } else {
         ui.show().expect("mostrar la ventana");
@@ -351,6 +397,31 @@ impl shard_ui::trash::TrashActions for NoCore {
     }
     fn restore(&self, _: &str) {}
     fn purge(&self, _: &[String]) {}
+}
+
+impl shard_ui::settings::SettingsActions for NoCore {
+    fn load(&self, req: u64) {
+        shard_ui::settings::post(move |s| {
+            let lang = "es";
+            s.loaded(req, Err(shard_ui::errors::Failure {
+                kind: "io".into(),
+                message: shard_ui::i18n::text(lang, "errGeneric"),
+                detail: "lcore: no se pudo abrir la carpeta de datos".into(),
+            }))
+        });
+    }
+    fn save(&self, _: &shard_ui::settings::Values, _: u64) {}
+    fn list_java(&self) {}
+    fn install_java(&self, _: u32) {}
+    fn load_autostart(&self) {}
+    fn set_autostart(&self, _: bool) {}
+    fn save_prefs(&self, _: &prefs::UiPrefs) {}
+    fn pick_background(&self) {}
+    fn image_accent(&self, _: &std::path::Path) {}
+    fn copy_text(&self, _: &str) -> bool {
+        false
+    }
+    fn check_update(&self) {}
 }
 
 impl shard_ui::skins::SkinActions for NoCore {

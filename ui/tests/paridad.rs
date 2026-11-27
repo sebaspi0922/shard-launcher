@@ -25,6 +25,9 @@ use shard_ui::servers::Servers;
 use shard_ui::launch::Failure;
 use shard_ui::notices::CrashNotice;
 use shard_ui::prefs::UiPrefs;
+use shard_ui::doctor::Doctor;
+use shard_ui::first_run::FirstRun;
+use shard_ui::settings::Settings;
 use shard_ui::skins::Skins;
 use shard_ui::theme::Style;
 use shard_ui::instance::InstanceDetail;
@@ -65,6 +68,11 @@ struct Ctx<'a> {
     // Fase 4.
     content: &'a Content,
     servers: &'a Servers,
+    settings: &'a std::rc::Rc<Settings>,
+    doctor: &'a Doctor,
+    first_run: &'a FirstRun,
+    /// Desplazamiento de la referencia de Flutter (`scroll_y`).
+    scroll: f32,
 }
 
 /// Detalle de `id` en la pestaña `tab` con los datos de ejemplo (como
@@ -79,6 +87,8 @@ fn detail(c: &Ctx, id: &str, tab: InstanceTab) {
 struct Scene {
     name: &'static str,
     lang: &'static str,
+    /// Idioma de los ajustes (`None` = el del sistema).
+    language: Option<&'static str>,
     setup: fn(&Ctx),
 }
 
@@ -141,10 +151,20 @@ fn servers_ready(c: &Ctx) {
     c.ui.set_route(Route::Servers);
 }
 
+/// Ajustes con los datos de fake_bridge.dart, en el desplazamiento de la
+/// referencia.
+fn settings(c: &Ctx, language: Option<&str>) {
+    c.ui.set_route(Route::Settings);
+    c.settings.loaded(c.settings.last_load(), Ok(fixtures::sample_values(language)));
+    c.settings.java_listed(Ok(fixtures::sample_javas()));
+    c.settings.autostart_loaded(false);
+    c.settings.scroll_to(c.scroll);
+}
+
 const SCENES: &[Scene] = &[
     Scene {
         name: "instances_grid_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             c.ctl.set_phase("create-aeronautica", Phase::Running);
@@ -152,17 +172,17 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "instances_list_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             c.ui.global::<InstancesState>().set_grid(false);
             c.ctl.model.borrow_mut().grid = false;
         },
     },
-    Scene { name: "instances_empty_es", lang: "es", setup: |c| c.ctl.set_instances(vec![]) },
+    Scene { name: "instances_empty_es", lang: "es", language: Some("es"), setup: |c| c.ctl.set_instances(vec![]) },
     Scene {
         name: "instances_search_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             type_into(c.ui, "search", "sur");
@@ -170,7 +190,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "instances_noresults_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             type_into(c.ui, "search", "zzz");
@@ -179,7 +199,7 @@ const SCENES: &[Scene] = &[
     // Fase 2. Panel y diálogos sobre Instancias (como sus referencias).
     Scene {
         name: "accounts_panel_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             by_label(c.ui, "NadiaK").mock_single_click(PointerEventButton::Left);
@@ -187,7 +207,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "ms_login_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             c.ui.global::<AccountsState>().invoke_add_microsoft();
@@ -196,7 +216,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "offline_account_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             c.ui.global::<AccountsState>().invoke_add_offline();
@@ -204,7 +224,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "skins_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ui.set_route(Route::Skins);
             sample_skins(c);
@@ -212,16 +232,16 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "skins_offline_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             c.acc.set_accounts(Ok(fixtures::offline_accounts()));
             c.ui.set_route(Route::Skins);
         },
     },
-    Scene { name: "home_es", lang: "es", setup: |x| home(x.ctl, x.ui) },
+    Scene { name: "home_es", lang: "es", language: Some("es"), setup: |x| home(x.ctl, x.ui) },
     Scene {
         name: "home_downloading_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
@@ -230,7 +250,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "home_error_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
@@ -242,7 +262,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "home_empty_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
@@ -250,13 +270,13 @@ const SCENES: &[Scene] = &[
             c.set_instances(vec![]);
         },
     },
-    Scene { name: "home_style_graphite_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Graphite) },
-    Scene { name: "home_style_sebaspi_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Sebaspi) },
-    Scene { name: "home_style_landscape_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Landscape) },
-    Scene { name: "home_style_aurora_es", lang: "es", setup: |x| styled(x.ctl, x.ui, Style::Aurora) },
+    Scene { name: "home_style_graphite_es", lang: "es", language: Some("es"), setup: |x| styled(x.ctl, x.ui, Style::Graphite) },
+    Scene { name: "home_style_sebaspi_es", lang: "es", language: Some("es"), setup: |x| styled(x.ctl, x.ui, Style::Sebaspi) },
+    Scene { name: "home_style_landscape_es", lang: "es", language: Some("es"), setup: |x| styled(x.ctl, x.ui, Style::Landscape) },
+    Scene { name: "home_style_aurora_es", lang: "es", language: Some("es"), setup: |x| styled(x.ctl, x.ui, Style::Aurora) },
     Scene {
         name: "web_home_graphite_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             ui.global::<Backdrop>().set_hidden(true);
@@ -265,7 +285,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "crash_banner_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
@@ -274,7 +294,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "update_banner_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |x| {
             let (c, ui) = (x.ctl, x.ui);
             home(c, ui);
@@ -286,7 +306,7 @@ const SCENES: &[Scene] = &[
     // F3 menú
     Scene {
         name: "instance_menu_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Worlds);
             c.worlds.listed("survival-amigos", Ok(fixtures::worlds::sample_worlds()));
@@ -297,7 +317,7 @@ const SCENES: &[Scene] = &[
     // F3 contenido
     Scene {
         name: "instance_content_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Content);
             fixtures::inst_content::deliver(c.inst_content, "survival-amigos");
@@ -306,7 +326,7 @@ const SCENES: &[Scene] = &[
     // F3 mundos
     Scene {
         name: "instance_worlds_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Worlds);
             c.worlds.listed("survival-amigos", Ok(fixtures::worlds::sample_worlds()));
@@ -316,7 +336,7 @@ const SCENES: &[Scene] = &[
     // F3 capturas
     Scene {
         name: "instance_screenshots_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Screenshots);
             c.shots.listed("survival-amigos", Ok(fixtures::screenshots::sample_screenshots()));
@@ -325,7 +345,7 @@ const SCENES: &[Scene] = &[
     // F3 copias
     Scene {
         name: "instance_backups_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Backups);
             c.backups.listed("survival-amigos", Ok(fixtures::backups::sample_backups()));
@@ -333,7 +353,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "backup_restore_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Backups);
             c.backups.listed("survival-amigos", Ok(fixtures::backups::sample_backups()));
@@ -343,7 +363,7 @@ const SCENES: &[Scene] = &[
     // F3 registros
     Scene {
         name: "instance_logs_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Logs);
             c.ctl.set_phase("survival-amigos", Phase::Running);
@@ -354,7 +374,7 @@ const SCENES: &[Scene] = &[
     // F3 ajustes
     Scene {
         name: "instance_settings_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Settings);
             c.inst_settings.globals_loaded(fixtures::logs::sample_globals());
@@ -363,7 +383,7 @@ const SCENES: &[Scene] = &[
     // F3 crear instancia
     Scene {
         name: "create_instance_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             by_id(c.ui, "new")[0].mock_single_click(PointerEventButton::Left);
@@ -375,7 +395,7 @@ const SCENES: &[Scene] = &[
     // F3 cambiar versión
     Scene {
         name: "change_version_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             detail(c, "survival-amigos", InstanceTab::Settings);
             by_label(c.ui, "Más opciones").mock_single_click(PointerEventButton::Left);
@@ -388,7 +408,7 @@ const SCENES: &[Scene] = &[
     // F3 papelera
     Scene {
         name: "trash_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             by_id(c.ui, "trash")[0].mock_single_click(PointerEventButton::Left);
@@ -396,11 +416,11 @@ const SCENES: &[Scene] = &[
         },
     },
     // Fase 4: contenido y servidores.
-    Scene { name: "content_search_es", lang: "es", setup: content_ready },
-    Scene { name: "content_target_es", lang: "es", setup: content_target },
+    Scene { name: "content_search_es", lang: "es", language: Some("es"), setup: content_ready },
+    Scene { name: "content_target_es", lang: "es", language: Some("es"), setup: content_target },
     Scene {
         name: "content_curseforge_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             c.content.key_state(false);
             content_ready(c);
@@ -410,7 +430,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "project_sheet_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             content_target(c);
             c.content.open_sheet("sodium");
@@ -419,7 +439,7 @@ const SCENES: &[Scene] = &[
     },
     Scene {
         name: "modpack_installing_es",
-        lang: "es",
+        lang: "es", language: Some("es"),
         setup: |c| {
             c.ctl.set_instances(fixtures::sample_instances());
             content_ready(c);
@@ -428,13 +448,88 @@ const SCENES: &[Scene] = &[
             c.content.set_modpack_progress(87, 212);
         },
     },
-    Scene { name: "servers_es", lang: "es", setup: servers_ready },
+    Scene { name: "servers_es", lang: "es", language: Some("es"), setup: servers_ready },
     Scene {
         name: "server_dialog_en",
-        lang: "en",
+        lang: "en", language: Some("en"),
         setup: |c| {
             servers_ready(c);
             c.servers.open_dialog(None);
+        },
+    },
+    // Fase 5.
+    // Primer arranque. Bienvenida: idioma del sistema (en el test, inglés).
+    Scene {
+        name: "first_run_welcome_es",
+        lang: "en", language: None,
+        setup: |c| {
+            c.acc.set_accounts(Ok(vec![]));
+            c.ctl.set_account(None);
+            c.ctl.set_instances(vec![]);
+            c.first_run.show(0);
+        },
+    },
+    Scene {
+        name: "first_run_import_es",
+        lang: "es", language: Some("es"),
+        setup: |c| {
+            c.acc.set_accounts(Ok(vec![]));
+            c.ctl.set_account(None);
+            c.ctl.set_instances(vec![]);
+            c.first_run.show(1);
+            c.first_run.sources(Ok(fixtures::sample_sources()));
+            c.first_run.roxy_plan(Ok(fixtures::sample_roxy_plan()));
+            // Marcar .minecraft (el golden pulsa su icono).
+            let st = c.ui.global::<shard_ui::FirstRunState>();
+            st.set_minecraft_selected(true);
+            st.invoke_minecraft_toggled(true);
+            c.first_run.minecraft_plan(Ok(fixtures::sample_minecraft_plan()));
+        },
+    },
+    Scene {
+        name: "first_run_account_en",
+        lang: "en", language: Some("en"),
+        setup: |c| {
+            c.ctl.set_instances(vec![]);
+            c.first_run.show(2);
+        },
+    },
+    Scene {
+        name: "first_run_done_es",
+        lang: "es", language: Some("es"),
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.first_run.show(3);
+        },
+    },
+    Scene {
+        name: "doctor_es",
+        lang: "es", language: Some("es"),
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            c.doctor.open("survival-amigos");
+            c.doctor.report(1, Ok(fixtures::sample_report()));
+        },
+    },
+    Scene { name: "settings_es", lang: "es", language: Some("es"), setup: |c| settings(c, Some("es")) },
+    Scene { name: "settings_appearance_es", lang: "es", language: Some("es"), setup: |c| settings(c, Some("es")) },
+    Scene { name: "settings_java_es", lang: "es", language: Some("es"), setup: |c| settings(c, Some("es")) },
+    Scene {
+        name: "settings_integrations_es",
+        lang: "es", language: Some("es"),
+        setup: |c| {
+            c.ui.global::<shard_ui::CurseforgeKey>().set_has_key(true);
+            settings(c, Some("es"));
+        },
+    },
+    Scene {
+        name: "settings_update_en",
+        lang: "en", language: Some("en"),
+        setup: |c| {
+            c.ctl.update_checked(Some(fixtures::flatpak_update()), false);
+            c.ctl.update.borrow_mut().dismissed = true;
+            c.ctl.refresh_notices();
+            settings(c, Some("en"));
         },
     },
 ];
@@ -500,7 +595,7 @@ fn boxes(ui: &MainWindow, wanted: &[String]) -> BTreeMap<String, [f32; 4]> {
         "no-instances", "session", "running", "servers", "update-banner", "crash-banner",
         // Fase 2.
         "panel", "txt-panel-title", "dialog", "txt-dialog-title", "field", "field-2", "code", "outlined", "filled", "cancel",
-        "progress", "chip", "empty-action", "viewer", "change", "source", "reset", "apply", "capes",
+        "progress", "chip", "empty-action", "excerpt", "steps", "wizard", "viewer", "change", "source", "reset", "apply", "capes",
         // Fase 4.
         "txt-subtitle", "import", "target", "txt-results", "sheet", "sheet-icon", "txt-sheet-title", "sheet-select",
         "txt-installed", "txt-versions", "latest-play", "add",
@@ -518,7 +613,7 @@ fn boxes(ui: &MainWindow, wanted: &[String]) -> BTreeMap<String, [f32; 4]> {
             out.insert(format!("{name}-{i}"), rect(e));
         }
     }
-    for kind in ["account", "action", "stage", "model", "cape"] {
+    for kind in ["account", "action", "stage", "model", "cape", "group", "panel", "seg", "switch", "slider", "option", "swatch", "java", "install", "diag", "step", "choice", "feature", "source", "summary-row", "text-btn"] {
         for (i, e) in by_id(ui, kind).iter().enumerate() {
             out.insert(format!("{kind}-{i}"), rect(e));
         }
@@ -582,6 +677,7 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
         let s = servers.clone();
         ctl.on_refresh(move |_| s.refresh());
     }
+    let settings = Settings::new(&ui, ctl.clone(), Box::new(rec.clone()), fixtures::TOTAL_MB, fixtures::DATA_DIR, fixtures::CORE_VERSION);
     acc.set_accounts(Ok(fixtures::sample_accounts()));
     // Fase 3: detalle, pestañas y diálogos (cada uno añade aquí su controlador).
     let detail = InstanceDetail::new(&ui, ctl.clone(), Box::new(rec.clone()));
@@ -602,7 +698,10 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     // (fin de la fase 3)
     ui.set_route(Route::Instances);
     ui.show().unwrap();
-    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers, detail: &detail, worlds: &worlds, shots: &shots, backups: &backups, console: &console, inst_settings: &inst_settings, inst_content: &inst_content });
+    let doctor = Doctor::new(&ui, ctl.clone(), Box::new(rec.clone()));
+    let first_run = FirstRun::new(&ui, ctl.clone(), Box::new(rec.clone()), scene.language.map(str::to_owned));
+    let scroll = ref_clock(refs, scene.name, "scroll_y").unwrap_or(0.0) as f32;
+    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers, detail: &detail, worlds: &worlds, shots: &shots, backups: &backups, console: &console, inst_settings: &inst_settings, inst_content: &inst_content, settings: &settings, doctor: &doctor, first_run: &first_run, scroll });
     // El fondo animado de Flutter va quieto en el modo de la escena.
     ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.

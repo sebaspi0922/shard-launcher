@@ -32,6 +32,9 @@ import { TrashLayer, TrashState, TrashItem } from "screens/instance/trash.slint"
 import { CurseforgeKey, CurseforgeKeyLayer } from "components/curseforge_key.slint";
 import { ContentPage, ContentLayer, ContentState, ProjectItem, SheetVersion, ModpackPhase } from "screens/content.slint";
 import { ServersPage, ServersLayer, ServersState, ServerCard, ServerMenu } from "screens/servers.slint";
+import { FirstRunPage, FirstRunState, RoxyRow } from "screens/first_run.slint";
+import { DoctorLayer, DoctorState, DiagnosisItem } from "screens/doctor.slint";
+import { SettingsPage, SettingsState, StyleCard, JavaItem, JavaInstallItem } from "screens/settings.slint";
 
 export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, InstanceItem, LoadState, LaunchState, LaunchPhase,
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
@@ -45,6 +48,7 @@ export { WorldsState, WorldItem, DatapackItem, ScreenshotsState, ShotItem }
 export { CreateInstanceState, PickerData, VersionRow, ChangeVersionState, TrashState, TrashItem }
 export { ContentState, ProjectItem, SheetVersion, ModpackPhase, CurseforgeKey }
 export { ServersState, ServerCard, ServerMenu }
+export { SettingsState, StyleCard, JavaItem, JavaInstallItem, DoctorState, DiagnosisItem, FirstRunState, RoxyRow }
 
 // Fondo de la app (backdrop.dart): el del estilo o una imagen propia.
 export enum BackdropKind {
@@ -112,6 +116,8 @@ export component MainWindow inherits Window {
     // Fondo: animado o quieto en un instante dado (modo rendimiento, capturas).
     in property <bool> animate-background: true;
     in property <duration> background-still-at: 0ms;
+    // Asistente de primer arranque a pantalla completa (sin raíl).
+    in-out property <bool> first-run;
     // Diálogo «¿Cerrar Shard?» (close_behavior = preguntar).
     in-out property <bool> close-dialog-open;
     // Aviso breve.
@@ -164,6 +170,7 @@ export component MainWindow inherits Window {
         }
     }
     NavRail {
+        visible: !root.first-run;
         x: 0;
         height: parent.height;
         route: root.route;
@@ -181,7 +188,18 @@ export component MainWindow inherits Window {
         }
         toggle-max => { root.toggle-max(); }
     }
+    if root.first-run: Rectangle {
+        TitleBar {
+            y: 0;
+            maximized: root.is-maximized;
+            minimize => { root.minimize(); }
+            toggle-max => { root.toggle-max(); }
+            close => { root.close-requested(); }
+        }
+        FirstRunPage { account: root.account; }
+    }
     Rectangle {
+        visible: !root.first-run;
         x: 76px;
         width: parent.width - 76px;
         TitleBar {
@@ -207,16 +225,7 @@ export component MainWindow inherits Window {
             if root.route == Route.skins: PageFade { SkinsPage { } }
             if root.route == Route.content: PageFade { ContentPage { } }
             if root.route == Route.servers: PageFade { ServersPage { } }
-            // Pantallas de fases siguientes: solo su título por ahora.
-            if root.route != Route.instances && root.route != Route.home && root.route != Route.skins && root.route != Route.content && root.route != Route.servers: EmptyState {
-                icon: root.route == Route.content ? Icons.extension
-                    : root.route == Route.servers ? Icons.dns
-                    : root.route == Route.skins ? Icons.checkroom : Icons.settings;
-                title: root.route == Route.content ? @tr("navContent")
-                    : root.route == Route.servers ? @tr("navServers")
-                    : root.route == Route.skins ? @tr("navSkins") : @tr("navSettings");
-                body: "";
-            }
+            if root.route == Route.settings: PageFade { SettingsPage { } }
         }
     }
     // Avisos de versión nueva y de cierre inesperado (abajo a la derecha).
@@ -231,6 +240,7 @@ export component MainWindow inherits Window {
         CrashBanner { accessible-id: "crash-banner"; }
     }
     AccountsLayer { }
+    DoctorLayer { }
     SkinsLayer { }
     InstanceLayer { }
     BackupsLayer { } // F3 copias

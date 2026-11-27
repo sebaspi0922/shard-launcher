@@ -5,7 +5,7 @@
 
 import { Palette, Theme, Type } from "../theme.slint";
 import { Fmt } from "../fmt.slint";
-import { Txt, Icon } from "base.slint";
+import { Txt, Wrapped, Icon } from "base.slint";
 import { Icons } from "../icons.slint";
 
 // Switch de Material 3 (switchTheme): pista de 52 × 32 en un área de 60 × 48
@@ -79,6 +79,7 @@ export component Slider inherits Rectangle {
     min-width: 64px;
     horizontal-stretch: 1;
     accessible-role: slider;
+    accessible-id: "slider";
     accessible-label: label;
     accessible-value: value;
     accessible-value-minimum: minimum;
@@ -297,14 +298,48 @@ export component MemorySlider inherits VerticalLayout {
     HorizontalLayout {
         padding-left: 24px;
         padding-right: 24px;
-        Txt { text: Fmt.memory(root.low); style: Type.body-small; color: Palette.text-secondary; }
+        Txt { text: Fmt.memory(root.low); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 0; }
         Rectangle { horizontal-stretch: 1; }
-        Txt { text: Fmt.memory(root.high); style: Type.body-small; color: Palette.text-secondary; }
+        Txt { text: Fmt.memory(root.high); style: Type.body-small; color: Palette.text-secondary; horizontal-stretch: 0; }
     }
     if root.warn: HorizontalLayout {
         padding-top: 12px;
         spacing: 8px;
         Icon { glyph: Icons.warning; size: 16px; color: Palette.warning; }
         Txt { text: @tr("isMemoryWarning", Fmt.memory(root.total-mb)); style: Type.body-small; color: Palette.warning; horizontal-stretch: 1; }
+    }
+}
+
+// Divider del tema: 1 px del color del borde.
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Palette.border;
+}
+
+// SettingRow (common.dart): título y descripción a la izquierda, 24 de hueco
+// y el control (hijo) a la derecha; 12 arriba y abajo. `control-width` > 0
+// fija el ancho del control (controlWidth).
+export component SettingRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    in property <color> description-color: Palette.text-secondary;
+    in property <length> control-width: 0;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    spacing: 24px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Txt { text: root.title; style: Type.title-small; }
+        // Flutter no redondea el alto del título (13 × 1,35 = 17,55): 2 px de
+        // hueco menos los 0,45 que Txt añade al redondear.
+        if root.description != "": Rectangle { height: 1.55px; }
+        if root.description != "": Wrapped { text: root.description; style: Type.body-small; color: root.description-color; }
+    }
+    HorizontalLayout {
+        horizontal-stretch: 0;
+        width: root.control-width > 0 ? root.control-width : self.preferred-width;
+        alignment: root.control-width > 0 ? LayoutAlignment.stretch : LayoutAlignment.end;
+        @children
     }
 }

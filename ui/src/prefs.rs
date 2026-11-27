@@ -91,6 +91,44 @@ pub fn parse(json: &str) -> UiPrefs {
     }
 }
 
+impl UiPrefs {
+    /// `UiPrefs.toJson` (mismas claves y valores que escribe Flutter).
+    pub fn to_json(&self) -> serde_json::Value {
+        let mut j = serde_json::Map::new();
+        j.insert("style".into(), self.style.name().into());
+        j.insert(
+            "accent".into(),
+            match self.accent {
+                AccentMode::Style => "style",
+                AccentMode::Auto => "auto",
+                AccentMode::Preset => "preset",
+            }
+            .into(),
+        );
+        j.insert("accent_preset".into(), self.accent_preset.into());
+        j.insert("background".into(), if self.background_image { "image" } else { "style" }.into());
+        if let Some(p) = &self.background_path {
+            j.insert("background_path".into(), p.to_string_lossy().into_owned().into());
+        }
+        j.insert("blur".into(), self.blur.into());
+        j.insert("dim".into(), self.dim.into());
+        j.insert("performance".into(), self.performance.into());
+        if let Some(done) = self.first_run_done {
+            j.insert("first_run_done".into(), done.into());
+        }
+        serde_json::Value::Object(j)
+    }
+}
+
+/// Guarda `<datos>/ui.json` (archivo temporal y renombrado, como el bridge).
+pub fn save(root: &Path, p: &UiPrefs) -> std::io::Result<()> {
+    let text = serde_json::to_string_pretty(&p.to_json()).map_err(std::io::Error::other)?;
+    let path = root.join("ui.json");
+    let tmp = root.join(".ui.json.tmp");
+    std::fs::write(&tmp, text)?;
+    std::fs::rename(&tmp, &path)
+}
+
 pub fn load(root: &Path) -> UiPrefs {
     let path = root.join("ui.json");
     let ok = std::fs::metadata(&path).is_ok_and(|m| m.is_file() && m.len() <= MAX_BYTES);
@@ -103,6 +141,30 @@ pub fn load(root: &Path) -> UiPrefs {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn guardar_y_leer_da_lo_mismo() {
+        let dir = std::env::temp_dir().join(format!("shard-prefs-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let p = UiPrefs {
+            style: Style::Landscape,
+            accent: AccentMode::Preset,
+            accent_preset: 0xFF9B7BFF,
+            background_image: true,
+            background_path: Some("/d/fondo.png".into()),
+            blur: 7.5,
+            dim: 0.3,
+            performance: true,
+            first_run_done: Some(true),
+        };
+        save(&dir, &p).unwrap();
+        assert_eq!(load(&dir), p);
+        // Sin imagen ni marca de primer arranque, esas claves no se escriben.
+        let j = UiPrefs::default().to_json();
+        assert!(j.get("background_path").is_none() && j.get("first_run_done").is_none());
+        assert_eq!(j["style"], "graphite");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
 
     #[test]
     fn modo_rendimiento() {

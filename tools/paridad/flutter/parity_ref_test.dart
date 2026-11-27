@@ -38,6 +38,11 @@ import 'package:shard/ui/instances/change_version_dialog.dart';
 import 'package:shard/ui/instances/create_instance_dialog.dart';
 import 'package:shard/ui/instances/trash_dialog.dart';
 import 'package:shard/ui/doctor/crash_banner.dart';
+import 'package:shard/ui/doctor/doctor_dialog.dart';
+import 'package:shard/ui/first_run/first_run_page.dart';
+import 'package:shard/ui/settings/settings_page.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:shard/core/providers.dart';
 import 'package:shard/ui/home/home_page.dart';
 import 'package:shard/ui/shell/backdrop.dart';
 import 'package:shard/ui/shell/update_banner.dart';
@@ -48,6 +53,7 @@ import 'package:shard/ui/shell/title_bar.dart';
 import 'package:shard/ui/skins/skin_viewer.dart';
 import 'package:shard/ui/skins/skins_page.dart';
 import 'package:shard/ui/widgets/art.dart';
+import 'package:shard/ui/widgets/avatar.dart';
 import 'package:shard/ui/widgets/common.dart';
 import 'package:shard/ui/widgets/media.dart';
 import 'package:shard/ui/widgets/play_button.dart';
@@ -371,6 +377,76 @@ Map<String, Rect> _serversBoxes(WidgetTester tester, {required String title, req
   return boxes;
 }
 
+/// Desplazamiento vertical de la página de Ajustes (la escena de Slint lo
+/// copia para ver la misma zona).
+double? _settingsScroll(WidgetTester tester) {
+  final f = find.descendant(of: find.byType(SettingsPage), matching: find.byType(Scrollable));
+  if (f.evaluate().isEmpty) return null;
+  return tester.state<ScrollableState>(f.first).position.pixels;
+}
+
+/// Cajas de Ajustes: grupos (título y panel), botones segmentados,
+/// interruptores, deslizadores, tarjetas de estilo y fondo, campo y filas de
+/// Java.
+Map<String, Rect> _settingsBoxes(WidgetTester tester, {required String title}) {
+  final boxes = <String, Rect>{};
+  Finder inPage(Finder f) => find.descendant(of: find.byType(SettingsPage), matching: f);
+  void put(String name, Finder f) => _put(tester, boxes, name, f);
+  // Solo lo que se ve, numerado en orden (Slint no expone lo que queda
+  // fuera de la ventana).
+  bool shown(Rect r) => r.top < 800 && r.bottom > 44;
+  void all(String kind, Finder f) {
+    var n = 0;
+    for (var i = 0; i < f.evaluate().length; i++) {
+      final r = tester.getRect(f.at(i));
+      if (!r.isEmpty && shown(r)) boxes['$kind-${n++}'] = r;
+    }
+  }
+
+  put('rail', _named('_NavRail'));
+  put('txt-title', inPage(find.text(title)));
+  all('group', inPage(find.byType(SettingsGroup)));
+  all('panel', inPage(find.byType(Panel)));
+  all('seg', inPage(find.byType(SegmentedButton<String>)));
+  all('switch', inPage(find.byType(Switch)));
+  all('slider', inPage(find.byType(Slider)));
+  all('option', inPage(_named('_BackgroundOption')));
+  all('swatch', inPage(_named('_Swatch')));
+  all('java', inPage(_named('_JavaRow')));
+  all('install', inPage(_named('_InstallButton')));
+  put('field', inPage(find.byType(TextField)));
+  boxes.removeWhere((name, r) => name != 'rail' && !shown(r));
+  return boxes;
+}
+
+/// Cajas del asistente de primer arranque.
+Map<String, Rect> _firstRunBoxes(WidgetTester tester, {required String title}) {
+  final boxes = <String, Rect>{};
+  Finder inPage(Finder f) => find.descendant(of: find.byType(FirstRunPage), matching: f);
+  void put(String name, Finder f) => _put(tester, boxes, name, f);
+  void all(String kind, Finder f) {
+    for (var i = 0; i < f.evaluate().length; i++) {
+      put('$kind-$i', f.at(i));
+    }
+  }
+
+  put('steps', inPage(_named('_StepRail')));
+  put('wizard', find.ancestor(of: inPage(_named('_StepRail')), matching: find.byType(Container)).first);
+  put('txt-title', inPage(find.text(title)));
+  all('step', inPage(_named('_StepItem')));
+  all('choice', inPage(_named('_ChoiceCard')));
+  all('feature', inPage(_named('_Feature')));
+  all('source', inPage(_named('_SourceCard')));
+  all('summary-row', inPage(_named('_SummaryRow')));
+  all('account', find.ancestor(of: inPage(find.byType(PlayerAvatar)), matching: find.byType(Panel)));
+  put('filled', inPage(find.byType(FilledButton)));
+  final texts = inPage(find.byType(TextButton));
+  for (var i = 0; i < texts.evaluate().length; i++) {
+    put('text-btn-$i', texts.at(i));
+  }
+  return boxes;
+}
+
 Future<void> _capture(WidgetTester tester, String scene, Map<String, Rect> boxes) async {
   try {
     await expectLater(find.byType(LauncherApp), matchesGoldenFile('$_goldenOut/$scene.png'));
@@ -379,6 +455,7 @@ Future<void> _capture(WidgetTester tester, String scene, Map<String, Rect> boxes
   }
   final json = {
     'atmosphere_s': _atmosphereSeconds(tester),
+    'scroll_y': _settingsScroll(tester),
     'sphere_s': _sphereSeconds(tester),
     'boxes': {
       for (final e in boxes.entries)
@@ -860,6 +937,117 @@ void main() {
       _put(tester, boxes, 'select-$i', selects.at(i));
     }
     await _capture(tester, 'server_dialog_en', boxes);
+  });
+
+  // Fase 5: Ajustes, primer arranque y Doctor. Mismos pasos que sus goldens.
+  testWidgets('settings_es', (tester) async {
+    await pumpApp(tester, location: '/settings');
+    await _capture(tester, 'settings_es', _settingsBoxes(tester, title: 'Ajustes'));
+  });
+
+  testWidgets('settings_appearance_es', (tester) async {
+    await pumpApp(tester, location: '/settings');
+    await tester.drag(find.text('General'), const Offset(0, -300));
+    await settle(tester);
+    await _capture(tester, 'settings_appearance_es', _settingsBoxes(tester, title: 'Ajustes'));
+  });
+
+  testWidgets('settings_java_es', (tester) async {
+    await pumpApp(tester, location: '/settings');
+    await tester.drag(find.text('General'), const Offset(0, -900));
+    await settle(tester);
+    await _capture(tester, 'settings_java_es', _settingsBoxes(tester, title: 'Ajustes'));
+  });
+
+  testWidgets('settings_integrations_es', (tester) async {
+    await pumpApp(tester, location: '/settings', bridge: FakeBridge()..curseforgeKey = true);
+    await tester.drag(find.text('General'), const Offset(0, -2400));
+    await settle(tester);
+    await _capture(tester, 'settings_integrations_es', _settingsBoxes(tester, title: 'Ajustes'));
+  });
+
+  testWidgets('settings_update_en', (tester) async {
+    final c = await pumpApp(
+      tester,
+      location: '/settings',
+      bridge: FakeBridge(language: 'en')..updatePackage = 'flatpak',
+    );
+    c.read(updateProvider.notifier).debugSet(
+          const UpdateState(status: UpdateStatus.available, info: flatpakUpdate, dismissed: true),
+        );
+    await settle(tester);
+    await tester.dragUntilVisible(
+      find.text('Check for updates automatically'),
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -300),
+    );
+    await settle(tester);
+    await _capture(tester, 'settings_update_en', _settingsBoxes(tester, title: 'Settings'));
+  });
+
+  testWidgets('first_run_welcome_es', (tester) async {
+    await pumpApp(tester, location: '/welcome', bridge: FakeBridge(instances: [], accounts: [], language: null));
+    await _capture(tester, 'first_run_welcome_es', _firstRunBoxes(tester, title: 'Welcome to Shard'));
+  });
+
+  testWidgets('first_run_import_es', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      bridge: FakeBridge(instances: [], accounts: []),
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.import)],
+    );
+    await tester.tap(find.byIcon(Symbols.deployed_code_rounded).first);
+    await settle(tester);
+    await _capture(tester, 'first_run_import_es', _firstRunBoxes(tester, title: 'Trae lo que ya tienes'));
+  });
+
+  // Sin regenerar: Sebas decidió quitar la cuenta Shard y Flutter aún tiene
+  // su tarjeta. La referencia es el golden first_run_account_en (Microsoft y
+  // offline) y las cajas choice-* se midieron en él (ver el JSON).
+  testWidgets('first_run_account_en', skip: true, (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      bridge: FakeBridge(instances: [], language: 'en'),
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.account)],
+    );
+    await _capture(tester, 'first_run_account_en', _firstRunBoxes(tester, title: 'Add your account'));
+  });
+
+  testWidgets('first_run_done_es', (tester) async {
+    await pumpApp(
+      tester,
+      location: '/welcome',
+      overrides: [firstRunInitialStepProvider.overrideWithValue(FirstRunStep.done)],
+    );
+    await _capture(tester, 'first_run_done_es', _firstRunBoxes(tester, title: 'Todo listo'));
+  });
+
+  // El golden abre Doctor sobre el detalle de la instancia (fase 3); aquí va
+  // sobre Instancias para no depender de esa pantalla. Mismo diálogo.
+  testWidgets('doctor_es', (tester) async {
+    final c = await pumpApp(tester, location: '/instances');
+    showDoctor(pageContext(tester), c.read(instanceByIdProvider('survival-amigos'))!);
+    await settle(tester);
+    final boxes = <String, Rect>{};
+    final dialog = find.byType(DoctorDialog);
+    Finder inDialog(Finder f) => find.descendant(of: dialog, matching: f);
+    void put(String name, Finder f) => _put(tester, boxes, name, f);
+    put('rail', _named('_NavRail'));
+    put('dialog', inDialog(find.byType(Material)));
+    put('txt-dialog-title', inDialog(find.text('Doctor · Survival con amigos')));
+    put('excerpt', inDialog(_named('_CrashExcerpt')));
+    // Solo las tarjetas que asoman en la zona con scroll (Slint no expone
+    // lo recortado): acaba 92 px por encima del borde del diálogo.
+    final bottom = tester.getRect(inDialog(find.byType(Material)).first).bottom - 92;
+    final cards = inDialog(_named('_DiagnosisCard'));
+    for (var i = 0; i < cards.evaluate().length; i++) {
+      if (tester.getRect(cards.at(i)).top < bottom) put('diag-$i', cards.at(i));
+    }
+    put('filled', inDialog(find.widgetWithText(FilledButton, 'Cerrar')));
+    put('cancel', inDialog(find.widgetWithText(TextButton, 'Volver a analizar')));
+    await _capture(tester, 'doctor_es', boxes);
   });
 }
 

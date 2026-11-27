@@ -33,6 +33,8 @@ export component Tag inherits Rectangle {
     in property <string> text;
     in property <string> icon;
     in property <bool> strong;
+    // Punto de color delante (transparente = sin punto).
+    in property <color> dot: transparent;
     width: row.preferred-width;
     height: row.preferred-height;
     border-radius: self.height / 2;
@@ -48,6 +50,10 @@ export component Tag inherits Rectangle {
         padding-top: 6px;
         padding-bottom: 6px;
         spacing: 5px;
+        if root.dot.alpha > 0: Rectangle {
+            width: 7px + 1px;
+            Rectangle { x: 0; width: 7px; height: 7px; border-radius: 3.5px; background: root.dot; }
+        }
         if root.icon != "": Icon { glyph: root.icon; size: 14px; color: Palette.text-secondary; y: (parent.height - self.height) / 2; }
         Txt { text: root.text; style: Type.label-medium; color: root.strong ? Palette.text : Palette.text-secondary; }
     }

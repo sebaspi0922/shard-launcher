@@ -1,0 +1,280 @@
+// Doctor (doctor/doctor_dialog.dart): diagnósticos de la última partida por
+// gravedad, con su explicación, el culpable y el arreglo automático.
+// Rust (`doctor.rs`) rellena `DoctorState`.
+
+import { Palette, Theme, Type } from "../theme.slint";
+import { Icons } from "../icons.slint";
+import { Txt, Wrapped, Icon, Spinner } from "../components/base.slint";
+import { FilledButton, TextButton } from "../components/buttons.slint";
+import { FormDialog, DialogActions, EmptyState, ErrorNote } from "../components/feedback.slint";
+import { ColorBadge } from "../components/panels.slint";
+import { LoadState } from "instances.slint";
+
+// Un diagnóstico (DiagnosisView).
+export struct DiagnosisItem {
+    id: string,
+    // java, memory, jvm_args, mod_conflict… (decide el icono).
+    category: string,
+    // 0 grave, 1 aviso, 2 nota.
+    severity: int,
+    title: string,
+    explanation: string,
+    confidence: int,
+    culprit: string,
+    // Arreglo automático («» = no hay).
+    fix: string,
+    applying: bool,
+}
+
+export global DoctorState {
+    in-out property <bool> open;
+    in property <string> instance-name;
+    in property <LoadState> state: LoadState.loading;
+    in property <string> error-message;
+    in property <string> error-detail;
+    in property <[DiagnosisItem]> diagnoses;
+    in property <string> crash-excerpt;
+    in property <bool> has-report;
+    // Hay un arreglo aplicándose (los demás botones esperan).
+    in property <bool> applying;
+    // Cuántos hay de cada gravedad.
+    in property <int> critical;
+    in property <int> warnings;
+    in property <int> notes;
+    callback rerun;
+    callback apply(string);
+    callback open-report;
+    callback closed;
+
+    // Color e icono de cada gravedad y categoría (severityColor, categoryIcon).
+    public pure function severity-color(s: int) -> color {
+        return s == 0 ? Palette.danger : s == 1 ? Palette.warning : Palette.info;
+    }
+    public pure function category-icon(c: string) -> string {
+        if c == "java" { return Icons.coffee; }
+        if c == "memory" { return Icons.memory; }
+        if c == "jvm_args" { return Icons.terminal; }
+        if c == "mod_conflict" { return Icons.extension-off; }
+        if c == "missing_dependency" { return Icons.link-off; }
+        if c == "corrupted_file" { return Icons.broken-image; }
+        if c == "graphics_driver" { return Icons.monitor; }
+        if c == "loader" { return Icons.build; }
+        if c == "account" { return Icons.person; }
+        if c == "network" { return Icons.wifi-off; }
+        if c == "system" { return Icons.computer; }
+        if c == "world_corruption" { return Icons.public-off; }
+        return Icons.help;
+    }
+}
+
+// Resumen del crash report (_CrashExcerpt).
+component CrashExcerpt inherits Rectangle {
+    border-radius: Theme.radius-control;
+    background: #0000004D;
+    border-width: 1px;
+    border-color: Palette.border;
+    height: lay.preferred-height;
+    accessible-role: groupbox;
+    accessible-label: @tr("doctorCrashExcerpt");
+    accessible-id: "excerpt";
+    lay := VerticalLayout {
+        padding: 13px;
+        HorizontalLayout {
+            spacing: 8px;
+            Icon { glyph: Icons.description; size: 16px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+            Txt { text: @tr("doctorCrashExcerpt"); style: Type.label-medium; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+            if DoctorState.has-report: TextButton {
+                height: 48px;
+                pad: 8px;
+                tint: Palette.text-secondary;
+                text: @tr("doctorOpenReport");
+                clicked => { DoctorState.open-report(); }
+            }
+            if !DoctorState.has-report: Rectangle { height: 48px; }
+        }
+        Rectangle { height: 8px; }
+        Wrapped {
+            text: DoctorState.crash-excerpt;
+            font-family: "JetBrains Mono";
+            natural: 1.32;
+            spaced: true;
+            style: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0 };
+            color: Palette.text-secondary;
+            max-lines: 6;
+        }
+    }
+}
+
+// Tarjeta de un diagnóstico (_DiagnosisCard): franja del color de la
+// gravedad, icono de la categoría, explicación, culpable y arreglo.
+component DiagnosisCard inherits Rectangle {
+    in property <DiagnosisItem> d;
+    property <color> tint: DoctorState.severity-color(d.severity);
+    border-radius: Theme.radius-card;
+    background: Palette.surface1;
+    border-width: 1px;
+    border-color: Palette.border;
+    clip: true;
+    height: lay.preferred-height + 2px;
+    accessible-role: groupbox;
+    accessible-label: d.title;
+    Rectangle { x: 1px; y: 1px; width: 4px; height: parent.height - 2px; background: root.tint; }
+    lay := HorizontalLayout {
+        x: 5px;
+        y: 1px;
+        width: parent.width - 6px;
+        padding: 16px;
+        spacing: 12px;
+        alignment: stretch;
+        VerticalLayout {
+            alignment: start;
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: Theme.radius-control;
+                background: root.tint.with-alpha(0.14);
+                Icon { glyph: DoctorState.category-icon(root.d.category); size: 20px; color: root.tint; }
+            }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            HorizontalLayout {
+                spacing: 8px;
+                Txt { text: root.d.title; style: Type.title-small; horizontal-stretch: 1; }
+                Txt { text: @tr("doctorConfidence", root.d.confidence); style: Type.label-small; color: Palette.text-muted; y: (parent.height - self.height) / 2; horizontal-stretch: 0; }
+            }
+            Rectangle { height: 4px; }
+            Wrapped { text: root.d.explanation; spaced: true; style: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0 }; color: Palette.text-secondary; }
+            if root.d.culprit != "": VerticalLayout {
+                padding-top: 8px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Txt { text: @tr("doctorCulprit"); style: Type.label-small; color: Palette.text-muted; y: (parent.height - self.height) / 2; horizontal-stretch: 0; }
+                    Rectangle {
+                        border-radius: 6px;
+                        background: #0000004D;
+                        width: min(chip.preferred-width + 16px, 480px);
+                        height: chip.height + 6px;
+                        chip := Txt {
+                            x: 8px;
+                            width: parent.width - 16px;
+                            text: root.d.culprit;
+                            style: { size: 11.5px, weight: 400, line-height: 1.5, letter-spacing: 0 };
+                            family: "JetBrains Mono";
+                        }
+                    }
+                }
+            }
+            if root.d.fix != "": VerticalLayout {
+                padding-top: 12px;
+                Rectangle {
+                    border-radius: Theme.radius-control;
+                    background: Palette.accent-container.with-alpha(0.35);
+                    border-width: 1px;
+                    border-color: Palette.accent.with-alpha(0.25);
+                    height: fix.preferred-height;
+                    fix := HorizontalLayout {
+                        padding-left: 13px;
+                        padding-right: 9px;
+                        padding-top: 9px;
+                        padding-bottom: 9px;
+                        spacing: 8px;
+                        Icon { glyph: Icons.auto-fix-high; size: 18px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+                        Wrapped {
+                            y: (parent.height - self.height) / 2;
+                            text: root.d.fix;
+                            spaced: true;
+                            style: { size: 12px, weight: 400, line-height: 1.45, letter-spacing: 0 };
+                            color: Palette.text;
+                            horizontal-stretch: 1;
+                        }
+                        FilledButton {
+                            text: @tr("doctorApplyFix");
+                            icon: Icons.build;
+                            icon-size: 16px;
+                            busy: root.d.applying;
+                            enabled: !DoctorState.applying;
+                            accessible-id: "apply-fix";
+                            clicked => { DoctorState.apply(root.d.id); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Diálogo de Doctor (va en MainWindow, encima de todo).
+export component DoctorLayer inherits Rectangle {
+    property <int> critical: DoctorState.critical;
+    property <int> warnings: DoctorState.warnings;
+    property <int> notes: DoctorState.notes;
+    if DoctorState.open: FormDialog {
+        title: @tr("doctorTitle", DoctorState.instance-name);
+        icon: Icons.stethoscope;
+        panel-width: 720px;
+        accessible-id: "doctor";
+        dismissed => {
+            DoctorState.open = false;
+            DoctorState.closed();
+        }
+        if DoctorState.state == LoadState.loading: VerticalLayout {
+            height: 220px;
+            alignment: center;
+            spacing: 16px;
+            HorizontalLayout { alignment: center; Spinner { } }
+            HorizontalLayout { alignment: center; Txt { text: @tr("doctorAnalyzing"); style: Type.body-small; color: Palette.text-secondary; } }
+        }
+        if DoctorState.state == LoadState.failed: ErrorNote {
+            message: DoctorState.error-message;
+            detail: DoctorState.error-detail;
+            details-label: @tr("details");
+        }
+        if DoctorState.state == LoadState.ready && DoctorState.diagnoses.length == 0: EmptyState {
+            height: 260px;
+            icon: Icons.verified;
+            title: @tr("doctorHealthyTitle");
+            body: @tr("doctorHealthyBody");
+        }
+        if DoctorState.state == LoadState.ready && DoctorState.diagnoses.length > 0: Flickable {
+            height: min(520px, list.preferred-height);
+            list := VerticalLayout {
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    if root.critical > 0: ColorBadge { text: @tr("doctorCritical" | "doctorCritical" % root.critical); icon: Icons.error; tint: Palette.danger; }
+                    if root.warnings > 0: ColorBadge { text: @tr("doctorWarnings" | "doctorWarnings" % root.warnings); icon: Icons.warning; tint: Palette.warning; }
+                    if root.notes > 0: ColorBadge { text: @tr("doctorInfo" | "doctorInfo" % root.notes); icon: Icons.info; tint: Palette.info; }
+                }
+                if DoctorState.crash-excerpt != "": VerticalLayout {
+                    padding-top: 16px;
+                    CrashExcerpt { }
+                }
+                Rectangle { height: 16px; }
+                for d in DoctorState.diagnoses: VerticalLayout {
+                    padding-bottom: 12px;
+                    DiagnosisCard { d: d; accessible-id: "diag"; }
+                }
+            }
+        }
+        DialogActions {
+            TextButton {
+                height: 48px;
+                text: @tr("doctorRerun");
+                icon: Icons.refresh;
+                enabled: DoctorState.state != LoadState.loading;
+                accessible-id: "cancel";
+                clicked => { DoctorState.rerun(); }
+            }
+            FilledButton {
+                text: @tr("close");
+                accessible-id: "filled";
+                clicked => {
+                    DoctorState.open = false;
+                    DoctorState.closed();
+                }
+            }
+        }
+    }
+}

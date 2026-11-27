@@ -19,6 +19,18 @@ pub enum Style {
 }
 
 impl Style {
+    pub const ALL: [Style; 4] = [Style::Graphite, Style::Sebaspi, Style::Landscape, Style::Aurora];
+
+    /// Nombre en `ui.json` (`AppStyle.name`).
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Graphite => "graphite",
+            Self::Sebaspi => "sebaspi",
+            Self::Landscape => "landscape",
+            Self::Aurora => "aurora",
+        }
+    }
+
     /// `AppStyle.parse`: desconocido = grafito.
     pub fn parse(name: &str) -> Self {
         match name {

@@ -163,8 +163,12 @@ impl Backend {
                             crate::accounts::post(|a| a.reload());
                         }
                         if matches!(e, Event::Progress { .. }) {
-                            let e = e.clone();
-                            crate::content::post(move |c| c.on_event(&e));
+                            let ev = e.clone();
+                            let content_event = ev.clone();
+                            crate::content::post(move |c| c.on_event(&content_event));
+                            let ev2 = ev.clone();
+                            crate::settings::post(move |s| s.on_event(&ev));
+                            crate::first_run::post(move |f| f.on_event(&ev2));
                         }
                         post(move |c| c.on_event(&e));
                         if reload {
@@ -197,8 +201,10 @@ impl Backend {
         });
     }
 
-    async fn check_update(&self, manual: bool) {
-        match self.core.check_update(PACKAGE_VERSION, &Package::detect()).await {
+    pub async fn check_update(&self, manual: bool) {
+        // Sin versión de paquete, la del núcleo (como `currentVersion` de Flutter).
+        let current = if PACKAGE_VERSION.is_empty() { env!("CARGO_PKG_VERSION") } else { PACKAGE_VERSION };
+        match self.core.check_update(current, &Package::detect()).await {
             Ok(info) => {
                 // La versión a instalar se guarda solo si la UI acepta el
                 // resultado (no lo acepta durante una instalación).
@@ -324,7 +330,7 @@ impl Actions for CoreActions {
     }
 
     fn diagnose(&self, id: &str) {
-        tracing::info!(id, "Doctor: pendiente (fase 5)");
+        crate::doctor::with(|d| d.open(id));
     }
 
     fn install_update(&self) {

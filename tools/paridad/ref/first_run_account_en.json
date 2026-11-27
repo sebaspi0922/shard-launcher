@@ -1,0 +1,92 @@
+{
+  "atmosphere_s": 1.0,
+  "scroll_y": null,
+  "sphere_s": null,
+  "boxes": {
+    "steps": [
+      151.0,
+      93.0,
+      240.0,
+      618.0
+    ],
+    "wizard": [
+      150.0,
+      92.0,
+      980.0,
+      620.0
+    ],
+    "txt-title": [
+      431.0,
+      148.0,
+      217.34,
+      31.0
+    ],
+    "step-0": [
+      175.0,
+      187.0,
+      191.0,
+      28.0
+    ],
+    "step-1": [
+      175.0,
+      237.0,
+      191.0,
+      28.0
+    ],
+    "step-2": [
+      175.0,
+      287.0,
+      191.0,
+      28.0
+    ],
+    "step-3": [
+      175.0,
+      337.0,
+      191.0,
+      28.0
+    ],
+    "choice-0": [
+      431.0,
+      231.0,
+      323.0,
+      120.0
+    ],
+    "choice-1": [
+      766.0,
+      231.0,
+      323.0,
+      120.0
+    ],
+    "account-0": [
+      431.0,
+      397.0,
+      658.0,
+      58.0
+    ],
+    "account-1": [
+      431.0,
+      463.0,
+      658.0,
+      58.0
+    ],
+    "filled": [
+      1000.39,
+      639.0,
+      88.61,
+      48.0
+    ],
+    "text-btn-0": [
+      431.0,
+      639.0,
+      82.2,
+      48.0
+    ],
+    "text-btn-1": [
+      16.0,
+      6.0,
+      118.68,
+      48.0
+    ]
+  },
+  "note": "PNG = golden first_run_account_en (2 tarjetas: Microsoft y offline). Sebas decidió quitar la cuenta Shard; Flutter aún la muestra. Cajas de choice-* medidas en el golden; el resto, de parity_ref_test.dart."
+}
