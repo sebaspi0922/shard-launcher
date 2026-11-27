@@ -225,21 +225,23 @@ export struct LaunchState {
     progress: float,
 }
 
-// Botón «Jugar» (play_button.dart). Pequeño (34 de alto, mínimo 96) o
-// grande (`large`: 56, mínimo 220, con sombra del acento en reposo).
+// Botón «Jugar» (play_button.dart). Pequeño (34 de alto, mínimo 96),
+// mediano (`medium`: 44, mínimo 150) o grande (`large`: 56, mínimo 220); el
+// mediano y el grande llevan sombra del acento en reposo.
 export component PlayButton inherits Rectangle {
     in property <LaunchState> state;
     in property <string> label;
     in property <bool> large;
+    in property <bool> medium;
     callback clicked;
     property <bool> idle: state.phase == LaunchPhase.idle;
     property <bool> running: state.phase == LaunchPhase.running;
     property <bool> failed: state.phase == LaunchPhase.error;
     property <color> fg: idle ? Palette.on-accent : running ? Palette.success : failed ? Palette.danger : Palette.on-accent-container;
-    property <length> h: large ? 56px : 34px;
-    property <length> icon: large ? 24px : 18px;
+    property <length> h: large ? 56px : medium ? 44px : 34px;
+    property <length> icon: large ? 24px : medium ? 20px : 18px;
     height: h;
-    width: max(large ? 220px : 96px, lay.preferred-width);
+    width: max(large ? 220px : medium ? 150px : 96px, lay.preferred-width);
     border-radius: large ? 14px : Theme.radius-control;
     background: idle ? (ta.has-hover ? Palette.accent-hover : Palette.accent)
         : running ? Palette.success.with-alpha(0.14)
@@ -247,7 +249,7 @@ export component PlayButton inherits Rectangle {
     border-width: 1px;
     border-color: idle ? transparent : running ? Palette.success.with-alpha(0.4)
         : failed ? Palette.danger.with-alpha(0.45) : Palette.accent.with-alpha(0.35);
-    drop-shadow-color: idle && large ? Palette.accent.with-alpha(0.35) : transparent;
+    drop-shadow-color: idle && (large || medium) ? Palette.accent.with-alpha(0.35) : transparent;
     drop-shadow-blur: 24px;
     drop-shadow-offset-y: 6px;
     animate background, border-color { duration: Theme.medium; easing: cubic-bezier(0.215, 0.61, 0.355, 1); }
@@ -292,7 +294,7 @@ export component PlayButton inherits Rectangle {
         Txt {
             text: root.label;
             // Sin alto de línea propio (TextStyle sin height): el natural.
-            style: { size: root.large ? 17px : 13px, weight: 700, line-height: 1.20996, letter-spacing: root.large ? 0.2px : 0 };
+            style: { size: root.large ? 17px : root.medium ? 14.5px : 13px, weight: 700, line-height: 1.20996, letter-spacing: root.large ? 0.2px : 0 };
             family: "Inter Tnum";
             color: root.fg;
             y: (parent.height - self.height) / 2;

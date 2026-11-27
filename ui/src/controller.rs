@@ -19,7 +19,7 @@ use crate::launch::{self, Failure};
 use crate::notices::{CrashNotice, Crashes, Update, UpdateStatus, UpdateView};
 use crate::prefs::UiPrefs;
 use crate::{
-    AccountChip, Activity, Fmt, HomeState, InstanceItem, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
+    AccountChip, Activity, Fmt, HomeState, InstanceItem, InstanceTab, InstancesState, LaunchFailure, LaunchPhase, LaunchState, LoadState, MainWindow,
     Notices, Route, ServerItem, UpdatePhase, art, errors, face, i18n,
 };
 
@@ -60,6 +60,12 @@ pub trait Actions {
 /// Quien quiere enterarse de cada cambio del modelo (bandeja, etc.).
 type Listener = Box<dyn Fn(&instances::Model)>;
 
+/// Quien abre el detalle de una instancia (fase 3: `instance::InstanceDetail`).
+type Opener = Box<dyn Fn(&str, Option<InstanceTab>)>;
+
+/// Quien abre un diálogo (fase 3: crear instancia, papelera).
+type Hook = Box<dyn Fn()>;
+
 pub struct Controller {
     ui: slint::Weak<MainWindow>,
     lang: RefCell<String>,
@@ -76,6 +82,9 @@ pub struct Controller {
     actions: Box<dyn Actions>,
     toast_timer: slint::Timer,
     listeners: RefCell<Vec<Listener>>,
+    opener: RefCell<Option<Opener>>,
+    new_instance_hook: RefCell<Option<Hook>>,
+    trash_hook: RefCell<Option<Hook>>,
     /// Instancia elegida en Inicio (`homeSelectionProvider`).
     selected: RefCell<Option<String>>,
     /// Servidores guardados (`None` = aún sin leer) y su estado por dirección.
@@ -157,6 +166,9 @@ impl Controller {
             actions,
             toast_timer: slint::Timer::default(),
             listeners: RefCell::default(),
+            opener: RefCell::default(),
+            new_instance_hook: RefCell::default(),
+            trash_hook: RefCell::default(),
             selected: RefCell::default(),
             servers: RefCell::default(),
             statuses: RefCell::default(),
@@ -176,10 +188,10 @@ impl Controller {
             c.refresh();
         });
         on!(ctl, st, on_grid_changed, |c, g| c.model.borrow_mut().grid = g);
-        on!(ctl, st, on_open, |c, id| c.actions.open_instance(&id));
+        on!(ctl, st, on_open, |c, id| c.open_instance(&id, None));
         on!(ctl, st, on_play, |c, id| c.play(&id));
-        on!(ctl, st, on_new_instance, |c| c.actions.new_instance());
-        on!(ctl, st, on_show_trash, |c| c.actions.show_trash());
+        on!(ctl, st, on_new_instance, |c| c.new_instance());
+        on!(ctl, st, on_show_trash, |c| c.show_trash());
         let weak = Rc::downgrade(&ctl);
         st.on_art(move |id, width| weak.upgrade().map(|c| c.landscape(&id, 12.0, width, 104.0)).unwrap_or_default());
 
@@ -197,17 +209,17 @@ impl Controller {
             c.model.borrow_mut().launches.dismiss(&id);
             c.refresh();
         });
-        on!(ctl, hs, on_open, |c, id| c.actions.open_instance(&id));
+        on!(ctl, hs, on_open, |c, id| c.open_instance(&id, None));
         on!(ctl, hs, on_see_all_instances, |c| c.navigate(Route::Instances));
         on!(ctl, hs, on_see_all_servers, |c| c.navigate(Route::Servers));
         on!(ctl, hs, on_join, |c, id| c.join(&id));
-        on!(ctl, hs, on_new_instance, |c| c.actions.new_instance());
+        on!(ctl, hs, on_new_instance, |c| c.new_instance());
         on!(ctl, hs, on_change_account, |c| c.actions.accounts());
         on!(ctl, hs, on_add_microsoft, |c| c.actions.add_microsoft_account());
         on!(ctl, hs, on_add_offline, |c| c.actions.add_offline_account());
         on!(ctl, hs, on_add_server, |c| c.actions.add_server());
         on!(ctl, hs, on_diagnose, |c, id| c.actions.diagnose(&id));
-        on!(ctl, hs, on_show_logs, |c, id| c.actions.show_logs(&id));
+        on!(ctl, hs, on_show_logs, |c, id| c.show_logs(&id));
         on!(ctl, hs, on_hero_size, |c, w, h| {
             c.hero_size.set((w, h));
             c.refresh_hero_art();
@@ -255,12 +267,12 @@ impl Controller {
         });
         on!(ctl, nt, on_crash_logs, |c| {
             if let Some(id) = c.take_crash() {
-                c.actions.show_logs(&id);
+                c.show_logs(&id);
             }
         });
 
         on!(ctl, ui, on_account_clicked, |c| c.actions.accounts());
-        on!(ctl, ui, on_activity_clicked, |c, id| c.actions.open_instance(&id));
+        on!(ctl, ui, on_activity_clicked, |c, id| c.open_instance(&id, None));
         on!(ctl, ui, on_route_changed, |c, r| {
             if r == Route::Home {
                 c.actions.refresh_servers();
@@ -273,15 +285,69 @@ impl Controller {
         ctl
     }
 
-    /// Acciones fuera de la UI (otras pantallas las usan para abrir una
-    /// instancia, etc.).
-    pub fn actions(&self) -> &dyn Actions {
-        &*self.actions
-    }
-
     /// Llama a `f` cada vez que cambia el modelo (bandeja, etc.).
     pub fn on_refresh(&self, f: impl Fn(&instances::Model) + 'static) {
         self.listeners.borrow_mut().push(Box::new(f));
+    }
+
+    /// Lo que la UI pide fuera de ella (para los controladores de otras
+    /// pantallas: Doctor, enlaces…).
+    pub fn actions(&self) -> &dyn Actions {
+        self.actions.as_ref()
+    }
+
+    /// Quién abre el detalle de una instancia; sin él, `Actions::open_instance`.
+    pub fn set_opener(&self, f: impl Fn(&str, Option<InstanceTab>) + 'static) {
+        *self.opener.borrow_mut() = Some(Box::new(f));
+    }
+
+    /// Quién abre «Nueva instancia» y la papelera; sin ellos, `Actions`.
+    pub fn set_dialog_hooks(&self, new_instance: impl Fn() + 'static, trash: impl Fn() + 'static) {
+        *self.new_instance_hook.borrow_mut() = Some(Box::new(new_instance));
+        *self.trash_hook.borrow_mut() = Some(Box::new(trash));
+    }
+
+    /// Abre el detalle de `id` (en `tab` o en la pestaña por defecto).
+    pub fn open_instance(&self, id: &str, tab: Option<InstanceTab>) {
+        match self.opener.borrow().as_ref() {
+            Some(f) => f(id, tab),
+            None => self.actions.open_instance(id),
+        }
+    }
+
+    /// «Ver registros»: el detalle en la pestaña Registros.
+    pub fn show_logs(&self, id: &str) {
+        if self.opener.borrow().is_some() {
+            self.open_instance(id, Some(InstanceTab::Logs));
+        } else {
+            self.actions.show_logs(id);
+        }
+    }
+
+    pub fn new_instance(&self) {
+        match self.new_instance_hook.borrow().as_ref() {
+            Some(f) => f(),
+            None => self.actions.new_instance(),
+        }
+    }
+
+    pub fn show_trash(&self) {
+        match self.trash_hook.borrow().as_ref() {
+            Some(f) => f(),
+            None => self.actions.show_trash(),
+        }
+    }
+
+    /// La instancia `id` tal como la pinta la UI (`None` = no está).
+    pub fn instance_item(&self, id: &str) -> Option<InstanceItem> {
+        let m = self.model.borrow();
+        m.by_id(id).map(|r| self.item(&m, r))
+    }
+
+    /// Último fallo de lanzamiento de `id` (nota bajo la cabecera).
+    pub fn launch_failure(&self, id: &str) -> LaunchFailure {
+        let m = self.model.borrow();
+        self.failure(m.launches.state(id).failure.as_ref())
     }
 
     fn navigate(&self, r: Route) {
@@ -385,6 +451,11 @@ impl Controller {
 
     pub fn lang(&self) -> String {
         self.lang.borrow().clone()
+    }
+
+    /// «Ahora» en segundos Unix (fijo en las escenas y los tests).
+    pub fn now(&self) -> i64 {
+        (self.now)()
     }
 
     pub fn set_language(&self, lang: &str) {

@@ -348,6 +348,52 @@ impl Core {
         .await
     }
 
+    /// Copia un datapack `.zip` (de fuera de la instancia) a `datapacks/` del
+    /// mundo, activado. Falla si ya hay uno con ese nombre (activo o no).
+    pub async fn add_datapack(
+        &self,
+        instance_id: &str,
+        world: &str,
+        source: &Path,
+    ) -> Result<DatapackInfo> {
+        let packs = self.world_dir(instance_id, world).await?.join("datapacks");
+        self.ensure_instance_stopped(instance_id).await?;
+        let name = source
+            .file_name()
+            .and_then(|n| n.to_str())
+            .ok_or_else(|| Error::InvalidPath(format!("nombre no válido: {}", source.display())))?;
+        let name = single_segment(name)?.to_owned();
+        if name.starts_with('.') || !name.to_ascii_lowercase().ends_with(".zip") {
+            return Err(Error::InvalidInput(format!(
+                "{name} no es un datapack (.zip)"
+            )));
+        }
+        let source = source.to_path_buf();
+        blocking(move || {
+            if !source.is_file() {
+                return Err(Error::InvalidInput(format!(
+                    "no existe el archivo {}",
+                    source.display()
+                )));
+            }
+            if exists(&packs.join(&name)) || exists(&packs.join(DISABLED_DIR).join(&name)) {
+                return Err(Error::InvalidInput(format!(
+                    "ya existe un datapack llamado {name}"
+                )));
+            }
+            fs::create_dir_all(&packs).map_err(|e| Error::io(&packs, e))?;
+            let to = packs.join(&name);
+            let size_bytes = fs::copy(&source, &to).map_err(|e| Error::io(&to, e))?;
+            Ok(DatapackInfo {
+                name,
+                is_dir: false,
+                enabled: true,
+                size_bytes,
+            })
+        })
+        .await
+    }
+
     /// Capturas de `screenshots/`, las más nuevas primero.
     pub async fn list_screenshots(&self, instance_id: &str) -> Result<Vec<ScreenshotInfo>> {
         let dir = self.screenshots_dir(instance_id).await?;
@@ -1128,6 +1174,64 @@ mod tests {
         assert!(core.list_datapacks(&id, "m").await.unwrap().is_empty());
         assert!(core.remove_datapack(&id, "m", "a.zip").await.is_err());
         assert!(core.list_datapacks(&id, "nada").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn datapacks_anadir_zip() {
+        let tmp = tempfile::tempdir().unwrap();
+        let core = core(tmp.path()).await;
+        let id = instance(&core).await;
+        let world = core.instance_game_dir(&id).unwrap().join("saves/m");
+        put_level(&world, &classic_level("M", 1));
+        let fuera = tmp.path().join("descargas");
+        fs::create_dir_all(&fuera).unwrap();
+        fs::write(fuera.join("Terralith.zip"), "zip!").unwrap();
+        fs::write(fuera.join("notas.txt"), "no").unwrap();
+
+        // Sin carpeta datapacks todavía: la crea.
+        let p = core
+            .add_datapack(&id, "m", &fuera.join("Terralith.zip"))
+            .await
+            .unwrap();
+        assert_eq!(
+            (p.name.as_str(), p.enabled, p.is_dir, p.size_bytes),
+            ("Terralith.zip", true, false, 4)
+        );
+        assert_eq!(
+            fs::read(world.join("datapacks/Terralith.zip")).unwrap(),
+            b"zip!"
+        );
+        // Repetido (también si está desactivado): error, no se pisa.
+        assert!(
+            core.add_datapack(&id, "m", &fuera.join("Terralith.zip"))
+                .await
+                .is_err()
+        );
+        core.set_datapack_enabled(&id, "m", "Terralith.zip", false)
+            .await
+            .unwrap();
+        assert!(
+            core.add_datapack(&id, "m", &fuera.join("Terralith.zip"))
+                .await
+                .is_err()
+        );
+        // Solo .zip que existan, y en un mundo que exista.
+        assert!(
+            core.add_datapack(&id, "m", &fuera.join("notas.txt"))
+                .await
+                .is_err()
+        );
+        assert!(
+            core.add_datapack(&id, "m", &fuera.join("falta.zip"))
+                .await
+                .is_err()
+        );
+        assert!(
+            core.add_datapack(&id, "nada", &fuera.join("Terralith.zip"))
+                .await
+                .is_err()
+        );
+        assert_eq!(core.list_datapacks(&id, "m").await.unwrap().len(), 1);
     }
 
     #[tokio::test]

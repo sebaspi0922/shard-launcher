@@ -1,0 +1,428 @@
+// Crear instancia (create_instance_dialog.dart): nombre, versión de
+// Minecraft, loader y versión del loader. El selector de versión y loader
+// (VersionPicker, LoaderColumn) lo usa también change_version.slint.
+// Rust (create_instance.rs) filtra, elige y valida; aquí solo se pinta.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Icon, Spinner } from "../../components/base.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+import { FormDialog, DialogActions, ErrorNote } from "../../components/feedback.slint";
+import { TextField, LabeledField } from "../../components/inputs.slint";
+import { Tag } from "../../components/common.slint";
+import { SelectMenu, SelectOption } from "../../components/select.slint";
+
+// Una fila de la lista de versiones.
+export struct VersionRow {
+    id: string,
+    kind: string,
+    // Es la última release (etiqueta «Última»).
+    latest: bool,
+}
+
+// Estado del selector (Rust lo calcula con `Picker::view`).
+export struct PickerData {
+    // Ya filtradas por la búsqueda.
+    rows: [VersionRow],
+    loading: bool,
+    error: string,
+    error-detail: string,
+    snapshots: bool,
+    selected: string,
+    loader: string,
+    // Campo de versión del loader: 0 = no se ve, 1 = cargando, 2 = lista,
+    // 3 = no hay versiones, 4 = error.
+    lv-state: int,
+    lv-value: string,
+    lv-label: string,
+    lv-options: [SelectOption],
+    lv-empty: string,
+    lv-error: string,
+    lv-error-detail: string,
+}
+
+export global CreateInstanceState {
+    in property <bool> open;
+    in property <PickerData> picker;
+    in-out property <string> name;
+    in-out property <string> search;
+    // «Ponle un nombre.» tras pulsar «Crear» con el nombre vacío.
+    in property <string> name-error;
+    in property <bool> busy;
+    in property <bool> can-create;
+    in property <string> error;
+    in property <string> error-detail;
+    callback cancel();
+    callback create();
+    callback name-edited(string);
+    callback search-edited(string);
+    callback snapshots(bool);
+    callback select-version(string);
+    callback select-loader(string);
+    callback select-loader-version(string);
+}
+
+// Switch del tema a escala 0,8 (Transform.scale): ocupa 60 × 48 en el
+// layout y se pinta en 48 × 38,4 centrado.
+component SmallSwitch inherits Rectangle {
+    in property <bool> checked;
+    in property <string> label;
+    callback toggled(bool);
+    width: 60px;
+    height: 48px;
+    accessible-role: switch;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-action-default => { root.toggled(!root.checked); }
+    property <length> knob: (root.checked ? 24px : 16px) * 0.8;
+    Rectangle {
+        x: 6px;
+        y: 4.8px;
+        width: 48px;
+        height: 38.4px;
+        accessible-role: groupbox;
+        accessible-id: "snapshots";
+        Rectangle {
+            x: 3.2px;
+            y: (parent.height - self.height) / 2;
+            width: 41.6px;
+            height: 25.6px;
+            border-radius: self.height / 2;
+            background: root.checked ? Palette.accent : Palette.surface2;
+            border-width: root.checked ? 0 : 1.6px;
+            border-color: Palette.border-strong;
+            Rectangle {
+                width: root.knob;
+                height: root.knob;
+                x: (root.checked ? parent.width - 12.8px : 12.8px) - self.width / 2;
+                y: (parent.height - self.height) / 2;
+                border-radius: self.width / 2;
+                background: root.checked ? Palette.on-accent : Palette.text-secondary;
+            }
+        }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { root.toggled(!root.checked); } }
+}
+
+// Fila de la lista (itemExtent 36): seleccionada en el contenedor de acento.
+component VersionItem inherits Rectangle {
+    in property <VersionRow> version;
+    in property <bool> selected;
+    callback clicked;
+    height: 36px;
+    border-radius: 6px;
+    background: root.selected ? Palette.accent-container : ta.has-hover ? Palette.surface1 : transparent;
+    accessible-role: list-item;
+    accessible-label: version.id;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-id: "version";
+    accessible-action-default => { root.clicked(); }
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        Txt {
+            text: root.version.id;
+            width: self.preferred-width;
+            style: root.selected ? { size: Type.body-medium.size, weight: 600, line-height: Type.body-medium.line-height, letter-spacing: 0 } : Type.body-medium;
+            color: root.selected ? Palette.on-accent-container : Palette.text;
+            y: (parent.height - self.height) / 2;
+        }
+        if root.version.latest: HorizontalLayout {
+            Rectangle { width: 8px; }
+            Tag { text: @tr("createLatestRelease"); y: (parent.height - self.height) / 2; accessible-id: "version-tag"; }
+        }
+        Rectangle { horizontal-stretch: 1; }
+        if root.version.kind != "release": Txt {
+            text: root.version.kind;
+            style: Type.body-small;
+            color: Palette.warning;
+            y: (parent.height - self.height) / 2;
+        }
+        if root.selected: Icon { glyph: Icons.check; size: 18px; color: Palette.on-accent-container; y: (parent.height - self.height) / 2; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// VersionPicker: título, snapshots, buscador y lista.
+export component VersionPicker inherits VerticalLayout {
+    in property <PickerData> data;
+    in-out property <string> search;
+    // accessible-id del buscador (las cajas de la referencia lo llaman
+    // `field` o `field-2` según el diálogo).
+    in property <string> search-id: "field";
+    // accessible-id de la caja de la lista (`code` en «Nueva instancia»).
+    in property <string> box-id: "code";
+    callback search-edited(string);
+    callback snapshots(bool);
+    callback select(string);
+    HorizontalLayout {
+        height: 48px;
+        Txt { text: @tr("createVersion"); style: Type.title-small; width: self.preferred-width; y: (parent.height - self.height) / 2; }
+        Rectangle { horizontal-stretch: 1; }
+        Txt { text: @tr("createSnapshots"); style: Type.body-small; color: Palette.text-secondary; width: self.preferred-width; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 4px; }
+        SmallSwitch {
+            checked: root.data.snapshots;
+            label: @tr("createSnapshots");
+            toggled(v) => { root.snapshots(v); }
+        }
+    }
+    Rectangle { height: 4px; }
+    TextField {
+        text <=> root.search;
+        placeholder: @tr("createSearchVersion");
+        prefix-icon: Icons.search;
+        accessible-label: @tr("createSearchVersion");
+        accessible-id: root.search-id;
+        edited(t) => { root.search-edited(t); }
+    }
+    Rectangle { height: 8px; }
+    Rectangle {
+        vertical-stretch: 1;
+        border-radius: Theme.radius-control;
+        background: Palette.background-deep.with-alpha(0.4);
+        border-width: 1px;
+        border-color: Palette.border;
+        accessible-role: groupbox;
+        accessible-id: root.box-id;
+        // Misma caja con su nombre propio (la referencia la llama de las dos maneras).
+        Rectangle { accessible-role: groupbox; accessible-id: "versions"; }
+        if root.data.loading && root.data.rows.length == 0: Spinner { }
+        if !root.data.loading && root.data.rows.length == 0: Txt {
+            text: @tr("createNoVersions");
+            style: Type.body-small;
+            color: Palette.text-secondary;
+            width: self.preferred-width;
+        }
+        if root.data.rows.length > 0: Flickable {
+            x: 1px;
+            y: 1px;
+            width: parent.width - 2px;
+            height: parent.height - 2px;
+            content-height: root.data.rows.length * 36px + 8px;
+            for r[i] in root.data.rows: VersionItem {
+                x: 4px;
+                y: 4px + i * 36px;
+                width: parent.width - 8px;
+                version: r;
+                selected: r.id == root.data.selected;
+                clicked => { root.select(r.id); }
+            }
+        }
+    }
+}
+
+// LoaderOption: casilla de 38 con borde, cuadrado de color, nombre y radio
+// (más 6 de separación debajo).
+component LoaderOption inherits Rectangle {
+    in property <string> loader;
+    in property <bool> selected;
+    callback clicked;
+    height: 44px;
+    accessible-role: radio-button;
+    accessible-label: Fmt.loader(loader);
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-id: "loader";
+    accessible-action-default => { root.clicked(); }
+    Rectangle {
+        y: 0;
+        height: 38px;
+        border-radius: Theme.radius-control;
+        background: root.selected ? Palette.accent-container.with-alpha(0.7) : ta.has-hover ? Palette.surface2 : Palette.surface1;
+        border-width: 1px;
+        border-color: root.selected ? Palette.accent.with-alpha(0.6) : Palette.border;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            Rectangle {
+                width: 9px;
+                height: 9px;
+                y: (parent.height - self.height) / 2;
+                border-radius: 2px;
+                background: Fmt.loader-color(root.loader);
+            }
+            Rectangle { width: 12px; }
+            Txt {
+                text: Fmt.loader(root.loader);
+                width: self.preferred-width;
+                style: root.selected ? { size: Type.body-medium.size, weight: 600, line-height: Type.body-medium.line-height, letter-spacing: 0 } : Type.body-medium;
+                y: (parent.height - self.height) / 2;
+            }
+            Rectangle { horizontal-stretch: 1; }
+            Icon {
+                glyph: root.selected ? Icons.radio-checked : Icons.radio-unchecked;
+                size: 18px;
+                color: root.selected ? Palette.accent : Palette.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+        ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+    }
+}
+
+// DropdownButtonFormField de la versión del loader: campo de 48 con la
+// etiqueta flotante, el valor (titleMedium) y la flecha. El menú es el de
+// SelectButton (SelectMenuLayer).
+component LoaderVersionField inherits Rectangle {
+    in property <PickerData> data;
+    callback changed(string);
+    property <int> owner;
+    property <int> serial: SelectMenu.serial;
+    changed serial => {
+        if SelectMenu.picked-owner == root.owner && SelectMenu.picked != root.data.lv-value {
+            root.changed(SelectMenu.picked);
+        }
+    }
+    init => { owner = SelectMenu.new-owner(); }
+    height: 48px;
+    border-radius: Theme.radius-control;
+    background: Palette.surface1;
+    border-width: 1px;
+    border-color: Palette.border;
+    accessible-role: combobox;
+    accessible-label: @tr("createLoaderVersion");
+    accessible-value: data.lv-label;
+    accessible-expandable: true;
+    accessible-expanded: SelectMenu.open && SelectMenu.owner == root.owner;
+    accessible-action-default => { root.toggle(); }
+    Rectangle {
+        x: 14px;
+        y: -1px;
+        width: lab.preferred-width + 8px;
+        height: 3px;
+        background: Theme.blend(Palette.surface2, Palette.background);
+    }
+    lab := Txt {
+        x: 18px;
+        y: 0.75px - self.height / 2;
+        width: self.preferred-width;
+        text: @tr("createLoaderVersion");
+        style: { size: Type.body-small.size * 0.75, weight: Type.body-small.weight, line-height: Type.body-small.line-height, letter-spacing: 0 };
+        color: Palette.accent;
+        accessible-role: none;
+    }
+    Txt {
+        x: 18px;
+        width: parent.width - 18px - 48px;
+        y: (parent.height - self.height) / 2;
+        text: root.data.lv-label;
+        style: Type.title-medium;
+        accessible-role: none;
+    }
+    // Icons.arrow_drop_down (24): triángulo de 10 × 5 centrado.
+    Path {
+        x: parent.width - 14px - 24px + 7px;
+        y: (parent.height - 24px) / 2 + 10px;
+        width: 10px;
+        height: 5px;
+        viewbox-width: 10;
+        viewbox-height: 5;
+        fill: #FFFFFFB3;
+        MoveTo { x: 0; y: 0; }
+        LineTo { x: 5; y: 5; }
+        LineTo { x: 10; y: 0; }
+        Close { }
+    }
+    TouchArea { mouse-cursor: pointer; clicked => { root.toggle(); } }
+    function toggle() {
+        SelectMenu.show(root.owner, root.data.lv-options, root.data.lv-value, max(100px, root.width - 60px),
+            self.absolute-position.x, self.absolute-position.y, self.width, self.height);
+    }
+}
+
+// Columna del loader: título, las cinco opciones y, abajo, su versión.
+export component LoaderColumn inherits VerticalLayout {
+    in property <PickerData> data;
+    callback select(string);
+    callback select-version(string);
+    Txt { text: @tr("createLoader"); style: Type.title-small; }
+    Rectangle { height: 8px; }
+    for l in ["vanilla", "fabric", "quilt", "forge", "neoforge"]: LoaderOption {
+        loader: l;
+        selected: l == root.data.loader;
+        clicked => { root.select(l); }
+    }
+    Rectangle { vertical-stretch: 1; }
+    if root.data.lv-state == 1: Rectangle {
+        height: 2px;
+        background: Palette.surface3;
+        Rectangle { x: 0; width: parent.width * 0.4; background: Palette.accent; }
+    }
+    if root.data.lv-state == 2: LoaderVersionField {
+        data: root.data;
+        accessible-id: "loader-version";
+        changed(v) => { root.select-version(v); }
+    }
+    if root.data.lv-state == 3: Txt { text: root.data.lv-empty; style: Type.body-small; color: Palette.warning; }
+    if root.data.lv-state == 4: ErrorNote { message: root.data.lv-error; detail: root.data.lv-error-detail; details-label: @tr("details"); }
+}
+
+// El diálogo (720 de ancho, 330 para la lista y el loader).
+component CreateInstanceDialog inherits FormDialog {
+    title: @tr("createTitle");
+    icon: Icons.add-box;
+    panel-width: 720px;
+    dismissed => { CreateInstanceState.cancel(); }
+    LabeledField {
+        text <=> CreateInstanceState.name;
+        label: @tr("createName");
+        text-size: Type.body-large.size;
+        placeholder: @tr("createNameHint");
+        error: CreateInstanceState.name-error;
+        accessible-id: "field";
+        edited(t) => { CreateInstanceState.name-edited(t); }
+    }
+    Rectangle { height: 20px; }
+    HorizontalLayout {
+        height: 330px;
+        VersionPicker {
+            width: (parent.width - 20px) * 5 / 9;
+            data: CreateInstanceState.picker;
+            search <=> CreateInstanceState.search;
+            search-id: "field-2";
+            search-edited(t) => { CreateInstanceState.search-edited(t); }
+            snapshots(v) => { CreateInstanceState.snapshots(v); }
+            select(id) => { CreateInstanceState.select-version(id); }
+        }
+        Rectangle { width: 20px; }
+        LoaderColumn {
+            width: (parent.width - 20px) * 4 / 9;
+            data: CreateInstanceState.picker;
+            select(l) => { CreateInstanceState.select-loader(l); }
+            select-version(v) => { CreateInstanceState.select-loader-version(v); }
+        }
+    }
+    if CreateInstanceState.error != "": VerticalLayout {
+        Rectangle { height: 16px; }
+        ErrorNote { message: CreateInstanceState.error; detail: CreateInstanceState.error-detail; details-label: @tr("details"); }
+    }
+    if CreateInstanceState.picker.error != "": VerticalLayout {
+        Rectangle { height: 16px; }
+        ErrorNote { message: CreateInstanceState.picker.error; detail: CreateInstanceState.picker.error-detail; details-label: @tr("details"); }
+    }
+    DialogActions {
+        TextButton {
+            height: 48px;
+            text: @tr("cancel");
+            accessible-id: "cancel";
+            clicked => { CreateInstanceState.cancel(); }
+        }
+        FilledButton {
+            text: @tr("create");
+            icon: Icons.add;
+            icon-size: 18px;
+            busy: CreateInstanceState.busy;
+            enabled: CreateInstanceState.can-create;
+            accessible-id: "filled";
+            clicked => { CreateInstanceState.create(); }
+        }
+    }
+}
+
+export component CreateInstanceLayer inherits Rectangle {
+    if CreateInstanceState.open: CreateInstanceDialog { }
+}

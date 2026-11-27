@@ -168,14 +168,23 @@ export component Slider inherits Rectangle {
 
 // SegmentedButton de texto (segmentedButtonTheme, densidad compacta): 32 de
 // alto en 40, todos los segmentos del ancho del más ancho, sin icono de
-// elegido. Hasta 5 opciones.
+// elegido. Hasta 5 opciones. `icons` (opcional, uno por opción) pone un
+// icono de 16 delante del texto (ButtonSegment.icon); `enabled: false` =
+// onSelectionChanged nulo (colores de deshabilitado de Material).
 export component SegmentedButton inherits Rectangle {
     in property <[string]> options;
+    in property <[string]> icons;
     in-out property <int> selected;
     in property <string> label;
+    in property <bool> enabled: true;
     callback changed(int);
     property <length> pad: 12px;
-    property <length> seg: max(m0.preferred-width, m1.preferred-width, m2.preferred-width, m3.preferred-width, m4.preferred-width) + 2 * pad + 2px;
+    // Con icono: 16 + 8 de separación y 4 más de relleno a la derecha
+    // (TextButton.icon: 12 / 16).
+    property <length> lead: icons.length > 0 ? 16px + 8px + 4px : 0;
+    // El ancho de un texto sale redondeado hacia arriba; medio píxel menos
+    // deja el segmento donde Flutter.
+    property <length> seg: max(m0.preferred-width, m1.preferred-width, m2.preferred-width, m3.preferred-width, m4.preferred-width) - 0.5px + lead + 2 * pad;
     width: options.length * seg;
     height: 40px;
     accessible-role: groupbox;
@@ -202,22 +211,31 @@ export component SegmentedButton inherits Rectangle {
             accessible-label: text;
             accessible-checkable: true;
             accessible-checked: i == root.selected;
+            accessible-enabled: root.enabled;
             accessible-action-default => { root.pick(i); }
+            property <color> fg: !root.enabled ? Palette.text.with-alpha(0.38) : i == root.selected ? Palette.on-accent-container : Palette.text-secondary;
             if i > 0: Rectangle { x: 0; width: 1px; background: Palette.border; }
-            Txt {
+            if root.icons.length > 0: HorizontalLayout {
+                alignment: center;
+                padding-right: 4px;
+                spacing: 8px;
+                Icon { glyph: root.icons[i]; size: 16px; color: fg; y: (parent.height - self.height) / 2; }
+                Txt { text: text; style: Type.label-medium; color: fg; y: (parent.height - self.height) / 2; }
+            }
+            if root.icons.length == 0: Txt {
                 x: root.pad;
                 width: parent.width - 2 * root.pad;
                 y: (parent.height - self.height) / 2;
                 text: text;
                 style: Type.label-medium;
                 horizontal-alignment: center;
-                color: i == root.selected ? Palette.on-accent-container : Palette.text-secondary;
+                color: fg;
             }
-            seg-ta := TouchArea { mouse-cursor: pointer; clicked => { root.pick(i); } }
+            seg-ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.pick(i); } }
         }
     }
     function pick(i: int) {
-        if selected != i {
+        if enabled && selected != i {
             selected = i;
             changed(i);
         }

@@ -97,6 +97,8 @@ export component LabeledField inherits VerticalLayout {
     // Texto oculto (contraseña).
     in property <bool> password;
     in property <bool> enabled: true;
+    // Tamaño del texto escrito (bodyLarge, como Flutter).
+    in property <length> text-size: Type.body-large.size;
     // Color de lo que hay detrás (hueco de la etiqueta sobre el borde).
     in property <color> backdrop: Theme.blend(Palette.surface2, Palette.background);
     out property <bool> has-focus: input.has-focus;
@@ -160,7 +162,7 @@ export component LabeledField inherits VerticalLayout {
             width: parent.width - self.x - 14px;
             height: parent.height;
             font-family: "Inter";
-            font-size: Type.body-large.size;
+            font-size: root.text-size;
             // Deshabilitado: el texto al 38 % (Material).
             color: root.enabled ? Palette.text : Palette.text.with-alpha(0.38);
             selection-background-color: Palette.accent.with-alpha(0.35);
@@ -184,4 +186,6 @@ export component LabeledField inherits VerticalLayout {
         }
     }
     public function focus-input() { input.focus(); }
+    // Selecciona todo el texto (TextSelection de todo el valor inicial).
+    public function select-all() { input.select-all(); }
 }

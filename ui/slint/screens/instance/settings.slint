@@ -1,0 +1,336 @@
+// Pestaña Ajustes del detalle de instancia (instance_settings_tab.dart):
+// General (nombre) y Memoria a la izquierda, Argumentos de JVM y Ventana del
+// juego a la derecha, y la barra «Hay cambios sin guardar». Rust
+// (`inst_settings::InstSettings`) carga el formulario, decide si hay cambios
+// y guarda; aquí se edita (estado de vista) y se avisa con `edited`.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Icon } from "../../components/base.slint";
+import { LabeledField } from "../../components/inputs.slint";
+import { ErrorNote } from "../../components/feedback.slint";
+import { Panel } from "../../components/panels.slint";
+import { Switch, MemorySlider } from "../../components/controls.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+
+export global InstSettingsState {
+    // `false` hasta que llega la instancia completa.
+    in property <bool> ready;
+    // Formulario (lo edita la vista; Rust lo lee en `edited`).
+    in-out property <string> name;
+    in-out property <bool> custom-memory;
+    in-out property <int> memory-mb;
+    in-out property <bool> custom-jvm;
+    in-out property <string> jvm;
+    in-out property <string> width;
+    in-out property <string> height;
+    in-out property <bool> fullscreen;
+    // Globales y RAM del equipo.
+    in property <int> global-memory-mb: 4096;
+    in property <string> global-jvm;
+    in property <int> total-mb;
+    // Hay cambios sin guardar / guardando / nombre no vacío.
+    in property <bool> dirty;
+    in property <bool> saving;
+    in property <bool> can-save;
+    // Error al guardar ("" = ninguno).
+    in property <string> error;
+    in property <string> error-detail;
+    callback edited();
+    callback save();
+    callback discard();
+}
+
+// _GlobalSwitch: «Usar el valor global» y un Switch al 80 % (escalado sin
+// cambiar su caja de 60 × 48, como Transform.scale).
+component GlobalSwitch inherits HorizontalLayout {
+    in-out property <bool> checked;
+    callback toggled(bool);
+    spacing: 4px;
+    horizontal-stretch: 0;
+    accessible-role: groupbox;
+    accessible-id: "global-switch";
+    Txt { width: self.preferred-width; y: (parent.height - self.height) / 2; text: @tr("isUseGlobal"); style: Type.body-small; color: Palette.text-secondary; }
+    Switch {
+        transform-scale: 0.8;
+        checked <=> root.checked;
+        label: @tr("isUseGlobal");
+        toggled(v) => { root.toggled(v); }
+    }
+}
+
+// Cabecera de _Section (dentro de un Panel): icono del acento, título,
+// subtítulo opcional y algo a la derecha; 16 debajo va el contenido.
+component SectionHeader inherits HorizontalLayout {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> subtitle;
+    spacing: 8px;
+    Icon { y: (parent.height - self.height) / 2; glyph: root.icon; size: 18px; color: Palette.accent; }
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Txt { text: root.title; style: Type.title-small; }
+        if root.subtitle != "": Txt { text: root.subtitle; style: Type.body-small; color: Palette.text-secondary; }
+    }
+    @children
+}
+
+// Campo de argumentos (TextField de 2 a 4 líneas, JetBrains Mono 12,5, con
+// pista y sin etiqueta): relleno 14 × 12 y borde del tema.
+component ArgsField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <string> hint;
+    in property <bool> enabled: true;
+    callback edited();
+    property <length> line: 19px;
+    property <int> lines: clamp(round(input.preferred-height / (12.5px * 1.32)), 2, 4);
+    height: 24px + lines * line;
+    border-radius: Theme.radius-control;
+    background: Palette.surface1;
+    border-width: input.has-focus ? 1.5px : 1px;
+    border-color: input.has-focus ? Palette.accent : Palette.border;
+    accessible-role: text-input;
+    accessible-label: @tr("isJvm");
+    accessible-value: text;
+    accessible-placeholder-text: hint;
+    accessible-id: "jvm-field";
+    accessible-action-set-value(v) => {
+        input.text = v;
+        root.edited();
+    }
+    forward-focus: input;
+    if root.text == "": Text {
+        x: 14px;
+        y: 12px + 1.25px;
+        width: parent.width - 28px;
+        text: root.hint;
+        font-family: "JetBrains Mono";
+        font-size: 12.5px;
+        color: Palette.text-muted;
+        wrap: word-wrap;
+        accessible-role: none;
+    }
+    input := TextInput {
+        x: 14px;
+        y: 12px + 1.25px;
+        width: parent.width - 28px;
+        height: parent.height - 24px;
+        font-family: "JetBrains Mono";
+        font-size: 12.5px;
+        color: Palette.text;
+        selection-background-color: Palette.accent.with-alpha(0.35);
+        selection-foreground-color: Palette.text;
+        single-line: false;
+        wrap: word-wrap;
+        enabled: root.enabled;
+        accessible-role: none;
+        edited => { root.edited(); }
+    }
+}
+
+// SettingRow: título y descripción a la izquierda, control a la derecha,
+// 12 arriba y abajo.
+component SettingRow inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> description;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    spacing: 24px;
+    VerticalLayout {
+        alignment: center;
+        horizontal-stretch: 1;
+        Txt { text: root.title; style: Type.title-small; }
+        Rectangle { height: 2px; }
+        Txt { text: root.description; style: Type.body-small; color: Palette.text-secondary; }
+    }
+    @children
+}
+
+export component SettingsTab inherits Rectangle {
+    in property <string> instance-id;
+    property <color> field-backdrop: Palette.card(Palette.surface1);
+    if InstSettingsState.ready: VerticalLayout {
+        fl := Flickable {
+            vertical-stretch: 1;
+            content-height: cols.preferred-height;
+            cols := HorizontalLayout {
+                alignment: stretch;
+                height: self.preferred-height;
+                spacing: 16px;
+                VerticalLayout {
+                    alignment: start;
+                    width: (root.width - 16px) / 2;
+                    spacing: 16px;
+                    Panel {
+                        accessible-role: groupbox;
+                        accessible-id: "section";
+                        SectionHeader { icon: Icons.badge; title: @tr("isGeneral"); }
+                        Rectangle { height: 16px; }
+                        LabeledField {
+                            text <=> InstSettingsState.name;
+                            label: @tr("isName");
+                            backdrop: root.field-backdrop;
+                            accessible-id: "name-field";
+                            edited => { InstSettingsState.edited(); }
+                        }
+                    }
+                    Panel {
+                        accessible-role: groupbox;
+                        accessible-id: "section";
+                        SectionHeader {
+                            icon: Icons.memory;
+                            title: @tr("isMemory");
+                            subtitle: @tr("isMemoryDesc");
+                            GlobalSwitch {
+                                checked: !InstSettingsState.custom-memory;
+                                toggled(v) => {
+                                    InstSettingsState.custom-memory = !v;
+                                    InstSettingsState.edited();
+                                }
+                            }
+                        }
+                        Rectangle { height: 16px; }
+                        if InstSettingsState.custom-memory: MemorySlider {
+                            value-mb: InstSettingsState.memory-mb;
+                            total-mb: InstSettingsState.total-mb;
+                            label: @tr("isMemory");
+                            accessible-role: groupbox;
+                            accessible-id: "memory";
+                            changed(v) => {
+                                InstSettingsState.memory-mb = v;
+                                InstSettingsState.edited();
+                            }
+                        }
+                        if !InstSettingsState.custom-memory: Txt {
+                            text: @tr("isMemoryGlobal", Fmt.memory(InstSettingsState.global-memory-mb));
+                            color: Palette.text-secondary;
+                            accessible-id: "memory-global";
+                        }
+                    }
+                }
+                VerticalLayout {
+                    alignment: start;
+                    spacing: 16px;
+                    Panel {
+                        accessible-role: groupbox;
+                        accessible-id: "section";
+                        SectionHeader {
+                            icon: Icons.code;
+                            title: @tr("isJvm");
+                            subtitle: @tr("isJvmDesc");
+                            GlobalSwitch {
+                                checked: !InstSettingsState.custom-jvm;
+                                toggled(v) => {
+                                    InstSettingsState.custom-jvm = !v;
+                                    InstSettingsState.edited();
+                                }
+                            }
+                        }
+                        Rectangle { height: 16px; }
+                        ArgsField {
+                            text <=> InstSettingsState.jvm;
+                            enabled: InstSettingsState.custom-jvm;
+                            hint: InstSettingsState.custom-jvm ? "-XX:+UseG1GC" : InstSettingsState.global-jvm;
+                            edited => { InstSettingsState.edited(); }
+                        }
+                    }
+                    Panel {
+                        accessible-role: groupbox;
+                        accessible-id: "section";
+                        SectionHeader { icon: Icons.aspect-ratio; title: @tr("isWindow"); }
+                        Rectangle { height: 16px; }
+                        HorizontalLayout {
+                            LabeledField {
+                                horizontal-stretch: 1;
+                                preferred-width: 0;
+                                text <=> InstSettingsState.width;
+                                label: @tr("isWidth");
+                                backdrop: root.field-backdrop;
+                                accessible-id: "width-field";
+                                edited => { InstSettingsState.edited(); }
+                            }
+                            HorizontalLayout {
+                                horizontal-stretch: 0;
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                Txt { width: self.preferred-width; y: (parent.height - self.height) / 2; text: "×"; style: Type.title-medium; color: Palette.text-muted; }
+                            }
+                            LabeledField {
+                                horizontal-stretch: 1;
+                                preferred-width: 0;
+                                text <=> InstSettingsState.height;
+                                label: @tr("isHeight");
+                                backdrop: root.field-backdrop;
+                                accessible-id: "height-field";
+                                edited => { InstSettingsState.edited(); }
+                            }
+                        }
+                        Rectangle { height: 4px; }
+                        Txt {
+                            text: @tr("isResolutionDesc");
+                            style: Type.body-small;
+                            color: Palette.text-secondary;
+                            accessible-id: "txt-resolution";
+                        }
+                        Rectangle { height: 8px; }
+                        SettingRow {
+                            title: @tr("isFullscreen");
+                            description: @tr("isFullscreenDesc");
+                            Switch {
+                                y: (parent.height - self.height) / 2;
+                                checked <=> InstSettingsState.fullscreen;
+                                label: @tr("isFullscreen");
+                                accessible-id: "fullscreen";
+                                toggled => { InstSettingsState.edited(); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if InstSettingsState.error != "": VerticalLayout {
+            padding-top: 12px;
+            ErrorNote {
+                message: InstSettingsState.error;
+                detail: InstSettingsState.error-detail;
+                details-label: @tr("details");
+                accessible-id: "error";
+            }
+        }
+        if InstSettingsState.dirty: VerticalLayout {
+            padding-top: 12px;
+            // Panel de nivel 2 con relleno 16 × 8.
+            Rectangle {
+                border-radius: Theme.radius-card;
+                background: Palette.card(Palette.surface2);
+                border-width: 1px;
+                border-color: Palette.border;
+                accessible-role: groupbox;
+                accessible-id: "unsaved";
+                HorizontalLayout {
+                    padding-left: 17px;
+                    padding-right: 17px;
+                    padding-top: 9px;
+                    padding-bottom: 9px;
+                    spacing: 8px;
+                    Icon { y: (parent.height - self.height) / 2; glyph: Icons.edit-note; size: 20px; color: Palette.accent; }
+                    Txt { y: (parent.height - self.height) / 2; horizontal-stretch: 1; text: @tr("unsavedChanges"); }
+                    TextButton {
+                        text: @tr("discard");
+                        accessible-id: "discard";
+                        clicked => { InstSettingsState.discard(); }
+                    }
+                    FilledButton {
+                        y: (parent.height - self.height) / 2;
+                        text: @tr("save");
+                        enabled: !InstSettingsState.saving;
+                        accessible-id: "save";
+                        clicked => { InstSettingsState.save(); }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -4,6 +4,16 @@
 
 use crate::instances::Record;
 
+// Fase 3: un archivo por pestaña o diálogo (`fixtures/<nombre>.rs`).
+pub mod backups;
+pub mod inst_content;
+pub mod detail;
+pub mod logs;
+pub mod screenshots;
+pub mod trash;
+pub mod versions;
+pub mod worlds;
+
 /// «Ahora» de las escenas. Solo importan las diferencias con él.
 pub const NOW: i64 = 1_791_822_600;
 
@@ -187,7 +197,7 @@ pub fn sample_device_code() -> DeviceCode {
 pub struct Recorder(pub Rc<RefCell<Vec<String>>>);
 
 impl Recorder {
-    fn push(&self, s: String) {
+    pub fn push(&self, s: String) {
         self.0.borrow_mut().push(s);
     }
 
@@ -245,6 +255,18 @@ impl SkinActions for Recorder {
     }
     fn cape(&self, account: &str, id: Option<&str>) {
         self.push(format!("cape {account} {}", id.unwrap_or("-")));
+    }
+}
+
+impl crate::instance::InstanceActions for Recorder {
+    fn load(&self, id: &str) {
+        self.push(format!("load-instance {id}"));
+    }
+    fn open_folder(&self, path: &std::path::Path) {
+        self.push(format!("open-folder {}", path.display()));
+    }
+    fn delete(&self, id: &str, name: &str) {
+        self.push(format!("delete-instance {id} {name}"));
     }
 }
 

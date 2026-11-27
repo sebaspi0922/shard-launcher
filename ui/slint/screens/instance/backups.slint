@@ -1,0 +1,870 @@
+// F3 copias
+// Pestaña Copias del detalle de instancia (backups_tab.dart): resumen,
+// «Crear copia», lista de copias con fijar, restaurar y menú ⋮, y el panel de
+// copias automáticas. Los diálogos y el menú van en `BackupsLayer`, encima
+// de toda la ventana.
+//
+// Rust (`backups::Backups`) rellena `BackupsState` y atiende sus callbacks.
+
+import { Palette, Theme, Type, TextStyle } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Icon, Spinner, InterMetrics } from "../../components/base.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+import { EmptyState, ErrorNote, FormDialog, DialogActions, ConfirmDialog } from "../../components/feedback.slint";
+import { Panel, ColorBadge } from "../../components/panels.slint";
+import { TipArea } from "../../components/common.slint";
+import { MenuPanel, MenuEntry } from "../../components/menu.slint";
+import { Switch, Slider } from "../../components/controls.slint";
+import { LabeledField } from "../../components/inputs.slint";
+
+// Una copia tal como se ve en la lista.
+export struct BackupItem {
+    id: string,
+    // Etiqueta o «Copia automática» / «Copia manual».
+    title: string,
+    // Etiqueta propia ("" = sin ella).
+    label: string,
+    automatic: bool,
+    pinned: bool,
+    // Fecha y hora absolutas («11 oct 2026 15:30»).
+    date: string,
+    // Segundos desde que se hizo.
+    ago: int,
+    size: string,
+}
+
+export global BackupsState {
+    in property <[BackupItem]> items;
+    // Primera lectura de la lista en curso.
+    in property <bool> loading;
+    // La lista no se pudo leer.
+    in property <string> error;
+    in property <string> error-detail;
+    // Tamaño de todas las copias («4,3 GB»).
+    in property <string> total;
+    // El juego de la instancia está abierto: no se crea ni se restaura.
+    in property <bool> locked;
+
+    // Copias automáticas (`Instance.backups`). `settings-ready` = ya llegaron.
+    in property <bool> settings-ready;
+    in property <bool> auto;
+    // Frecuencias que se ofrecen (horas) y la elegida.
+    in property <[int]> intervals: [6, 12, 24, 72, 168];
+    in property <int> interval: 24;
+    in property <int> keep: 5;
+
+    // Diálogo «Nueva copia de seguridad».
+    in property <bool> create-open;
+    in property <bool> create-busy;
+    in property <string> create-error;
+    in property <string> create-error-detail;
+    // Progreso de la tarea en curso (crear o restaurar): fracción (< 0 =
+    // sin total todavía) y «hechos / total».
+    in property <float> progress: -1;
+    in property <string> progress-text;
+
+    // Diálogo «Restaurar copia» (`restore-item` = la copia).
+    in property <bool> restore-open;
+    in property <BackupItem> restore-item;
+    in-out property <bool> restore-worlds;
+    in-out property <bool> restore-safety: true;
+    // 0 = sin empezar; 1 = copia previa; 2 = restaurando.
+    in property <int> restore-step;
+    in property <string> restore-error;
+    in property <string> restore-error-detail;
+
+    // Menú ⋮ de una copia (`menu-item`), cambiar etiqueta y eliminar: estado
+    // de vista.
+    in-out property <bool> menu-open;
+    in-out property <BackupItem> menu-item;
+    in-out property <length> menu-x;
+    in-out property <length> menu-y;
+    in-out property <bool> rename-open;
+    in-out property <bool> delete-open;
+
+    callback open-create;
+    callback close-create;
+    // (etiqueta, fijar)
+    callback create(string, bool);
+    callback set-pinned(string, bool);
+    callback open-restore(BackupItem);
+    callback close-restore;
+    // (id, solo mundos, copia previa)
+    callback restore(string, bool, bool);
+    callback rename(string, string);
+    callback delete(string);
+    callback set-auto(bool);
+    callback set-interval(int);
+    callback set-keep(int);
+}
+
+// Texto de varias líneas con el interlineado de Flutter: cada línea mide
+// tamaño × alto redondeado (como Skia) y las líneas van a esa distancia
+// (`line-height-factor`), no juntas como en `Wrapped`.
+component Lines {
+    in property <string> text;
+    in property <TextStyle> style: Type.body-medium;
+    in property <color> color: Palette.text-secondary;
+    property <length> block: round(style.size * style.line-height / 1px) * 1px;
+    property <int> lines: max(1, round(t.preferred-height / (style.size * style.line-height)));
+    height: lines * block;
+    min-width: 0;
+    accessible-role: AccessibleRole.text;
+    accessible-label: text;
+    t := Text {
+        x: 0;
+        // bodyMedium: Slint deja el glifo ~1 px más abajo que Skia (medido
+        // con el arnés en el diálogo de restaurar); bodySmall ya cae bien.
+        y: root.style.size > 13px ? -1px : 0;
+        width: parent.width;
+        text: root.text;
+        font-family: "Inter";
+        font-size: root.style.size;
+        font-weight: root.style.weight;
+        letter-spacing: root.style.letter-spacing;
+        line-height-factor: root.style.line-height / InterMetrics.natural;
+        color: root.color;
+        wrap: word-wrap;
+        vertical-alignment: top;
+        accessible-role: none;
+    }
+}
+
+// Texto de una frecuencia (`_intervalLabel`).
+global Intervals {
+    public pure function label(h: int) -> string {
+        if h == 24 {
+            return @tr("backupDaily");
+        }
+        if h == 168 {
+            return @tr("backupWeekly");
+        }
+        if h == 72 {
+            return @tr("backupEveryDays", 3);
+        }
+        return @tr("backupEveryHours", h);
+    }
+}
+
+// IconButton estándar: 40 visibles en un área de 48, icono de 19.
+component RowIconButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> filled;
+    in property <color> tint: Palette.text-secondary;
+    in property <string> tooltip;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: Theme.radius-control;
+        background: ta.has-hover ? root.tint.with-alpha(0.08) : transparent;
+        Icon { glyph: root.icon; filled: root.filled; size: 19px; color: root.tint; }
+    }
+    ta := TipArea { tip: root.tooltip; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// OutlinedButton.icon de la fila (minimumSize 34): icono 18 + texto, 42
+// visibles (12 + 18 + 12) en un área de 48. Deshabilitado con el juego
+// abierto, con el aviso en el globo.
+component RestoreButton inherits Rectangle {
+    in property <bool> enabled: true;
+    in property <string> tooltip;
+    callback clicked;
+    height: 48px;
+    width: lay.preferred-width;
+    accessible-role: button;
+    accessible-label: @tr("backupRestore");
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
+    property <color> fg: enabled ? Palette.text : Palette.text.with-alpha(0.38);
+    Rectangle {
+        y: 3px;
+        height: 42px;
+        border-radius: Theme.radius-control;
+        border-width: 1px;
+        border-color: root.enabled ? Palette.border-strong : Palette.text.with-alpha(0.12);
+        background: !root.enabled ? transparent : ta.has-hover ? Palette.surface2 : Palette.surface1;
+        animate background { duration: Theme.fast; }
+    }
+    lay := HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        Icon { glyph: Icons.settings-backup-restore; size: 18px; color: root.fg; y: (parent.height - self.height) / 2; }
+        Txt { text: @tr("backupRestore"); style: Type.label-large; color: root.fg; y: (parent.height - self.height) / 2; }
+    }
+    ta := TipArea {
+        tip: root.tooltip;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { if root.enabled { root.clicked(); } }
+    }
+}
+
+// Una copia (_BackupRow): icono, título con insignias, fecha · hace cuánto
+// · tamaño, fijar, «Restaurar» y ⋮.
+component BackupRow inherits Rectangle {
+    in property <BackupItem> item;
+    property <color> tint: item.automatic ? Palette.info : Palette.accent;
+    height: 68px;
+    accessible-role: groupbox;
+    accessible-label: item.title;
+    accessible-id: "backup";
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 8px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        Rectangle {
+            width: 42px;
+            height: 42px;
+            y: (parent.height - self.height) / 2;
+            border-radius: 10px;
+            background: root.tint.with-alpha(0.12);
+            border-width: 1px;
+            border-color: root.tint.with-alpha(0.25);
+            Icon { glyph: root.item.automatic ? Icons.schedule : Icons.inventory-2; size: 20px; color: root.tint; }
+        }
+        Rectangle { width: 16px; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            HorizontalLayout {
+                alignment: start;
+                Txt { text: root.item.title; style: Type.title-small; y: (parent.height - self.height) / 2; }
+                Rectangle { width: 8px; }
+                if root.item.automatic && root.item.label != "": ColorBadge { text: @tr("backupAutoBadge"); tint: Palette.info; y: (parent.height - self.height) / 2; }
+                if root.item.pinned: Rectangle { width: 4px; }
+                if root.item.pinned: ColorBadge { text: @tr("backupPinnedBadge"); tint: Palette.warning; y: (parent.height - self.height) / 2; }
+            }
+            Rectangle { height: 2px; }
+            Txt {
+                text: root.item.date + "  ·  " + Fmt.relative(root.item.ago) + "  ·  " + root.item.size;
+                style: Type.body-small;
+                color: Palette.text-muted;
+            }
+        }
+        RowIconButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.push-pin;
+            filled: root.item.pinned;
+            tint: root.item.pinned ? Palette.warning : Palette.text-secondary;
+            tooltip: root.item.pinned ? @tr("backupUnpin") : @tr("backupPin");
+            accessible-id: "pin";
+            clicked => { BackupsState.set-pinned(root.item.id, !root.item.pinned); }
+        }
+        Rectangle { width: 4px; }
+        RestoreButton {
+            y: (parent.height - self.height) / 2;
+            enabled: !BackupsState.locked;
+            tooltip: BackupsState.locked ? @tr("closeGameFirst") : "";
+            accessible-id: "restore";
+            clicked => { BackupsState.open-restore(root.item); }
+        }
+        Rectangle { width: 4px; }
+        more := RowIconButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.more-vert;
+            tooltip: @tr("instanceMore");
+            accessible-id: "dots";
+            clicked => {
+                // MenuAnchor con alignmentOffset (-140, 4).
+                BackupsState.menu-item = root.item;
+                BackupsState.menu-x = self.absolute-position.x - 140px;
+                BackupsState.menu-y = self.absolute-position.y + self.height + 4px;
+                BackupsState.menu-open = true;
+            }
+        }
+    }
+}
+
+// Una píldora de PillTabs (media.dart _Pill): 14/8 de relleno más el borde.
+component Pill inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked;
+    width: t.preferred-width + 30px;
+    height: 36px;
+    border-radius: 18px;
+    background: selected ? Palette.accent-container : ta.has-hover ? Palette.surface2 : Palette.surface1;
+    border-width: 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.45) : Palette.border;
+    animate background { duration: Theme.fast; }
+    accessible-role: button;
+    accessible-label: text;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-action-default => { clicked(); }
+    t := Txt {
+        x: 15px;
+        y: (parent.height - self.height) / 2;
+        width: self.preferred-width;
+        text: root.text;
+        style: { size: Type.label-large.size, weight: root.selected ? 600 : 500, line-height: Type.label-large.line-height, letter-spacing: 0 };
+        color: root.selected ? Palette.on-accent-container : Palette.text-secondary;
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// PillTabs de las frecuencias: Wrap con 8 entre píldoras y entre filas.
+// Hasta 6 (las 5 de serie y la de la instancia si es otra).
+component IntervalPills inherits Rectangle {
+    in property <[int]> hours;
+    in property <int> selected;
+    callback picked(int);
+    property <length> gap: 8px;
+    property <length> line: 36px + gap;
+    // ¿Cabe la píldora i en la fila de la anterior?
+    property <bool> fit1: p0.x + p0.width + gap + p1.width <= root.width;
+    property <bool> fit2: p1.x + p1.width + gap + p2.width <= root.width;
+    property <bool> fit3: p2.x + p2.width + gap + p3.width <= root.width;
+    property <bool> fit4: p3.x + p3.width + gap + p4.width <= root.width;
+    property <bool> fit5: p4.x + p4.width + gap + p5.width <= root.width;
+    property <length> bottom: hours.length > 5 ? p5.y : hours.length > 4 ? p4.y : hours.length > 3 ? p3.y
+        : hours.length > 2 ? p2.y : hours.length > 1 ? p1.y : p0.y;
+    height: hours.length == 0 ? 0 : bottom + 36px;
+    accessible-role: groupbox;
+    accessible-label: @tr("backupInterval");
+    p0 := Pill {
+        x: 0;
+        y: 0;
+        visible: root.hours.length > 0;
+        text: Intervals.label(root.hours[0]);
+        selected: root.hours[0] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[0]); }
+    }
+    p1 := Pill {
+        x: root.fit1 ? p0.x + p0.width + root.gap : 0;
+        y: root.fit1 ? p0.y : p0.y + root.line;
+        visible: root.hours.length > 1;
+        text: Intervals.label(root.hours[1]);
+        selected: root.hours[1] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[1]); }
+    }
+    p2 := Pill {
+        x: root.fit2 ? p1.x + p1.width + root.gap : 0;
+        y: root.fit2 ? p1.y : p1.y + root.line;
+        visible: root.hours.length > 2;
+        text: Intervals.label(root.hours[2]);
+        selected: root.hours[2] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[2]); }
+    }
+    p3 := Pill {
+        x: root.fit3 ? p2.x + p2.width + root.gap : 0;
+        y: root.fit3 ? p2.y : p2.y + root.line;
+        visible: root.hours.length > 3;
+        text: Intervals.label(root.hours[3]);
+        selected: root.hours[3] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[3]); }
+    }
+    p4 := Pill {
+        x: root.fit4 ? p3.x + p3.width + root.gap : 0;
+        y: root.fit4 ? p3.y : p3.y + root.line;
+        visible: root.hours.length > 4;
+        text: Intervals.label(root.hours[4]);
+        selected: root.hours[4] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[4]); }
+    }
+    p5 := Pill {
+        x: root.fit5 ? p4.x + p4.width + root.gap : 0;
+        y: root.fit5 ? p4.y : p4.y + root.line;
+        visible: root.hours.length > 5;
+        text: Intervals.label(root.hours[5]);
+        selected: root.hours[5] == root.selected;
+        accessible-id: "interval";
+        clicked => { root.picked(root.hours[5]); }
+    }
+}
+
+// Panel de copias automáticas (_AutoSettings).
+component AutoSettings inherits Panel {
+    accessible-role: groupbox;
+    accessible-label: @tr("backupAutoTitle");
+    accessible-id: "auto";
+    HorizontalLayout {
+        height: 48px;
+        Icon { glyph: Icons.autorenew; size: 18px; color: Palette.accent; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 8px; }
+        Txt { text: @tr("backupAutoTitle"); style: Type.title-small; horizontal-stretch: 1; y: (parent.height - self.height) / 2; }
+        Switch {
+            checked: BackupsState.auto;
+            label: @tr("backupAutoTitle");
+            accessible-id: "auto-switch";
+            toggled(v) => { BackupsState.set-auto(v); }
+        }
+    }
+    Rectangle { height: 4px; }
+    Lines { text: @tr("backupAutoDesc"); style: Type.body-small; }
+    // Apagadas: al 45 % y sin responder (AnimatedOpacity + IgnorePointer).
+    Rectangle {
+        height: opts.preferred-height;
+        opacity: BackupsState.auto ? 1 : 0.45;
+        animate opacity { duration: Theme.fast; }
+        opts := VerticalLayout {
+            Rectangle { height: 20px; }
+            Txt { text: @tr("backupInterval"); style: Type.label-large; }
+            Rectangle { height: 8px; }
+            IntervalPills {
+                hours: BackupsState.intervals;
+                selected: BackupsState.interval;
+                picked(h) => { BackupsState.set-interval(h); }
+            }
+            Rectangle { height: 20px; }
+            HorizontalLayout {
+                Txt { text: @tr("backupKeep"); style: Type.label-large; horizontal-stretch: 1; accessible-id: "txt-keep"; }
+                Txt { text: @tr("backupKeepCount", BackupsState.keep); style: Type.title-small; color: Palette.accent; horizontal-stretch: 0; width: self.preferred-width; }
+            }
+            Slider {
+                value: clamp(BackupsState.keep, 1, 20);
+                minimum: 1;
+                maximum: 20;
+                step: 1;
+                label: @tr("backupKeep");
+                accessible-id: "keep";
+                changed(v) => { BackupsState.set-keep(round(v)); }
+            }
+        }
+        if !BackupsState.auto: TouchArea { }
+    }
+    Rectangle { height: 8px; }
+    Rectangle {
+        height: note.height;
+        Icon { x: 0; y: 0; glyph: Icons.push-pin; size: 16px; color: Palette.text-muted; }
+        note := Lines { x: 24px; y: 0; width: parent.width - 24px; text: @tr("backupPinnedNote"); style: Type.body-small; accessible-id: "txt-note"; }
+    }
+}
+
+export component BackupsTab inherits Rectangle {
+    in property <string> instance-id;
+    property <bool> empty: BackupsState.items.length == 0;
+    HorizontalLayout {
+        VerticalLayout {
+            horizontal-stretch: 1;
+            HorizontalLayout {
+                height: 48px;
+                Txt {
+                    text: root.empty ? @tr("backupsTitle")
+                        : @tr("backupsSummary" | "backupsSummary" % BackupsState.items.length, BackupsState.total);
+                    style: Type.body-medium;
+                    color: Palette.text-secondary;
+                    horizontal-stretch: 1;
+                    y: (parent.height - self.height) / 2;
+                    accessible-id: "txt-summary";
+                }
+                Rectangle {
+                    width: create.width;
+                    create := FilledButton {
+                        icon: Icons.add;
+                        text: @tr("backupCreate");
+                        enabled: !BackupsState.locked;
+                        accessible-id: "create-play";
+                        clicked => { BackupsState.open-create(); }
+                    }
+                    if BackupsState.locked: TipArea { tip: @tr("closeGameFirst"); }
+                }
+            }
+            Rectangle { height: 12px; }
+            body := Rectangle {
+                vertical-stretch: 1;
+                if root.empty && BackupsState.error != "": ErrorNote {
+                    width: parent.width;
+                    height: self.preferred-height;
+                    message: BackupsState.error;
+                    detail: BackupsState.error-detail;
+                    details-label: @tr("details");
+                }
+                if root.empty && BackupsState.error == "" && BackupsState.loading: Spinner { }
+                if root.empty && BackupsState.error == "" && !BackupsState.loading: Panel {
+                    EmptyState {
+                        icon: Icons.cloud-sync;
+                        title: @tr("backupsEmptyTitle");
+                        body: @tr("backupsEmptyBody");
+                        accessible-id: "empty";
+                    }
+                }
+                // Panel tan alto como la lista (shrinkWrap), con desplazamiento
+                // si no cabe.
+                if !root.empty: Panel {
+                    y: 0;
+                    height: min(body.height, list.preferred-height + 2px);
+                    pad: 0;
+                    accessible-role: AccessibleRole.list;
+                    accessible-id: "list";
+                    Flickable {
+                        content-height: list.preferred-height;
+                        list := VerticalLayout {
+                            padding-top: 4px;
+                            padding-bottom: 4px;
+                            for item[i] in BackupsState.items: VerticalLayout {
+                                if i > 0: Rectangle {
+                                    height: 1px;
+                                    Rectangle { x: 16px; width: parent.width - 32px; background: Palette.border; }
+                                }
+                                BackupRow { item: item; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Rectangle { width: 20px; }
+        VerticalLayout {
+            width: 330px;
+            alignment: start;
+            if BackupsState.settings-ready: AutoSettings { }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Diálogos
+// ---------------------------------------------------------------------------
+
+// CheckboxListTile (contentPadding cero, casilla delante): casilla de 18 en
+// 40, 16 hasta el título; 56 de alto (72 con subtítulo).
+component CheckTile inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> text;
+    in property <string> subtitle;
+    in property <bool> enabled: true;
+    height: subtitle == "" ? 56px : max(72px, texts.preferred-height + 16px);
+    accessible-role: checkbox;
+    accessible-label: text;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-enabled: enabled;
+    accessible-action-default => { toggle(); }
+    Rectangle {
+        x: 11px;
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border-width: root.checked ? 0 : 1.5px;
+        border-color: Palette.border-strong;
+        background: root.checked ? Palette.accent : transparent;
+        opacity: root.enabled ? 1 : 0.38;
+        // Marca de Material: (0,15; 0,45) → (0,4; 0,7) → (0,85; 0,25), trazo 2.
+        if root.checked: Path {
+            width: 18px;
+            height: 18px;
+            viewbox-width: 18;
+            viewbox-height: 18;
+            stroke: Palette.on-accent;
+            stroke-width: 2px;
+            MoveTo { x: 2.7; y: 8.1; } LineTo { x: 7.2; y: 12.6; } LineTo { x: 15.3; y: 4.5; }
+        }
+    }
+    texts := VerticalLayout {
+        x: 56px;
+        width: parent.width - 56px;
+        alignment: center;
+        Txt { text: root.text; style: Type.body-medium; color: root.enabled ? Palette.text : Palette.text-muted; }
+        if root.subtitle != "": Lines { text: root.subtitle; style: Type.body-small; }
+    }
+    TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.toggle(); } }
+    function toggle() {
+        if enabled {
+            checked = !checked;
+        }
+    }
+}
+
+// StageProgress: qué se hace, «hechos / total» y la barra de 6.
+component StageProgress inherits VerticalLayout {
+    in property <string> label;
+    in property <float> fraction: -1;
+    in property <string> counts;
+    accessible-role: progress-indicator;
+    accessible-label: label;
+    accessible-id: "progress";
+    HorizontalLayout {
+        Txt { text: root.label; style: Type.body-medium; horizontal-stretch: 1; }
+        if root.counts != "": Txt { text: root.counts; style: Type.body-small; color: Palette.text-muted; }
+    }
+    Rectangle { height: 8px; }
+    Rectangle {
+        height: 6px;
+        border-radius: 4px;
+        clip: true;
+        background: Palette.accent.with-alpha(0.24);
+        // Sin total: un tramo que va y viene (indeterminado).
+        property <float> t: Theme.motion ? mod(animation-tick() / 1800ms, 1) : 0;
+        Rectangle {
+            x: root.fraction >= 0 ? 0 : (t * 1.4 - 0.4) * parent.width;
+            width: root.fraction >= 0 ? clamp(root.fraction, 0, 1) * parent.width : 0.4 * parent.width;
+            border-radius: 4px;
+            background: Palette.accent;
+        }
+    }
+}
+
+// Una forma de restaurar (_ModeOption).
+component ModeOption inherits Rectangle {
+    in property <bool> selected;
+    in property <string> icon;
+    in property <string> title;
+    in property <string> body;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: lay.preferred-height;
+    border-radius: Theme.radius-card;
+    background: selected ? Palette.accent-container.with-alpha(0.5) : Palette.surface1;
+    border-width: selected ? 1.5px : 1px;
+    border-color: selected ? Palette.accent.with-alpha(0.6) : Palette.border;
+    accessible-role: radio-button;
+    accessible-label: title;
+    accessible-checkable: true;
+    accessible-checked: selected;
+    accessible-action-default => { if enabled { clicked(); } }
+    if ta.has-hover && root.enabled: Rectangle { border-radius: root.border-radius; background: Palette.text.with-alpha(0.04); }
+    lay := HorizontalLayout {
+        padding: 12px;
+        spacing: 12px;
+        Icon { glyph: root.icon; size: 22px; color: root.selected ? Palette.accent : Palette.text-secondary; y: (parent.height - self.height) / 2; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Txt { text: root.title; style: Type.title-small; }
+            Rectangle { height: 2px; }
+            Lines { text: root.body; style: Type.body-small; }
+        }
+        Icon {
+            glyph: root.selected ? Icons.radio-checked : Icons.radio-unchecked;
+            size: 20px;
+            color: root.selected ? Palette.accent : Palette.text-muted;
+            y: (parent.height - self.height) / 2;
+        }
+    }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+// «Nueva copia de seguridad» (_CreateBackupDialog).
+component CreateBackupDialog inherits FormDialog {
+    title: @tr("backupCreateTitle");
+    icon: Icons.cloud-upload;
+    dismissible: false;
+    accessible-id: "create-dialog";
+    property <bool> busy: BackupsState.create-busy;
+    init => { label.focus-input(); }
+    Lines { text: @tr("backupCreateBody"); color: Palette.text; }
+    Rectangle { height: 16px; }
+    label := LabeledField {
+        label: @tr("backupLabelOptional");
+        placeholder: @tr("backupLabelHint");
+        enabled: !root.busy;
+        accessible-id: "field";
+        accepted => { root.submit(); }
+    }
+    Rectangle { height: 8px; }
+    pin := CheckTile {
+        text: @tr("backupPinOnCreate");
+        subtitle: @tr("backupPinnedNote");
+        enabled: !root.busy;
+        accessible-id: "pin-on-create";
+    }
+    if root.busy: VerticalLayout {
+        Rectangle { height: 12px; }
+        StageProgress { label: @tr("backupCreating"); fraction: BackupsState.progress; counts: BackupsState.progress-text; }
+    }
+    if BackupsState.create-error != "": VerticalLayout {
+        Rectangle { height: 12px; }
+        ErrorNote { message: BackupsState.create-error; detail: BackupsState.create-error-detail; details-label: @tr("details"); }
+    }
+    DialogActions {
+        TextButton {
+            height: 48px;
+            text: @tr("cancel");
+            enabled: !root.busy;
+            accessible-id: "cancel";
+            clicked => { BackupsState.close-create(); }
+        }
+        FilledButton {
+            text: @tr("backupCreate");
+            enabled: !root.busy;
+            accessible-id: "filled";
+            clicked => { root.submit(); }
+        }
+    }
+    function submit() {
+        if !root.busy {
+            BackupsState.create(label.text, pin.checked);
+        }
+    }
+}
+
+// «Restaurar copia» (RestoreBackupDialog).
+component RestoreBackupDialog inherits FormDialog {
+    title: @tr("backupRestoreTitle");
+    icon: Icons.settings-backup-restore;
+    panel-width: 520px;
+    dismissible: false;
+    accessible-id: "restore-dialog";
+    property <BackupItem> item: BackupsState.restore-item;
+    property <bool> worlds: BackupsState.restore-worlds;
+    property <bool> busy: BackupsState.restore-step > 0;
+    Lines { text: @tr("backupRestoreFrom", root.item.title, root.item.date); color: Palette.text; accessible-id: "txt-from"; }
+    Rectangle { height: 16px; }
+    ModeOption {
+        selected: !root.worlds;
+        icon: Icons.select-all;
+        title: @tr("backupModeFull");
+        body: @tr("backupModeFullDesc");
+        enabled: !root.busy;
+        accessible-id: "mode";
+        clicked => { BackupsState.restore-worlds = false; }
+    }
+    Rectangle { height: 8px; }
+    ModeOption {
+        selected: root.worlds;
+        icon: Icons.public;
+        title: @tr("backupModeWorlds");
+        body: @tr("backupModeWorldsDesc");
+        enabled: !root.busy;
+        accessible-id: "mode";
+        clicked => { BackupsState.restore-worlds = true; }
+    }
+    Rectangle { height: 16px; }
+    Rectangle {
+        height: warn.height + 26px;
+        border-radius: Theme.radius-control;
+        background: Palette.warning.with-alpha(0.08);
+        border-width: 1px;
+        border-color: Palette.warning.with-alpha(0.35);
+        accessible-role: text;
+        accessible-label: root.worlds ? @tr("backupWarnWorlds") : @tr("backupWarnFull");
+        accessible-id: "warn";
+        // Relleno 12 + el borde; icono arriba (crossAxisAlignment.start).
+        Icon { x: 13px; y: 13px; glyph: Icons.warning; size: 18px; color: Palette.warning; }
+        warn := Lines {
+            x: 13px + 18px + 8px;
+            y: 13px;
+            width: parent.width - self.x - 13px;
+            text: root.worlds ? @tr("backupWarnWorlds") : @tr("backupWarnFull");
+            color: Palette.text;
+        }
+    }
+    Rectangle { height: 8px; }
+    CheckTile {
+        checked <=> BackupsState.restore-safety;
+        text: @tr("backupSafety");
+        enabled: !root.busy;
+        accessible-id: "safety";
+    }
+    if root.busy: VerticalLayout {
+        Rectangle { height: 8px; }
+        StageProgress {
+            label: BackupsState.restore-step == 1 ? @tr("backupCreating") : @tr("backupRestoring");
+            fraction: BackupsState.progress;
+            counts: BackupsState.progress-text;
+        }
+    }
+    if BackupsState.restore-error != "": VerticalLayout {
+        Rectangle { height: 12px; }
+        ErrorNote { message: BackupsState.restore-error; detail: BackupsState.restore-error-detail; details-label: @tr("details"); }
+    }
+    DialogActions {
+        TextButton {
+            height: 48px;
+            text: @tr("cancel");
+            enabled: !root.busy;
+            accessible-id: "cancel";
+            clicked => { BackupsState.close-restore(); }
+        }
+        FilledButton {
+            text: root.worlds ? @tr("backupRestoreWorlds") : @tr("backupRestoreFull");
+            danger: true;
+            enabled: !root.busy;
+            accessible-id: "filled-play";
+            clicked => {
+                if !root.busy {
+                    BackupsState.restore(root.item.id, root.worlds, BackupsState.restore-safety);
+                }
+            }
+        }
+    }
+}
+
+// «Cambiar etiqueta» (showTextPrompt con allowEmpty).
+component RenameBackupDialog inherits FormDialog {
+    title: @tr("backupLabelTitle");
+    accessible-id: "rename-dialog";
+    property <string> id: BackupsState.menu-item.id;
+    dismissed => { BackupsState.rename-open = false; }
+    init => {
+        field.text = BackupsState.menu-item.label;
+        field.focus-input();
+        field.select-all();
+    }
+    field := LabeledField {
+        label: @tr("backupLabel");
+        accessible-id: "field";
+        accepted => { root.submit(); }
+    }
+    DialogActions {
+        TextButton { height: 48px; text: @tr("cancel"); accessible-id: "cancel"; clicked => { BackupsState.rename-open = false; } }
+        FilledButton { text: @tr("save"); accessible-id: "filled"; clicked => { root.submit(); } }
+    }
+    function submit() {
+        BackupsState.rename-open = false;
+        BackupsState.rename(root.id, field.text);
+    }
+}
+
+// Menú ⋮ y diálogos de la pestaña, por encima de toda la ventana.
+export component BackupsLayer inherits Rectangle {
+    if BackupsState.menu-open: Rectangle {
+        TouchArea { clicked => { BackupsState.menu-open = false; } }
+        FocusScope {
+            init => { self.focus(); }
+            key-pressed(e) => {
+                if e.text == Key.Escape {
+                    BackupsState.menu-open = false;
+                    return accept;
+                }
+                reject
+            }
+        }
+        MenuPanel {
+            x: BackupsState.menu-x;
+            y: BackupsState.menu-y;
+            accessible-id: "backup-menu";
+            MenuEntry {
+                icon: Icons.label;
+                text: @tr("backupLabelTitle");
+                activated => { BackupsState.menu-open = false; BackupsState.rename-open = true; }
+            }
+            MenuEntry {
+                icon: Icons.delete;
+                text: @tr("delete");
+                danger: true;
+                activated => { BackupsState.menu-open = false; BackupsState.delete-open = true; }
+            }
+        }
+    }
+    if BackupsState.create-open: CreateBackupDialog { }
+    if BackupsState.restore-open: RestoreBackupDialog { }
+    if BackupsState.rename-open: RenameBackupDialog { }
+    if BackupsState.delete-open: ConfirmDialog {
+        title: @tr("backupDeleteTitle");
+        body: @tr("backupDeleteBody", BackupsState.menu-item.title);
+        action: @tr("delete");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-delete-backup";
+        dismissed => { BackupsState.delete-open = false; }
+        accepted => {
+            BackupsState.delete-open = false;
+            BackupsState.delete(BackupsState.menu-item.id);
+        }
+    }
+}

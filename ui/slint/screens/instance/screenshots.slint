@@ -1,0 +1,292 @@
+// Pestaña Capturas del detalle de instancia (screenshots_tab.dart): rejilla
+// de miniaturas, abrir la carpeta y el visor a pantalla completa con
+// flechas, abrir con el visor del sistema y borrar. Rust
+// (`screenshots::Screenshots`) rellena `ScreenshotsState`.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Txt, Icon, Spinner } from "../../components/base.slint";
+import { TextButton } from "../../components/buttons.slint";
+import { EmptyState, ErrorNote, ConfirmDialog } from "../../components/feedback.slint";
+import { TipArea } from "../../components/common.slint";
+
+export struct ShotItem {
+    file: string,
+    // Fecha de la captura («11 oct 2026 13:30»; el archivo si no se sabe).
+    caption: string,
+    // Miniatura (o el paisaje del nombre mientras carga o si no se puede).
+    image: image,
+}
+
+export global ScreenshotsState {
+    in property <bool> loading;
+    in property <string> error;
+    in property <string> error-detail;
+    in property <[ShotItem]> items;
+    // Visor.
+    in-out property <bool> viewer-open;
+    in property <int> viewer-index;
+    // Imagen completa de la captura del visor (vacía mientras carga).
+    in property <image> viewer-image;
+    in-out property <bool> confirm-delete;
+    // Tamaño de una celda de la rejilla (para los paisajes de reserva).
+    callback cell-size(length, length);
+    // Abre el visor en la captura `i` (o pasa a ella).
+    callback view(int);
+    callback open-folder;
+    // Abre la captura del visor con el visor del sistema.
+    callback open-file;
+    // Borra la captura del visor (ya confirmado).
+    callback delete;
+}
+
+// Miniatura (_Thumb): imagen, degradado abajo con la fecha y borde del
+// acento al pasar el ratón.
+component Thumb inherits Rectangle {
+    in property <ShotItem> shot;
+    callback clicked;
+    property <bool> hover: ta.has-hover;
+    border-radius: Theme.radius-card;
+    accessible-role: button;
+    accessible-label: shot.file;
+    accessible-id: "shot";
+    accessible-action-default => { clicked(); }
+    Rectangle {
+        x: 1px;
+        y: 1px;
+        width: parent.width - 2px;
+        height: parent.height - 2px;
+        border-radius: root.border-radius - 1px;
+        clip: true;
+        Image { width: parent.width; height: parent.height; source: root.shot.image; image-fit: cover; }
+        Rectangle {
+            y: parent.height - self.height;
+            height: 42px;
+            background: @linear-gradient(180deg, #00000000 0%, #000000B3 100%);
+            Txt {
+                x: 10px;
+                y: 18px;
+                width: parent.width - 20px;
+                text: root.shot.caption;
+                style: Type.label-medium;
+                color: #FFFFFF;
+            }
+        }
+    }
+    Rectangle {
+        border-radius: root.border-radius;
+        border-width: root.hover ? 1.5px : 1px;
+        border-color: root.hover ? Palette.accent.with-alpha(0.6) : Palette.border;
+        animate border-color, border-width { duration: Theme.fast; }
+    }
+    ta := TouchArea { mouse-cursor: pointer; clicked => { root.clicked(); } }
+}
+
+export component ScreenshotsTab inherits Rectangle {
+    in property <string> instance-id;
+    property <[ShotItem]> items: ScreenshotsState.items;
+    // SliverGridDelegateWithMaxCrossAxisExtent(300, 16/10, 12, 12).
+    property <int> cols: max(1, ceil(root.width / (300px + 12px)));
+    property <length> cell-w: (root.width - (cols - 1) * 12px) / cols;
+    property <length> cell-h: cell-w / 1.6;
+    changed cell-w => { ScreenshotsState.cell-size(cell-w - 2px, cell-h - 2px); }
+    init => { ScreenshotsState.cell-size(cell-w - 2px, cell-h - 2px); }
+    if root.items.length == 0 && ScreenshotsState.loading: Spinner { }
+    if root.items.length == 0 && !ScreenshotsState.loading && ScreenshotsState.error != "": ErrorNote {
+        width: min(480px, root.width);
+        height: self.preferred-height;
+        message: ScreenshotsState.error;
+        detail: ScreenshotsState.error-detail;
+        details-label: @tr("details");
+        accessible-id: "shots-error";
+    }
+    if root.items.length == 0 && !ScreenshotsState.loading && ScreenshotsState.error == "": EmptyState {
+        icon: Icons.photo-library;
+        title: @tr("screenshotsEmptyTitle");
+        body: @tr("screenshotsEmptyBody");
+        accessible-id: "empty";
+    }
+    if root.items.length > 0: VerticalLayout {
+        HorizontalLayout {
+            height: 48px;
+            Txt {
+                text: @tr("screenshotsCount" | "screenshotsCount" % root.items.length);
+                style: Type.body-medium;
+                color: Palette.text-secondary;
+                y: (parent.height - self.height) / 2;
+                accessible-id: "txt-shots-count";
+            }
+            Rectangle { horizontal-stretch: 1; }
+            TextButton {
+                height: 48px;
+                icon: Icons.folder-open;
+                text: @tr("openFolder");
+                accessible-id: "shots-folder";
+                clicked => { ScreenshotsState.open-folder(); }
+            }
+        }
+        Rectangle { height: 8px; }
+        Flickable {
+            vertical-stretch: 1;
+            content-height: ceil(root.items.length / root.cols) * (root.cell-h + 12px) - 12px;
+            for s[i] in root.items: Thumb {
+                x: mod(i, root.cols) * (root.cell-w + 12px);
+                y: floor(i / root.cols) * (root.cell-h + 12px);
+                width: root.cell-w;
+                height: root.cell-h;
+                shot: s;
+                clicked => { ScreenshotsState.view(i); }
+            }
+        }
+    }
+}
+
+// Botón del visor (_ViewerButton): 44 × 44, fondo blanco al 8 %, icono
+// blanco de 22.
+component ViewerButton inherits Rectangle {
+    in property <string> icon;
+    in property <string> tooltip;
+    in property <bool> enabled: true;
+    callback clicked;
+    width: 48px;
+    height: 48px;
+    accessible-role: button;
+    accessible-label: tooltip;
+    accessible-enabled: enabled;
+    accessible-action-default => { if enabled { clicked(); } }
+    Rectangle {
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+        background: ta.has-hover && root.enabled ? #FFFFFF21 : #FFFFFF14;
+        Icon { glyph: root.icon; size: 22px; color: root.enabled ? #FFFFFF : #FFFFFF3D; }
+    }
+    ta := TipArea {
+        tip: root.tooltip;
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.default;
+        clicked => { if root.enabled { root.clicked(); } }
+    }
+}
+
+// Visor a pantalla completa (_Viewer): velo negro al 85 %, nombre y
+// posición, abrir, borrar y cerrar arriba; flechas a los lados. Teclado:
+// ← → y Escape.
+component Viewer inherits Rectangle {
+    property <int> index: ScreenshotsState.viewer-index;
+    property <int> count: ScreenshotsState.items.length;
+    property <ShotItem> shot: ScreenshotsState.items[index];
+    background: #000000D9;
+    accessible-role: groupbox;
+    accessible-label: shot.file;
+    accessible-id: "viewer";
+    TouchArea { }
+    // Al cerrar la confirmación de borrado, el teclado vuelve al visor.
+    property <bool> confirming: ScreenshotsState.confirm-delete;
+    changed confirming => { if !self.confirming { keys.focus(); } }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(e) => {
+            if e.text == Key.LeftArrow {
+                if root.index > 0 { ScreenshotsState.view(root.index - 1); }
+                return accept;
+            }
+            if e.text == Key.RightArrow {
+                if root.index < root.count - 1 { ScreenshotsState.view(root.index + 1); }
+                return accept;
+            }
+            if e.text == Key.Escape {
+                ScreenshotsState.viewer-open = false;
+                return accept;
+            }
+            reject
+        }
+    }
+    VerticalLayout {
+        padding: 32px;
+        HorizontalLayout {
+            Txt {
+                text: root.shot.file + "   ·   " + (root.index + 1) + " / " + root.count;
+                style: Type.title-small;
+                color: #FFFFFF;
+                horizontal-stretch: 1;
+                y: (parent.height - self.height) / 2;
+                accessible-id: "txt-viewer";
+            }
+            ViewerButton {
+                icon: Icons.open-in-new;
+                tooltip: @tr("screenshotOpen");
+                accessible-id: "viewer-open";
+                clicked => { ScreenshotsState.open-file(); }
+            }
+            ViewerButton {
+                icon: Icons.delete;
+                tooltip: @tr("delete");
+                accessible-id: "viewer-delete";
+                clicked => { ScreenshotsState.confirm-delete = true; }
+            }
+            ViewerButton {
+                icon: Icons.close;
+                tooltip: @tr("close");
+                accessible-id: "viewer-close";
+                clicked => { ScreenshotsState.viewer-open = false; }
+            }
+        }
+        Rectangle { height: 16px; }
+        HorizontalLayout {
+            vertical-stretch: 1;
+            ViewerButton {
+                icon: Icons.chevron-left;
+                tooltip: @tr("previous");
+                enabled: root.index > 0;
+                accessible-id: "viewer-prev";
+                y: (parent.height - self.height) / 2;
+                clicked => { ScreenshotsState.view(root.index - 1); }
+            }
+            Rectangle { width: 12px; }
+            frame := Rectangle {
+                horizontal-stretch: 1;
+                property <image> source: ScreenshotsState.viewer-image.width > 0 ? ScreenshotsState.viewer-image : root.shot.image;
+                // BoxFit.contain con las esquinas redondeadas de la imagen.
+                property <float> ratio: self.source.height > 0 ? self.source.width / self.source.height : 16 / 9;
+                property <length> w: min(self.width, self.height * ratio);
+                property <length> h: w / ratio;
+                Rectangle {
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    width: parent.w;
+                    height: parent.h;
+                    border-radius: Theme.radius-card;
+                    clip: true;
+                    Image { width: parent.width; height: parent.height; source: frame.source; image-fit: fill; accessible-id: "viewer-image"; }
+                }
+            }
+            Rectangle { width: 12px; }
+            ViewerButton {
+                icon: Icons.chevron-right;
+                tooltip: @tr("next");
+                enabled: root.index < root.count - 1;
+                accessible-id: "viewer-next";
+                y: (parent.height - self.height) / 2;
+                clicked => { ScreenshotsState.view(root.index + 1); }
+            }
+        }
+    }
+}
+
+// Visor y confirmación de borrado, por encima de toda la ventana.
+export component ScreenshotsLayer inherits Rectangle {
+    if ScreenshotsState.viewer-open && ScreenshotsState.items.length > 0: Viewer { }
+    if ScreenshotsState.confirm-delete: ConfirmDialog {
+        title: @tr("screenshotDeleteTitle");
+        body: @tr("screenshotDeleteBody", ScreenshotsState.items[ScreenshotsState.viewer-index].file);
+        action: @tr("delete");
+        cancel-label: @tr("cancel");
+        danger: true;
+        accessible-id: "confirm-delete-shot";
+        dismissed => { ScreenshotsState.confirm-delete = false; }
+        accepted => {
+            ScreenshotsState.confirm-delete = false;
+            ScreenshotsState.delete();
+        }
+    }
+}

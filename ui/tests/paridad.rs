@@ -27,7 +27,13 @@ use shard_ui::notices::CrashNotice;
 use shard_ui::prefs::UiPrefs;
 use shard_ui::skins::Skins;
 use shard_ui::theme::Style;
-use shard_ui::{AccountsState, Backdrop, InstancesState, MainWindow, Route};
+use shard_ui::instance::InstanceDetail;
+use shard_ui::inst_content::InstContent;
+use shard_ui::console::Console;
+use shard_ui::inst_settings::InstSettings;
+use shard_ui::backups::Backups; // F3 copias
+use shard_ui::{change_version, create_instance, trash};
+use shard_ui::{AccountsState, Backdrop, InstanceTab, InstancesState, MainWindow, Route};
 use slint::ComponentHandle;
 use slint::platform::{PointerEventButton, WindowEvent};
 
@@ -46,8 +52,27 @@ struct Ctx<'a> {
     ctl: &'a Controller,
     acc: &'a Accounts,
     skins: &'a Skins,
+    // Fase 3.
+    detail: &'a InstanceDetail,
+    // F3 contenido
+    inst_content: &'a InstContent,
+    console: &'a Console,
+    inst_settings: &'a InstSettings,
+    // F3 copias
+    backups: &'a Backups,
+    worlds: &'a shard_ui::worlds::Worlds,
+    shots: &'a shard_ui::screenshots::Screenshots,
+    // Fase 4.
     content: &'a Content,
     servers: &'a Servers,
+}
+
+/// Detalle de `id` en la pestaña `tab` con los datos de ejemplo (como
+/// `/instances/:id?tab=`), con la instancia completa ya cargada.
+fn detail(c: &Ctx, id: &str, tab: InstanceTab) {
+    c.ctl.set_instances(fixtures::sample_instances());
+    c.detail.open(id, Some(tab));
+    c.detail.loaded(id, Ok(fixtures::detail::sample_detail(id).expect("instancia de ejemplo")));
 }
 
 /// Una escena: idioma y qué hacer después de cargar los datos de ejemplo.
@@ -256,6 +281,120 @@ const SCENES: &[Scene] = &[
             c.update_checked(Some(fixtures::sample_update()), false);
         },
     },
+    // Fase 3: detalle de instancia. Cada pestaña o diálogo añade sus escenas
+    // debajo de su marca (así las ramas no chocan).
+    // F3 menú
+    Scene {
+        name: "instance_menu_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Worlds);
+            c.worlds.listed("survival-amigos", Ok(fixtures::worlds::sample_worlds()));
+            c.worlds.datapacks_listed("survival-amigos", "Mundo de verano", Ok(fixtures::worlds::sample_datapacks()));
+            by_label(c.ui, "Más opciones").mock_single_click(PointerEventButton::Left);
+        },
+    },
+    // F3 contenido
+    Scene {
+        name: "instance_content_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Content);
+            fixtures::inst_content::deliver(c.inst_content, "survival-amigos");
+        },
+    },
+    // F3 mundos
+    Scene {
+        name: "instance_worlds_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Worlds);
+            c.worlds.listed("survival-amigos", Ok(fixtures::worlds::sample_worlds()));
+            c.worlds.datapacks_listed("survival-amigos", "Mundo de verano", Ok(fixtures::worlds::sample_datapacks()));
+        },
+    },
+    // F3 capturas
+    Scene {
+        name: "instance_screenshots_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Screenshots);
+            c.shots.listed("survival-amigos", Ok(fixtures::screenshots::sample_screenshots()));
+        },
+    },
+    // F3 copias
+    Scene {
+        name: "instance_backups_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Backups);
+            c.backups.listed("survival-amigos", Ok(fixtures::backups::sample_backups()));
+        },
+    },
+    Scene {
+        name: "backup_restore_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Backups);
+            c.backups.listed("survival-amigos", Ok(fixtures::backups::sample_backups()));
+            by_id(c.ui, "restore")[1].mock_single_click(PointerEventButton::Left);
+        },
+    },
+    // F3 registros
+    Scene {
+        name: "instance_logs_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Logs);
+            c.ctl.set_phase("survival-amigos", Phase::Running);
+            c.console.started(1, "survival-amigos");
+            c.console.lines(1, fixtures::logs::sample_log());
+        },
+    },
+    // F3 ajustes
+    Scene {
+        name: "instance_settings_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Settings);
+            c.inst_settings.globals_loaded(fixtures::logs::sample_globals());
+        },
+    },
+    // F3 crear instancia
+    Scene {
+        name: "create_instance_es",
+        lang: "es",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            by_id(c.ui, "new")[0].mock_single_click(PointerEventButton::Left);
+            create_instance::with(|d| d.versions_loaded(false, Ok(fixtures::versions::sample_versions(false))));
+            by_label(c.ui, "Fabric").mock_single_click(PointerEventButton::Left);
+            create_instance::with(|d| d.loader_versions_loaded("fabric", "1.21.5", Ok(fixtures::versions::sample_loader_versions())));
+        },
+    },
+    // F3 cambiar versión
+    Scene {
+        name: "change_version_es",
+        lang: "es",
+        setup: |c| {
+            detail(c, "survival-amigos", InstanceTab::Settings);
+            by_label(c.ui, "Más opciones").mock_single_click(PointerEventButton::Left);
+            by_label(c.ui, "Cambiar versión").mock_single_click(PointerEventButton::Left);
+            change_version::with(|d| d.versions_loaded(false, Ok(fixtures::versions::sample_versions(false))));
+            by_label(c.ui, "NeoForge").mock_single_click(PointerEventButton::Left);
+            change_version::with(|d| d.loader_versions_loaded("neoforge", "1.21.4", Ok(fixtures::versions::sample_loader_versions())));
+        },
+    },
+    // F3 papelera
+    Scene {
+        name: "trash_en",
+        lang: "en",
+        setup: |c| {
+            c.ctl.set_instances(fixtures::sample_instances());
+            by_id(c.ui, "trash")[0].mock_single_click(PointerEventButton::Left);
+            trash::with(|t| t.listed(Ok(fixtures::trash::sample_trash())));
+        },
+    },
     // Fase 4: contenido y servidores.
     Scene { name: "content_search_es", lang: "es", setup: content_ready },
     Scene { name: "content_target_es", lang: "es", setup: content_target },
@@ -331,8 +470,30 @@ fn rect(e: &ElementHandle) -> [f32; 4] {
 }
 
 /// Cajas con los nombres de la referencia de Flutter.
-fn boxes(ui: &MainWindow) -> BTreeMap<String, [f32; 4]> {
+fn boxes(ui: &MainWindow, wanted: &[String]) -> BTreeMap<String, [f32; 4]> {
     let mut out = BTreeMap::new();
+    // Fase 3 en adelante: cualquier caja de la referencia se busca por su
+    // `accessible-id` exacto o, si acaba en `-<n>`, como el n-ésimo elemento
+    // con el id sin el número (`world-2` = tercer `world`).
+    for name in wanted {
+        // `*-btn`: se compara sin el ancho (texto); el id no lo lleva.
+        let name = name.as_str();
+        let (key, name) = (name.to_owned(), name.strip_suffix("-btn").unwrap_or(name));
+        let exact = by_id(ui, name);
+        let found = match exact.first() {
+            Some(e) => Some(e.clone()),
+            None => name.rsplit_once('-').and_then(|(kind, n)| {
+                let n: usize = n.parse().ok()?;
+                by_id(ui, kind).get(n).cloned()
+            }),
+        };
+        if let Some(e) = found {
+            let r = rect(&e);
+            if r[3] > 1.0 {
+                out.insert(key, r);
+            }
+        }
+    }
     for name in [
         "rail", "titlebar", "pill", "txt-title", "txt-count", "search", "view-toggle", "trash", "new", "empty", "txt-greeting",
         "txt-subtitle", "txt-hero-name", "txt-recent", "hero", "hero-icon", "hero-play-btn", "hero-picker-btn", "hero-failure",
@@ -388,6 +549,15 @@ fn ref_clock(refs: &Path, scene: &str, key: &str) -> Option<f64> {
         .and_then(|v| v.get(key).and_then(|t| t.as_f64()))
 }
 
+/// Nombres de las cajas de la referencia de Flutter de `scene`.
+fn ref_box_names(refs: &Path, scene: &str) -> Vec<String> {
+    std::fs::read_to_string(refs.join(format!("{scene}.json")))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.get("boxes").and_then(|b| b.as_object()).map(|o| o.keys().cloned().collect()))
+        .unwrap_or_default()
+}
+
 fn write_png(path: &Path, buf: &slint::SharedPixelBuffer<slint::Rgba8Pixel>) {
     let file = std::fs::File::create(path).expect("png");
     let mut enc = png::Encoder::new(std::io::BufWriter::new(file), buf.width(), buf.height());
@@ -407,22 +577,39 @@ fn render(scene: &Scene, refs: &Path, out: &Path) {
     let acc = Accounts::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| 0));
     let skins = Skins::new(&ui, ctl.clone(), acc.clone(), Box::new(rec.clone()));
     let content = Content::new(&ui, ctl.clone(), Box::new(rec.clone()));
-    let servers = Servers::new(&ui, ctl.clone(), acc.clone(), Box::new(rec));
+    let servers = Servers::new(&ui, ctl.clone(), acc.clone(), Box::new(rec.clone()));
     {
         let s = servers.clone();
         ctl.on_refresh(move |_| s.refresh());
     }
     acc.set_accounts(Ok(fixtures::sample_accounts()));
+    // Fase 3: detalle, pestañas y diálogos (cada uno añade aquí su controlador).
+    let detail = InstanceDetail::new(&ui, ctl.clone(), Box::new(rec.clone()));
+    // F3 contenido
+    let inst_content = InstContent::new(&ui, &detail, Box::new(rec.clone()));
+    let console = Console::new(&ui, &detail);
+    let inst_settings = InstSettings::new(&ui, &detail, Box::new(rec.clone()));
+    // F3 copias
+    let backups = Backups::new(&ui, detail.clone(), Box::new(rec.clone()));
+    backups.set_utc_offset(|_| fixtures::backups::UTC_OFFSET);
+    let worlds = shard_ui::worlds::Worlds::new(&ui, &detail, Box::new(rec.clone()), Box::new(|| fixtures::NOW));
+    let shots = shard_ui::screenshots::Screenshots::new(&ui, &detail, Box::new(rec.clone()), Box::new(|_| fixtures::screenshots::UTC_OFFSET));
+    // F3 crear instancia, cambiar versión y papelera (se alcanzan con `with`).
+    let create = create_instance::CreateInstance::new(&ui, ctl.clone(), Box::new(rec.clone()));
+    let trash_ctl = trash::Trash::new(&ui, ctl.clone(), Box::new(rec.clone()), Box::new(|| fixtures::NOW));
+    create_instance::dialog_hooks(&ctl, &create, &trash_ctl);
+    change_version::ChangeVersion::new(&ui, detail.clone(), Box::new(rec.clone()));
+    // (fin de la fase 3)
     ui.set_route(Route::Instances);
     ui.show().unwrap();
-    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers });
+    (scene.setup)(&Ctx { ui: &ui, ctl: &ctl, acc: &acc, skins: &skins, content: &content, servers: &servers, detail: &detail, worlds: &worlds, shots: &shots, backups: &backups, console: &console, inst_settings: &inst_settings, inst_content: &inst_content });
     // El fondo animado de Flutter va quieto en el modo de la escena.
     ui.set_animate_background(false);
     // Que terminen las transiciones (150–260 ms) antes de capturar.
     i_slint_backend_testing::testing_backend::mock_elapsed_time(1000);
     let snap = ui.window().take_snapshot().expect("captura");
     write_png(&out.join(format!("{}.png", scene.name)), &snap);
-    let json = serde_json::json!({ "boxes": boxes(&ui) });
+    let json = serde_json::json!({ "boxes": boxes(&ui, &ref_box_names(refs, scene.name)) });
     std::fs::write(out.join(format!("{}.json", scene.name)), serde_json::to_string_pretty(&json).unwrap()).unwrap();
     ui.hide().unwrap();
 }

@@ -1,0 +1,191 @@
+// Cambiar versión (change_version_dialog.dart): versión de Minecraft y
+// loader de una instancia, con copia de seguridad previa opcional. Usa el
+// selector de create_instance.slint; Rust (change_version.rs) decide.
+
+import { Palette, Theme, Type } from "../../theme.slint";
+import { Icons } from "../../icons.slint";
+import { Fmt } from "../../fmt.slint";
+import { Txt, Icon, Wrapped } from "../../components/base.slint";
+import { FilledButton, TextButton } from "../../components/buttons.slint";
+import { FormDialog, DialogActions, ErrorNote } from "../../components/feedback.slint";
+import { Tag } from "../../components/common.slint";
+import { PickerData, VersionPicker, LoaderColumn } from "create_instance.slint";
+
+export global ChangeVersionState {
+    in property <bool> open;
+    in property <string> name;
+    // «Ahora: 1.21.4 · Fabric 0.16.10» y su loader.
+    in property <string> current;
+    in property <string> current-loader;
+    // Hay cambios: se ve la flecha y lo nuevo («1.21.4 · NeoForge»).
+    in property <bool> changed;
+    in property <string> target;
+    in property <string> target-loader;
+    in property <PickerData> picker;
+    in-out property <string> search;
+    in property <bool> backup: true;
+    in property <bool> busy;
+    in property <bool> can-apply;
+    in property <string> error;
+    in property <string> error-detail;
+    callback cancel();
+    callback apply();
+    callback backup-toggled(bool);
+    callback search-edited(string);
+    callback snapshots(bool);
+    callback select-version(string);
+    callback select-loader(string);
+    callback select-loader-version(string);
+}
+
+// Checkbox (área de 48) y «Copia antes» en un InkWell.
+component BackupCheck inherits Rectangle {
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+    width: row.preferred-width;
+    height: 48px;
+    accessible-role: checkbox;
+    accessible-label: @tr("changeVersionBackup");
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-enabled: enabled;
+    accessible-action-default => { if root.enabled { root.toggled(!root.checked); } }
+    Rectangle {
+        border-radius: 6px;
+        background: ta.has-hover && root.enabled ? Palette.surface1 : transparent;
+    }
+    row := HorizontalLayout {
+        Rectangle {
+            width: 48px;
+            accessible-role: groupbox;
+            accessible-id: "backup";
+            Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 4px;
+                border-width: root.checked ? 0 : 1.5px;
+                border-color: Palette.border-strong;
+                background: root.checked ? Palette.accent : transparent;
+                opacity: root.enabled ? 1 : 0.38;
+                if root.checked: Path {
+                    width: 14px;
+                    height: 14px;
+                    viewbox-width: 24;
+                    viewbox-height: 24;
+                    stroke: Palette.on-accent;
+                    stroke-width: 2.5px;
+                    MoveTo { x: 4; y: 12.5; }
+                    LineTo { x: 9.5; y: 18; }
+                    LineTo { x: 20; y: 6.5; }
+                }
+            }
+        }
+        Txt { text: @tr("changeVersionBackup"); style: Type.label-large; y: (parent.height - self.height) / 2; }
+        Rectangle { width: 8px; }
+    }
+    ta := TouchArea { enabled: root.enabled; mouse-cursor: pointer; clicked => { root.toggled(!root.checked); } }
+}
+
+component ChangeVersionDialog inherits FormDialog {
+    title: @tr("changeVersionTitle", ChangeVersionState.name);
+    icon: Icons.swap-vert;
+    panel-width: 720px;
+    dismissed => { ChangeVersionState.cancel(); }
+    HorizontalLayout {
+        alignment: start;
+        // También la caja `code` de la referencia (primer contenedor con borde).
+        Rectangle {
+            width: current.width;
+            height: current.height;
+            accessible-role: groupbox;
+            accessible-id: "code";
+            current := Tag { text: @tr("changeVersionCurrent", ChangeVersionState.current); dot: Fmt.loader-color(ChangeVersionState.current-loader); accessible-id: "version-tag"; }
+        }
+        if ChangeVersionState.changed: HorizontalLayout {
+            Rectangle { width: 8px; }
+            Icon { glyph: Icons.arrow-forward; size: 16px; color: Palette.text-muted; y: (parent.height - self.height) / 2; }
+            Rectangle { width: 8px; }
+            Tag { text: ChangeVersionState.target; dot: Fmt.loader-color(ChangeVersionState.target-loader); strong: true; accessible-id: "version-tag"; }
+        }
+    }
+    Rectangle { height: 16px; }
+    HorizontalLayout {
+        height: 300px;
+        VersionPicker {
+            width: (parent.width - 20px) * 5 / 9;
+            data: ChangeVersionState.picker;
+            search <=> ChangeVersionState.search;
+            search-id: "field";
+            box-id: "version-box";
+            search-edited(t) => { ChangeVersionState.search-edited(t); }
+            snapshots(v) => { ChangeVersionState.snapshots(v); }
+            select(id) => { ChangeVersionState.select-version(id); }
+        }
+        Rectangle { width: 20px; }
+        LoaderColumn {
+            width: (parent.width - 20px) * 4 / 9;
+            data: ChangeVersionState.picker;
+            select(l) => { ChangeVersionState.select-loader(l); }
+            select-version(v) => { ChangeVersionState.select-loader-version(v); }
+        }
+    }
+    Rectangle { height: 16px; }
+    Rectangle {
+        border-radius: Theme.radius-control;
+        background: Palette.warning.with-alpha(0.08);
+        border-width: 1px;
+        border-color: Palette.warning.with-alpha(0.3);
+        accessible-role: groupbox;
+        accessible-id: "warning";
+        HorizontalLayout {
+            padding-left: 13px;
+            padding-right: 13px;
+            padding-top: 9px;
+            padding-bottom: 9px;
+            Icon { glyph: Icons.warning; size: 18px; color: Palette.warning; y: (parent.height - self.height) / 2; }
+            Rectangle { width: 12px; }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                Wrapped { text: @tr("changeVersionWarning"); style: Type.body-small; }
+            }
+            Rectangle { width: 12px; }
+            BackupCheck {
+                checked: ChangeVersionState.backup;
+                enabled: !ChangeVersionState.busy;
+                toggled(v) => { ChangeVersionState.backup-toggled(v); }
+            }
+        }
+    }
+    if ChangeVersionState.error != "": VerticalLayout {
+        Rectangle { height: 16px; }
+        ErrorNote { message: ChangeVersionState.error; detail: ChangeVersionState.error-detail; details-label: @tr("details"); }
+    }
+    if ChangeVersionState.picker.error != "": VerticalLayout {
+        Rectangle { height: 16px; }
+        ErrorNote { message: ChangeVersionState.picker.error; detail: ChangeVersionState.picker.error-detail; details-label: @tr("details"); }
+    }
+    DialogActions {
+        TextButton {
+            height: 48px;
+            text: @tr("cancel");
+            enabled: !ChangeVersionState.busy;
+            accessible-id: "cancel";
+            clicked => { ChangeVersionState.cancel(); }
+        }
+        FilledButton {
+            text: @tr("changeVersionApply");
+            icon: Icons.check;
+            icon-size: 18px;
+            busy: ChangeVersionState.busy;
+            enabled: ChangeVersionState.can-apply;
+            accessible-id: "filled";
+            clicked => { ChangeVersionState.apply(); }
+        }
+    }
+}
+
+export component ChangeVersionLayer inherits Rectangle {
+    if ChangeVersionState.open: ChangeVersionDialog { }
+}

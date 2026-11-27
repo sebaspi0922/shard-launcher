@@ -16,6 +16,19 @@ import { LaunchFailure } from "components/feedback.slint";
 import { Notices, UpdatePhase, UpdateBanner, CrashBanner } from "components/banners.slint";
 import { TipLayer, Tips } from "components/common.slint";
 import { SelectMenuLayer, SelectMenu, SelectOption } from "components/select.slint";
+// Fase 3: detalle de instancia y diálogos de instancias.
+import { InstancePage, InstanceLayer, InstanceState, InstanceTab } from "screens/instance.slint";
+import { CreateInstanceLayer } from "screens/instance/create_instance.slint";
+import { ChangeVersionLayer } from "screens/instance/change_version.slint";
+import { TrashLayer } from "screens/instance/trash.slint";
+// F3 contenido
+import { ContentTabLayer, InstContentState, ContentRow } from "screens/instance/content.slint";
+import { BackupsLayer, BackupsState, BackupItem } from "screens/instance/backups.slint"; // F3 copias
+import { WorldsLayer, WorldsState, WorldItem, DatapackItem } from "screens/instance/worlds.slint";
+import { ScreenshotsLayer, ScreenshotsState, ShotItem } from "screens/instance/screenshots.slint";
+import { CreateInstanceLayer, CreateInstanceState, PickerData, VersionRow } from "screens/instance/create_instance.slint";
+import { ChangeVersionLayer, ChangeVersionState } from "screens/instance/change_version.slint";
+import { TrashLayer, TrashState, TrashItem } from "screens/instance/trash.slint";
 import { CurseforgeKey, CurseforgeKeyLayer } from "components/curseforge_key.slint";
 import { ContentPage, ContentLayer, ContentState, ProjectItem, SheetVersion, ModpackPhase } from "screens/content.slint";
 import { ServersPage, ServersLayer, ServersState, ServerCard, ServerMenu } from "screens/servers.slint";
@@ -24,6 +37,12 @@ export { Palette, Theme, Fmt, Route, AccountChip, Activity, InstancesState, Inst
     HomeState, ServerItem, LaunchFailure, Notices, UpdatePhase, Tips }
 export { AccountsState, AccountItem, LoginPhase, SkinsState, CapeItem, SkinView }
 export { SelectMenu, SelectOption }
+export { InstanceState, InstanceTab }
+export { InstContentState, ContentRow }
+export { ConsoleState, LogRow, LogGroup } from "screens/instance/logs.slint"; export { InstSettingsState } from "screens/instance/settings.slint";
+export { BackupsState, BackupItem } // F3 copias
+export { WorldsState, WorldItem, DatapackItem, ScreenshotsState, ShotItem }
+export { CreateInstanceState, PickerData, VersionRow, ChangeVersionState, TrashState, TrashItem }
 export { ContentState, ProjectItem, SheetVersion, ModpackPhase, CurseforgeKey }
 export { ServersState, ServerCard, ServerMenu }
 
@@ -151,6 +170,8 @@ export component MainWindow inherits Window {
         account: root.account;
         accessible-id: "rail";
         navigate(r) => {
+            // Cualquier sección del raíl sale del detalle (go('/instances')…).
+            if InstanceState.id != "" { InstanceState.close(); }
             root.route = r;
             root.route-changed(r);
         }
@@ -181,7 +202,8 @@ export component MainWindow inherits Window {
             height: parent.height - 44px;
             // Cambio de sección: la nueva entra con un fundido de 260 ms.
             if root.route == Route.home: PageFade { HomePage { account: root.account; } }
-            if root.route == Route.instances: PageFade { InstancesPage { } }
+            if root.route == Route.instances && InstanceState.id == "": PageFade { InstancesPage { } }
+            if root.route == Route.instances && InstanceState.id != "": PageFade { InstancePage { } }
             if root.route == Route.skins: PageFade { SkinsPage { } }
             if root.route == Route.content: PageFade { ContentPage { } }
             if root.route == Route.servers: PageFade { ServersPage { } }
@@ -210,6 +232,14 @@ export component MainWindow inherits Window {
     }
     AccountsLayer { }
     SkinsLayer { }
+    InstanceLayer { }
+    BackupsLayer { } // F3 copias
+    CreateInstanceLayer { }
+    ChangeVersionLayer { }
+    TrashLayer { }
+    ContentTabLayer { }
+    WorldsLayer { }
+    ScreenshotsLayer { }
     ContentLayer { }
     ServersLayer { }
     Snackbar {
